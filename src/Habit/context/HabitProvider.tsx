@@ -1,4 +1,4 @@
-import { createContext, useMemo } from "react";
+import { createContext, useMemo, useRef } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import getCompletionMapId from "../helpers/getCompletionMapId";
 import { deserializeHabits, HABITS_STORAGE_KEY, serializeHabits } from "../helpers/habitStorage";
@@ -10,23 +10,20 @@ type HabitProviderProps = {
 
 export type { Habit };
 
-type Context = {
+export type HabitStateContextType = {
     habits: Habit[];
     habitsCount: number;
     todayCompletedHabitsCount: number;
+};
+
+export type HabitActionsContextType = {
     addHabit: (habit: Habit) => void;
     removeHabit: (id: string) => void;
     updateHabit: (key: string) => void;
-}
+};
 
-export const HabitContext = createContext<Context>({
-    habits: [],
-    habitsCount: 0,
-    todayCompletedHabitsCount: 0,
-    addHabit: () => {},
-    removeHabit: () => {},
-    updateHabit: () => {},
-});
+export const HabitStateContext = createContext<HabitStateContextType | null>(null);
+export const HabitActionsContext = createContext<HabitActionsContextType | null>(null);
 
 export function HabitProvider({ children }: HabitProviderProps) {
     const [habits, setHabits] = useLocalStorage<Habit[]>(HABITS_STORAGE_KEY, [], {
@@ -44,35 +41,36 @@ export function HabitProvider({ children }: HabitProviderProps) {
         }).length;
     }, [habits]);
 
-    const addHabit = (habit: Habit) => {
-        setHabits((currentHabits) => [...currentHabits, habit]);
-    }
-
-    const removeHabit = (id: string) => {
-        setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
-    }
-
-    const updateHabit = (key: string) => {
-        setHabits((currentHabits) => currentHabits.map((habit) => {
-            if (!key.startsWith(`${habit.id}-`)) return habit;
-
-            const newCompletedMap = new Map(habit.completedMap);
-            newCompletedMap.set(key, !(newCompletedMap.get(key) ?? false));
-            return {
-                ...habit,
-                completedMap: newCompletedMap,
-            };
-        }));
-    }
-
-    const contextValue = useMemo(
-        () => ({ habits, habitsCount, todayCompletedHabitsCount, addHabit, removeHabit, updateHabit }),
+    const stateValue = useMemo(
+        () => ({ habits, habitsCount, todayCompletedHabitsCount }),
         [habits, habitsCount, todayCompletedHabitsCount],
     );
 
+    const actionsRef = useRef<HabitActionsContextType>({
+        addHabit(habit: Habit) {
+            setHabits((currentHabits) => [...currentHabits, habit]);
+        },
+        removeHabit(id: string) {
+            setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
+        },
+        updateHabit(key: string) {
+            setHabits((currentHabits) =>
+                currentHabits.map((habit) => {
+                    if (!key.startsWith(`${habit.id}-`)) return habit;
+
+                    const newCompletedMap = new Map(habit.completedMap);
+                    newCompletedMap.set(key, !(newCompletedMap.get(key) ?? false));
+                    return { ...habit, completedMap: newCompletedMap };
+                }),
+            );
+        },
+    });
+
     return (
-        <HabitContext.Provider value={contextValue}>
-            {children}
-        </HabitContext.Provider>
+        <HabitActionsContext.Provider value={actionsRef.current}>
+            <HabitStateContext.Provider value={stateValue}>
+                {children}
+            </HabitStateContext.Provider>
+        </HabitActionsContext.Provider>
     );
 }

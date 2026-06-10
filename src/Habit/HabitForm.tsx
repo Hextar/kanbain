@@ -1,7 +1,7 @@
 import Button from '@/uiKit/Button';
 import Input from '@/uiKit/Input';
 import { useState, type SubmitEvent } from 'react';
-import useHabits from './context/useHabits';
+import { useHabitActions } from './context/useHabits';
 
 type FormProps = {
     className?: string;
@@ -9,7 +9,7 @@ type FormProps = {
 
 export default function Form({ className }: FormProps) {
     const [name, setName] = useState('')
-    const { addHabit } = useHabits();
+    const { addHabit } = useHabitActions();
 
     const isDisabled = name.trim() === ''
 

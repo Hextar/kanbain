@@ -1,7 +1,7 @@
 import { format, isToday, isAfter } from 'date-fns'
 import RadioButton from '@/uiKit/RadioButton'
 import Button from '@/uiKit/Button';
-import useHabits from './context/useHabits';
+import { useHabitActions } from './context/useHabits';
 import type { Habit } from './context/HabitProvider';
 import getStreakCount from './helpers/getStreakCount';
 import getCompletionMapId from './helpers/getCompletionMapId';
@@ -10,7 +10,7 @@ import useTimerange from './context/useTimerangeContext';
 type HabitListItemProps = Habit
 
 export default function HabitListItem({ id, name, completedMap: completedMap }: HabitListItemProps) {
-    const { removeHabit } = useHabits();
+    const { removeHabit } = useHabitActions();
     const { visibleDates } = useTimerange();
     const completedCount = getStreakCount(id, completedMap);
 
@@ -35,7 +35,7 @@ export default function HabitListItem({ id, name, completedMap: completedMap }: 
 }
 
 function HabitListItemDate({ id, date, completed }: { id: string, date: Date, completed?: boolean }) {
-    const { updateHabit } = useHabits();
+    const { updateHabit } = useHabitActions();
     const shouldHighlight = isToday(date) && !completed;
     const isDisabled = isAfter(date, new Date());
 
