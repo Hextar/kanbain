@@ -1,4 +1,4 @@
-import { createContext, useMemo, useRef } from "react";
+import { createContext } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import getCompletionMapId from "../helpers/getCompletionMapId";
 import { deserializeHabits, HABITS_STORAGE_KEY, serializeHabits } from "../helpers/habitStorage";
@@ -10,23 +10,23 @@ type HabitProviderProps = {
 
 export type { Habit };
 
-export type HabitStateContextType = {
+type Context = {
     habits: Habit[];
-    habitsCount: number;
-    todayCompletedHabitsCount: number;
-};
-
-export type HabitActionsContextType = {
+    habitsCount: () => number;
+    todayCompletedHabitsCount: () => number;
     addHabit: (habit: Habit) => void;
     removeHabit: (id: string) => void;
     updateHabit: (key: string) => void;
-};
+}
 
-// Re-renders when habits or derived counts change
-export const HabitStateContext = createContext<HabitStateContextType | null>(null);
-
-// Stable reference — consumers do not re-render when habits change
-export const HabitActionsContext = createContext<HabitActionsContextType | null>(null);
+export const HabitContext = createContext<Context>({
+    habits: [],
+    habitsCount: () => 0,
+    todayCompletedHabitsCount: () => 0,
+    addHabit: () => {},
+    removeHabit: () => {},
+    updateHabit: () => {},
+});
 
 export function HabitProvider({ children }: HabitProviderProps) {
     const [habits, setHabits] = useLocalStorage<Habit[]>(HABITS_STORAGE_KEY, [], {
@@ -34,48 +34,39 @@ export function HabitProvider({ children }: HabitProviderProps) {
         deserializer: deserializeHabits,
     });
 
-    const habitsCount = useMemo(() => habits.length, [habits]);
+    const habitsCount = () => habits.length;
 
-    const todayCompletedHabitsCount = useMemo(() => {
-        const today = new Date();
+    const todayCompletedHabitsCount = () => {
         return habits.filter((habit) => {
+            const today = new Date();
             const todayISO = getCompletionMapId(habit.id, today);
             return habit.completedMap.get(todayISO) ?? false;
         }).length;
-    }, [habits]);
+    }
 
-    const stateValue = useMemo(
-        () => ({ habits, habitsCount, todayCompletedHabitsCount }),
-        [habits, habitsCount, todayCompletedHabitsCount],
-    );
+    const addHabit = (habit: Habit) => {
+        setHabits((currentHabits) => [...currentHabits, habit]);
+    }
 
-    // One object, created once — Provider value identity never changes.
-    // Functions use setHabits(updater) so they always see the latest habits.
-    const actionsRef = useRef<HabitActionsContextType>({
-        addHabit(habit: Habit) {
-            setHabits((currentHabits) => [...currentHabits, habit]);
-        },
-        removeHabit(id: string) {
-            setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
-        },
-        updateHabit(key: string) {
-            setHabits((currentHabits) =>
-                currentHabits.map((habit) => {
-                    if (!key.startsWith(`${habit.id}-`)) return habit;
+    const removeHabit = (id: string) => {
+        setHabits((currentHabits) => currentHabits.filter((habit) => habit.id !== id));
+    }
 
-                    const newCompletedMap = new Map(habit.completedMap);
-                    newCompletedMap.set(key, !(newCompletedMap.get(key) ?? false));
-                    return { ...habit, completedMap: newCompletedMap };
-                }),
-            );
-        },
-    });
+    const updateHabit = (key: string) => {
+        setHabits((currentHabits) => currentHabits.map((habit) => {
+            const newCompletedMap = new Map<string, boolean>(habit.completedMap);
+            const mapValue = newCompletedMap.get(key) ?? false;
+            newCompletedMap.set(key, !mapValue);
+            return {
+                ...habit,
+                completedMap: newCompletedMap,
+            };
+        }));
+    }
 
     return (
-        <HabitActionsContext.Provider value={actionsRef.current}>
-            <HabitStateContext.Provider value={stateValue}>
-                {children}
-            </HabitStateContext.Provider>
-        </HabitActionsContext.Provider>
+        <HabitContext.Provider value={{ habits, habitsCount, todayCompletedHabitsCount, addHabit, removeHabit, updateHabit }}>
+            {children}
+        </HabitContext.Provider>
     );
 }

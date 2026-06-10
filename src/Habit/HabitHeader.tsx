@@ -1,5 +1,5 @@
 import Button from '@/uiKit/Button';
-import { useHabitState } from './context/useHabits';
+import useHabits from './context/useHabits';
 import useTimerange from './context/useTimerangeContext';
 
 type HeaderProps = {
@@ -7,13 +7,13 @@ type HeaderProps = {
 }
 
 export default function Header({ className }: HeaderProps) {
-    const { habitsCount, todayCompletedHabitsCount } = useHabitState();
+    const { habitsCount, todayCompletedHabitsCount } = useHabits();
     const { formattedWeekRange, goToPreviousWeek, goToNextWeek, isCurrentWeek } = useTimerange();
 
     return <div className={`flex justify-between items-center p-4 ${className}`}>
         <div className="flex flex-col items-start gap-4">
             <h1 className="text-3xl font-bold text-white">Habit Tracker</h1>
-            <span className="text-sm text-zinc-500">{todayCompletedHabitsCount} / {habitsCount} done today</span>
+            <span className="text-sm text-zinc-500">{todayCompletedHabitsCount()} / {habitsCount()} done today</span>
         </div>
         <div className="flex flex-col items-end gap-4">
             <div className="flex flex-col items-end">
