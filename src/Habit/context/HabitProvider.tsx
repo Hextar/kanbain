@@ -54,9 +54,10 @@ export function HabitProvider({ children }: HabitProviderProps) {
 
     const updateHabit = (key: string) => {
         setHabits((currentHabits) => currentHabits.map((habit) => {
-            const newCompletedMap = new Map<string, boolean>(habit.completedMap);
-            const mapValue = newCompletedMap.get(key) ?? false;
-            newCompletedMap.set(key, !mapValue);
+            if (!key.startsWith(`${habit.id}-`)) return habit;
+
+            const newCompletedMap = new Map(habit.completedMap);
+            newCompletedMap.set(key, !(newCompletedMap.get(key) ?? false));
             return {
                 ...habit,
                 completedMap: newCompletedMap,
