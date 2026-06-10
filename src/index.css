@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+body {
+    background-color: var(--color-zinc-900);
+}
