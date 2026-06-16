@@ -1,5 +1,5 @@
 import Button from '@/uiKit/Button';
-import { useHabitState } from './context/useHabits';
+import useHabits from './context/useHabits';
 import useTimerange from './context/useTimerangeContext';
 
 type HeaderProps = {
@@ -7,7 +7,7 @@ type HeaderProps = {
 }
 
 export default function Header({ className }: HeaderProps) {
-    const { habitsCount, todayCompletedHabitsCount } = useHabitState();
+    const { habitsCount, todayCompletedHabitsCount } = useHabits();
     const { formattedWeekRange, goToPreviousWeek, goToNextWeek, isCurrentWeek } = useTimerange();
 
     return <div className={`flex justify-between items-center p-4 ${className}`}>
