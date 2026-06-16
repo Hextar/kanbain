@@ -1,4 +1,4 @@
-import useHabits from "./context/useHabits";
+import { useHabitState } from "./context/useHabits";
 import HabitListItem from "./HabitListItem";
 
 
@@ -7,7 +7,7 @@ type HabitListProps = {
 }
 
 export default function HabitList({ className }: HabitListProps) {
-    const { habits } = useHabits();
+    const { habits } = useHabitState();
     
     if (habits.length === 0) {
         return <EmptyHabitList className={className} />
