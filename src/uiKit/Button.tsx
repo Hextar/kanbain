@@ -20,18 +20,18 @@ export default function Button({ variant = 'primary', size = 'md', kind = 'fille
     switch (variant) {
         case 'primary':
             colorStyles = kind === 'outline'
-                ? 'border border-purple-500 text-purple-500 bg-transparent hover:bg-purple-500 hover:text-white'
+                ? 'outline outline-purple-500 text-purple-500 bg-transparent hover:bg-purple-500 hover:text-white'
                 : 'bg-purple-500 hover:bg-purple-600 text-white';
             break;
         case 'secondary':
             colorStyles = kind === 'outline'
-                ? 'border border-gray-500 text-gray-500 bg-transparent hover:bg-gray-500 hover:text-white'
+                ? 'outline outline-gray-500 text-gray-500 bg-transparent hover:bg-gray-500 hover:text-white'
                 : 'bg-gray-500 hover:bg-gray-600 text-white';
             break;
         case 'danger':
         default:
             colorStyles = kind === 'outline'
-                ? 'border border-red-500 text-red-500 bg-transparent hover:bg-red-500 hover:text-white'
+                ? 'outline outline-red-500 text-red-500 bg-transparent hover:bg-red-500 hover:text-white'
                 : 'bg-red-500 hover:bg-red-600 text-white';
             break;
     }

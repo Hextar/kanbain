@@ -23,7 +23,7 @@ export default function Form({ className }: FormProps) {
     }
 
     return <form className={`${className}`} onSubmit={handleSubmit}>
-        <div className="flex flex-row items-start gap-4 pt-0 p-4">
+        <div className="flex flex-row items-start gap-4 p-4 pt-0">
             <Input type="text" id="habit" name="habit" placeholder="New habit" value={name} onChange={(e) => setName(e.target.value)} />
             <Button className="flex" kind="filled" aria-label="Add habit" type="submit" disabled={isDisabled}>Add</Button>
         </div>
