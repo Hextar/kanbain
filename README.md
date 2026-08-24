@@ -26,25 +26,42 @@ The interesting part is not generating the first board. It is treating the AI as
 
 ## Current status
 
-The Kanban UI and task/column CRUD live in `frontend/`. The wizard, planner, and estimate feedback are the product direction above — not shipped yet.
+The Kanban UI lives in `frontend/`. The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. The wizard UI, planner, and estimate feedback are not shipped yet.
 
-Frontend details: [frontend/README.md](frontend/README.md).
+- Frontend: [frontend/README.md](frontend/README.md)
+- Backend: [backend/README.md](backend/README.md)
 
 ## Docker
 
 On macOS, start the Docker client before building.
 
+### Full stack (built frontend)
+
 ```bash
-# Compose (preferred)
+# Frontend (:8080), Flask API (:3000), Postgres (:5432)
 docker compose up --build
-
-# Image
-docker build --tag frontend frontend
-docker run -d -p 8080:8080 frontend
-
-# Inspect / stop
-docker ps
-docker images
-docker stop frontend
-docker stop $(docker ps -a -q)
 ```
+
+`/api` on the frontend container is proxied to Flask. This is a production-style build: no Vite hot reload. Use it to run the whole app, not to iterate on the UI.
+
+### Frontend development against the real API
+
+Skip the frontend container. Run Postgres and Flask in Docker, then Vite on the host with mocks off:
+
+```bash
+docker compose up --build database backend
+```
+
+In another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev:prod
+```
+
+Open the URL Vite prints (usually http://localhost:5173). `/api` is proxied to Flask on port 3000.
+
+`npm run dev` still uses MSW and does not need Docker.
+
+Run Flask on the host only when you are changing the backend: start Postgres with `docker compose up database`, then follow [backend/README.md](backend/README.md).
