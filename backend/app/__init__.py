@@ -17,9 +17,13 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     from .cli import register_cli
     from .routes.columns import columns_bp
     from .routes.health import health_bp
+    from .routes.milestones import milestones_bp
+    from .routes.projects import projects_bp
     from .routes.tasks import tasks_bp
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(projects_bp)
+    app.register_blueprint(milestones_bp)
     app.register_blueprint(columns_bp)
     app.register_blueprint(tasks_bp)
     register_cli(app)

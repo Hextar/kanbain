@@ -3,7 +3,7 @@ import pytest
 from app import create_app
 from app.config import TestConfig
 from app.extensions import db
-from app.seed import seed_default_columns
+from app.seed import seed_defaults
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def app():
     application = create_app(TestConfig)
     with application.app_context():
         db.create_all()
-        seed_default_columns()
+        seed_defaults()
         yield application
         db.session.remove()
         db.drop_all()
