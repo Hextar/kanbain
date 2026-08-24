@@ -4,11 +4,35 @@ services:
       context: ./frontend
     ports:
       - 8080:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend
     ports:
       - 3000:3000
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@database:5432/kanban_dashboard
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      PORT: 3000
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/api/health')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   database:
     image: postgres:15
     ports:
@@ -17,3 +41,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: kanban_dashboard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kanban_dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
