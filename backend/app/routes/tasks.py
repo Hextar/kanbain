@@ -2,11 +2,58 @@ from flask import Blueprint, jsonify, request
 
 from ..extensions import db
 from ..http import error_response
-from ..models import BoardColumn, Task
+from ..lookups import (
+    UnknownEntityError,
+    get_column,
+    get_member,
+    get_milestone,
+    get_task,
+    resolve_project_id,
+)
+from ..models import Task, TaskDependency, new_id
 from ..serialize import parse_datetime, utcnow
-from ..validation import json_error, parse_optional_id, parse_priority, require_title
+from ..validation import (
+    TSHIRTS,
+    WORK_KINDS,
+    json_error,
+    parse_enum,
+    parse_int,
+    parse_number,
+    parse_optional_id,
+    parse_optional_text,
+    parse_priority,
+    parse_string_list,
+    require_title,
+)
 
 tasks_bp = Blueprint("tasks", __name__)
+
+
+def _replace_dependencies(task: Task, depends_on_ids: list[str]) -> None:
+    unique_ids = []
+    seen = set()
+    for depends_on_id in depends_on_ids:
+        if depends_on_id == task.id:
+            raise ValueError("a task cannot depend on itself")
+        if depends_on_id in seen:
+            continue
+        seen.add(depends_on_id)
+        unique_ids.append(depends_on_id)
+
+    dependency_tasks = []
+    for depends_on_id in unique_ids:
+        try:
+            dependency_tasks.append(get_task(depends_on_id))
+        except UnknownEntityError as exc:
+            raise LookupError(str(exc)) from exc
+
+    for dependency in dependency_tasks:
+        if dependency.project_id != task.project_id:
+            raise ValueError("dependsOn must be in the same project")
+
+    task.dependencies.clear()
+    for depends_on_id in unique_ids:
+        task.dependencies.append(TaskDependency(task_id=task.id, depends_on_id=depends_on_id))
 
 
 def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
@@ -17,31 +64,83 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
     if creating or "columnId" in payload:
         if not isinstance(column_id, str) or not column_id:
             raise ValueError("columnId is required")
-        if db.session.get(BoardColumn, column_id) is None:
-            raise LookupError("Unknown column")
-        task.column_id = column_id
+        column = get_column(column_id)
+        if task.project_id and column.project_id != task.project_id:
+            raise ValueError("columnId must belong to the same project")
+        task.column_id = column.id
+        task.project_id = column.project_id
+
+    if creating and not task.project_id:
+        raise ValueError("columnId is required")
+
+    if "projectId" in payload:
+        project_id = parse_optional_id(payload.get("projectId"), "projectId")
+        if project_id and project_id != task.project_id:
+            raise ValueError("projectId does not match the column's project")
+
+    if "parentId" in payload:
+        parent_id = parse_optional_id(payload.get("parentId"), "parentId")
+        if parent_id is None:
+            task.parent_id = None
+        elif parent_id == task.id:
+            raise ValueError("a task cannot be its own parent")
+        else:
+            parent = get_task(parent_id)
+            if parent.project_id != task.project_id:
+                raise ValueError("parentId must belong to the same project")
+            task.parent_id = parent_id
+
+    if creating or "workKind" in payload:
+        work_kind = parse_enum(payload.get("workKind"), WORK_KINDS, "workKind")
+        task.work_kind = work_kind or "task"
 
     if "description" in payload:
-        description = payload.get("description")
-        if description is not None and not isinstance(description, str):
-            raise ValueError("description must be a string")
-        task.description = description
+        task.description = parse_optional_text(payload.get("description"), "description")
+
+    if "acceptanceCriteria" in payload:
+        task.acceptance_criteria = parse_string_list(
+            payload.get("acceptanceCriteria"), "acceptanceCriteria"
+        )
 
     if "priority" in payload:
         task.priority = parse_priority(payload.get("priority"))
 
     if "category" in payload:
-        category = payload.get("category")
-        if category is not None and not isinstance(category, str):
-            raise ValueError("category must be a string")
-        task.category = category
+        task.category = parse_optional_text(payload.get("category"), "category")
+
+    if "estimateTshirt" in payload:
+        task.estimate_tshirt = parse_enum(payload.get("estimateTshirt"), TSHIRTS, "estimateTshirt")
+    if "estimatePoints" in payload:
+        task.estimate_points = parse_int(payload.get("estimatePoints"), "estimatePoints")
+    if "estimateHours" in payload:
+        task.estimate_hours = parse_number(payload.get("estimateHours"), "estimateHours")
+
+    if "assigneeId" in payload:
+        assignee_id = parse_optional_id(payload.get("assigneeId"), "assigneeId")
+        if assignee_id is None:
+            task.assignee_id = None
+        else:
+            member = get_member(assignee_id)
+            if member.project_id != task.project_id:
+                raise ValueError("assigneeId must belong to the same project")
+            task.assignee_id = assignee_id
+
+    if "milestoneId" in payload:
+        milestone_id = parse_optional_id(payload.get("milestoneId"), "milestoneId")
+        if milestone_id is None:
+            task.milestone_id = None
+        else:
+            milestone = get_milestone(milestone_id)
+            if milestone.project_id != task.project_id:
+                raise ValueError("milestoneId must belong to the same project")
+            task.milestone_id = milestone_id
 
     if "tags" in payload:
-        task.tags = _string_list(payload.get("tags"), "tags")
+        task.tags = parse_string_list(payload.get("tags"), "tags")
     if "attachments" in payload:
-        task.attachments = _string_list(payload.get("attachments"), "attachments")
+        task.attachments = parse_string_list(payload.get("attachments"), "attachments")
     if "comments" in payload:
-        task.comments = _string_list(payload.get("comments"), "comments")
+        task.comments = parse_string_list(payload.get("comments"), "comments")
 
     if "dueDate" in payload:
         task.due_date = parse_datetime(payload.get("dueDate"))
@@ -50,29 +149,31 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
     if "updatedAt" in payload:
         task.updated_at = parse_datetime(payload.get("updatedAt"))
 
-
-def _string_list(value: object, field: str) -> list[str] | None:
-    if value is None:
-        return None
-    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
-        raise ValueError(f"{field} must be an array of strings")
-    return value
+    if "dependsOn" in payload:
+        depends_on = parse_string_list(payload.get("dependsOn"), "dependsOn")
+        _replace_dependencies(task, depends_on or [])
 
 
 def _task_filters():
-    statement = db.select(Task)
+    project_id = resolve_project_id(request.args.get("projectId"))
+    statement = db.select(Task).where(Task.project_id == project_id)
     column_id = request.args.get("columnId")
     category = request.args.get("category")
     priority = request.args.get("priority")
+    work_kind = request.args.get("workKind")
 
     if column_id:
         statement = statement.where(Task.column_id == column_id)
     if category:
         statement = statement.where(Task.category == category)
     if priority:
-        if priority not in {"low", "medium", "high"}:
+        parsed = parse_priority(priority)
+        if parsed is None:
             raise ValueError("priority must be low, medium, or high")
-        statement = statement.where(Task.priority == priority)
+        statement = statement.where(Task.priority == parsed)
+    if work_kind:
+        parsed_kind = parse_enum(work_kind, WORK_KINDS, "workKind", required=True)
+        statement = statement.where(Task.work_kind == parsed_kind)
     return statement
 
 
@@ -80,6 +181,8 @@ def _task_filters():
 def list_tasks():
     try:
         statement = _task_filters()
+    except UnknownEntityError as exc:
+        return error_response(str(exc), 400)
     except ValueError as exc:
         return json_error(exc)
     tasks = db.session.execute(statement).scalars()
@@ -87,10 +190,11 @@ def list_tasks():
 
 
 @tasks_bp.get("/api/tasks/<task_id>")
-def get_task(task_id: str):
-    task = db.session.get(Task, task_id)
-    if task is None:
-        return error_response(f"Task {task_id} not found", 404)
+def get_task_route(task_id: str):
+    try:
+        task = get_task(task_id)
+    except UnknownEntityError as exc:
+        return error_response(str(exc), 404)
     return jsonify(task.to_dict())
 
 
@@ -108,11 +212,14 @@ def create_task():
     if task_id and db.session.get(Task, task_id):
         return error_response(f"Task {task_id} already exists", 409)
 
-    task = Task(created_at=utcnow())
-    if task_id:
-        task.id = task_id
+    task = Task(created_at=utcnow(), work_kind="task")
+    task.id = task_id or new_id()
     try:
         _apply_task_fields(task, payload, creating=True)
+    except UnknownEntityError as exc:
+        message = str(exc)
+        status = 404 if message.startswith("Task ") else 400
+        return error_response(message, status)
     except LookupError as exc:
         return error_response(str(exc), 400)
     except ValueError as exc:
@@ -125,9 +232,10 @@ def create_task():
 
 @tasks_bp.put("/api/tasks/<task_id>")
 def update_task(task_id: str):
-    task = db.session.get(Task, task_id)
-    if task is None:
-        return error_response(f"Task {task_id} not found", 404)
+    try:
+        task = get_task(task_id)
+    except UnknownEntityError as exc:
+        return error_response(str(exc), 404)
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -135,6 +243,10 @@ def update_task(task_id: str):
 
     try:
         _apply_task_fields(task, payload, creating=False)
+    except UnknownEntityError as exc:
+        message = str(exc)
+        status = 404 if message.startswith("Task ") else 400
+        return error_response(message, status)
     except LookupError as exc:
         return error_response(str(exc), 400)
     except ValueError as exc:

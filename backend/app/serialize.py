@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 
 def parse_datetime(value: object) -> datetime | None:
@@ -19,6 +20,12 @@ def dump_datetime(value: datetime | None) -> str | None:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def dump_number(value: Decimal | int | float | None) -> float | None:
+    if value is None:
+        return None
+    return float(value)
 
 
 def utcnow() -> datetime:

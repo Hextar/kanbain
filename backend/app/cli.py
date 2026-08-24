@@ -7,7 +7,7 @@ def register_cli(app: Flask) -> None:
     @app.cli.command("seed")
     @with_appcontext
     def seed_command() -> None:
-        from .seed import seed_default_columns
+        from .seed import seed_defaults
 
-        seed_default_columns()
+        seed_defaults()
         click.echo("Database seeded.")
