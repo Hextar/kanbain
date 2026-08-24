@@ -2,9 +2,11 @@
   "name": "kanbain",
   "private": true,
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:prod": "vite --mode api",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write .",
