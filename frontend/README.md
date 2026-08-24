@@ -1,6 +1,6 @@
 # task-dashboard
 
-A React 19 kanban dashboard built with Vite and TypeScript. Task data lives in the `Task` feature module and is loaded through TanStack Query over `fetch('/api/tasks')`. In development, [MSW](https://mswjs.io/) intercepts those requests with an in-memory mock (refresh clears tasks).
+A React 19 kanban dashboard built with Vite and TypeScript. Task data lives in the `Task` feature module and is loaded through TanStack Query over `fetch('/api/tasks')`. In development, [MSW](https://mswjs.io/) intercepts those requests with an in-memory mock (refresh clears tasks). `npm run dev:prod` skips MSW and sends `/api` to the Flask backend (Vite proxies to `http://localhost:3000`).
 
 **Repository:** https://github.com/Hextar/kanban-dashboard
 
@@ -23,7 +23,8 @@ A React 19 kanban dashboard built with Vite and TypeScript. Task data lives in t
 
 ```bash
 npm install
-npm run dev
+npm run dev          # MSW mocks
+# npm run dev:prod   # real Flask API (see below)
 ```
 
 Open http://localhost:5173 (or the port shown in the terminal).
@@ -32,7 +33,8 @@ Open http://localhost:5173 (or the port shown in the terminal).
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start dev server |
+| `npm run dev` | Start dev server with MSW mocks |
+| `npm run dev:prod` | Start dev server against the real Flask API |
 | `npm run build` | Typecheck and production build |
 | `npm run preview` | Preview production build |
 | `npm run lint` | Run ESLint |
@@ -56,9 +58,16 @@ src/
   mocks/               # MSW worker (starts in dev)
 ```
 
-In development, MSW intercepts `/api/*` before Vite. Vite also proxies `/api` to `http://localhost:3000` (see `compose.yaml`) so you can drop MSW when the real backend is up.
+In development, MSW intercepts `/api/*` before Vite unless mocks are disabled. Vite proxies `/api` to `http://localhost:3000`.
 
-When the backend exists, keep the fetch functions in `Task/api/tasks.ts` and stop starting the worker in `main.tsx`.
+To develop against a real backend, start Postgres and Flask from the repo root, then run Vite with mocks off:
+
+```bash
+docker compose up --build database backend
+npm run dev:prod
+```
+
+That is the usual path for frontend work against real data. Run Flask on the host only when you are changing the API (see [backend/README.md](../backend/README.md)).
 
 ## Query keys
 
