@@ -1,3 +1,5 @@
+# Full stack: docker compose up --build
+# API + DB for local Vite (`npm run dev:prod`): docker compose up --build database backend
 services:
   frontend:
     build:
@@ -14,7 +16,7 @@ services:
     ports:
       - 3000:3000
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@database:5432/kanban_dashboard
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
       PORT: 3000
     depends_on:
