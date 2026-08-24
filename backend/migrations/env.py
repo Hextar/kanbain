@@ -5,7 +5,8 @@ from alembic import context
 from flask import current_app
 
 config = context.config
-fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 logger = logging.getLogger("alembic.env")
 
 
