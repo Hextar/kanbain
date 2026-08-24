@@ -1,17 +1,9 @@
-import HabitHeader from './Habit/HabitHeader'
-import HabitForm from './Habit/HabitForm'
-import HabitList from './Habit/HabitList'
-import { HabitProvider } from './Habit/context/HabitProvider';
-import TimerangeProvider from './Habit/context/TimerangeProvider';
+import { KanbanBoard } from '@/Task';
 
 export default function App() {
-  return <div className="w-full max-w-screen-md mx-auto flex flex-col items-center justify-center">
-    <HabitProvider>
-      <TimerangeProvider>
-        <HabitHeader className="w-full"/>
-        <HabitForm className="w-full" />
-        <HabitList className="w-full" />
-      </TimerangeProvider>
-    </HabitProvider>
-  </div>;
+    return (
+        <div className="flex h-full w-full max-w-full flex-col items-start justify-center">
+            <KanbanBoard />
+        </div>
+    );
 }
