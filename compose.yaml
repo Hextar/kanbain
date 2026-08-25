@@ -1,11 +1,14 @@
 # Full stack: docker compose up --build
-# API + DB for local Vite (`npm run dev:prod`): docker compose up --build database backend
+# API + DB for local Next.js (`npm run dev`): docker compose up --build database backend
 services:
   frontend:
     build:
       context: ./frontend
     ports:
       - 8080:8080
+    environment:
+      API_URL: http://backend:3000
+      PORT: 8080
     depends_on:
       backend:
         condition: service_healthy

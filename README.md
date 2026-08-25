@@ -26,7 +26,7 @@ The interesting part is not generating the first board. It is treating the AI as
 
 ## Current status
 
-The Kanban UI lives in `frontend/`. The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. The wizard UI, planner, and estimate feedback are not shipped yet.
+The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. The wizard UI, planner, and estimate feedback are not shipped yet.
 
 - Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
@@ -42,14 +42,14 @@ On macOS, start the Docker client before building.
 docker compose up --build
 ```
 
-`/api` on the frontend container is proxied to Flask. This is a production-style build: no Vite hot reload. Use it to run the whole app, not to iterate on the UI.
+`/api` on the frontend container is proxied to Flask. This is a production-style Next.js build. Use it to run the whole app, not to iterate on the UI.
 
 ### Frontend development against the real API
 
-Skip the frontend container. Run Postgres and Flask in Docker, then Vite on the host with mocks off:
+Skip the frontend container. Run Postgres and Flask in Docker, then Next.js on the host:
 
 ```bash
-docker compose up --build database backend
+docker compose up -d --build database backend
 ```
 
 In another terminal:
@@ -57,11 +57,25 @@ In another terminal:
 ```bash
 cd frontend
 npm install
-npm run dev:prod
+cp .env.example .env.local
+npm run dev
 ```
 
-Open the URL Vite prints (usually http://localhost:5173). `/api` is proxied to Flask on port 3000.
+Open the URL Next prints. Flask is on port 3000, so the UI is usually http://localhost:3001. Server Components and `/api` talk to Flask.
 
-`npm run dev` still uses MSW and does not need Docker.
+### Cleanup DB
 
-Run Flask on the host only when you are changing the backend: start Postgres with `docker compose up database`, then follow [backend/README.md](backend/README.md).
+```bash
+docker compose down -v
+```
+
+### Mocked frontend (no Flask)
+
+```bash
+cd frontend
+npm run dev:mock
+```
+
+Open http://localhost:3000. Data lives in memory until you restart Next.
+
+Run Flask on the host only when you are changing the API: start Postgres with `docker compose up database`, then follow [backend/README.md](backend/README.md).

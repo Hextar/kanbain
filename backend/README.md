@@ -32,7 +32,7 @@ flask seed
 flask run --host 127.0.0.1 --port 3000
 ```
 
-Point the Vite app at this API with `npm run dev:prod` from `frontend/`.
+Point the Next.js app at this API with `npm run dev` from `frontend/`.
 
 ## Tests
 
@@ -57,6 +57,8 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | PUT / DELETE | `/api/projects/<id>/milestones/<id>` | |
 | GET | `/api/columns` | `?projectId=` — sorted by `order` |
 | POST | `/api/columns` | `{ "title", "projectId"?, "id"? }` |
+| PUT | `/api/columns/<id>` | `{ "title" }` |
+| DELETE | `/api/columns/<id>` | 204 even if the column is already gone; cascades tasks |
 | GET | `/api/tasks` | `?projectId=&columnId=&category=&priority=&workKind=` |
 | GET | `/api/tasks/<id>` | 404 if missing |
 | POST | `/api/tasks` | `{ "title", "columnId", ... }` — `projectId` is inferred from the column |

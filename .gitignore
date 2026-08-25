@@ -6,8 +6,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!.env.development
-!.env.api
 
 # Editors
 .idea/
@@ -35,6 +33,7 @@ dist-ssr/
 coverage/
 *.tsbuildinfo
 .vite/
+.next/
 
 # Logs
 logs/
