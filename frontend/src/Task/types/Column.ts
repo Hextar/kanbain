@@ -1,14 +1,16 @@
 export type Column = {
-    id: string;
-    title: string;
-    order: number;
+  id: string;
+  projectId: string;
+  title: string;
+  order: number;
 };
 
 export type CreateColumnInput = {
-    id?: Column['id'];
-    title: string;
+  id?: Column["id"];
+  projectId: string;
+  title: string;
 };
 
 export type ColumnItem = Column & {
-    isSaving?: boolean;
+  isSaving?: boolean;
 };

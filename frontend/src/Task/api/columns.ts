@@ -1,24 +1,69 @@
-import type { Column, CreateColumnInput } from '../types/Column';
+import { apiFetch, isMockApi, readJson } from "@/api/env";
+import * as mockDb from "@/api/mockDb";
+import {
+  columnFromJson,
+  type ColumnJson,
+} from "@/Project/helpers/columnJson";
+import type { Column, CreateColumnInput } from "../types/Column";
 
-const COLUMNS_URL = '/api/columns';
+const COLUMNS_URL = "/api/columns";
 
-async function readJson<T>(response: Response, errorMessage: string): Promise<T> {
-    if (!response.ok) {
-        throw new Error(errorMessage);
-    }
-    return response.json() as Promise<T>;
+function columnsUrl(projectId: string) {
+  const params = new URLSearchParams({ projectId });
+  return `${COLUMNS_URL}?${params.toString()}`;
 }
 
-export async function getColumns(): Promise<Column[]> {
-    const response = await fetch(COLUMNS_URL);
-    return readJson<Column[]>(response, 'Failed to load columns');
+export async function getColumns(projectId: string): Promise<Column[]> {
+  if (typeof window === "undefined" && isMockApi()) {
+    return mockDb.listColumnsFor(projectId);
+  }
+  const response = await apiFetch(columnsUrl(projectId));
+  const payload = await readJson<ColumnJson[]>(
+    response,
+    "Failed to load columns",
+  );
+  return payload.map(columnFromJson);
 }
 
 export async function createColumn(input: CreateColumnInput): Promise<Column> {
-    const response = await fetch(COLUMNS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-    });
-    return readJson<Column>(response, 'Failed to create column');
+  if (typeof window === "undefined" && isMockApi()) {
+    return mockDb.insertColumn(input);
+  }
+  const response = await apiFetch(COLUMNS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const payload = await readJson<ColumnJson>(
+    response,
+    "Failed to create column",
+  );
+  return columnFromJson(payload);
+}
+
+export async function updateColumn(column: Column): Promise<Column> {
+  if (typeof window === "undefined" && isMockApi()) {
+    return mockDb.updateColumn(column.id, { title: column.title });
+  }
+  const response = await apiFetch(`${COLUMNS_URL}/${column.id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: column.title }),
+  });
+  const payload = await readJson<ColumnJson>(
+    response,
+    "Failed to update column",
+  );
+  return columnFromJson(payload);
+}
+
+export async function deleteColumn(id: Column["id"]): Promise<void> {
+  if (typeof window === "undefined" && isMockApi()) {
+    mockDb.deleteColumn(id);
+    return;
+  }
+  const response = await apiFetch(`${COLUMNS_URL}/${id}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(`Failed to delete column ${id}`);
+  }
 }

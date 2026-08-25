@@ -1,4 +1,4 @@
-import type { Task, TaskListFilters } from '../types/Task';
+import type { Task, TaskListFilters } from "../types/Task";
 
 /**
  * TanStack Query cache keys for tasks.
@@ -13,9 +13,10 @@ import type { Task, TaskListFilters } from '../types/Task';
  *   ['tasks', 'detail', '<Task.id>']
  */
 export const taskKeys = {
-    all: ['tasks'] as const,
-    lists: () => [...taskKeys.all, 'list'] as const,
-    list: (filters: TaskListFilters = {}) => [...taskKeys.lists(), filters] as const,
-    details: () => [...taskKeys.all, 'detail'] as const,
-    detail: (id: Task['id']) => [...taskKeys.details(), id] as const,
+  all: ["tasks"] as const,
+  lists: () => [...taskKeys.all, "list"] as const,
+  list: (filters: TaskListFilters = {}) =>
+    [...taskKeys.lists(), filters] as const,
+  details: () => [...taskKeys.all, "detail"] as const,
+  detail: (id: Task["id"]) => [...taskKeys.details(), id] as const,
 };
