@@ -1,0 +1,308 @@
+import {
+  projectFromJson,
+  projectToJson,
+  type ProjectJson,
+} from "@/Project/helpers/projectJson";
+import {
+  columnFromJson,
+  columnToJson,
+  type ColumnJson,
+} from "@/Project/helpers/columnJson";
+import type { CreateProjectInput, Project } from "@/Project/types/Project";
+import type { Column, CreateColumnInput } from "@/Task/types/Column";
+import type { CreateTaskInput, Task, TaskListFilters } from "@/Task/types/Task";
+import {
+  taskFromJson,
+  taskToJson,
+  type TaskJson,
+} from "@/Task/helpers/taskJson";
+
+const projects: Project[] = [];
+const columns: Column[] = [];
+const tasks: Task[] = [];
+
+class MockApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+function jsonError(message: string, status: number) {
+  return Response.json({ message }, { status });
+}
+
+function resolveProjectId(requested: string | null) {
+  if (requested) return requested;
+  if (projects.length === 1) return projects[0].id;
+  return null;
+}
+
+export function listProjects() {
+  return projects;
+}
+
+export function findProject(id: string) {
+  return projects.find((project) => project.id === id) ?? null;
+}
+
+export function insertProject(input: CreateProjectInput): Project {
+  const name = input.name.trim();
+  if (!name) throw new MockApiError("name is required", 400);
+  const project = projectFromJson({
+    id: input.id ?? crypto.randomUUID(),
+    name,
+    deadlineKind: "ongoing",
+    methodology: "kanban",
+    qualityBar: "mvp",
+    riskTolerance: "medium",
+    createdAt: new Date().toISOString(),
+    members: [],
+  } satisfies ProjectJson);
+  projects.push(project);
+  return project;
+}
+
+export function updateProject(
+  id: string,
+  payload: Pick<ProjectJson, "name">,
+): Project {
+  const index = projects.findIndex((project) => project.id === id);
+  if (index === -1) throw new MockApiError(`Project ${id} not found`, 404);
+  const name = payload.name.trim();
+  if (!name) throw new MockApiError("name is required", 400);
+  const nextProject = {
+    ...projects[index],
+    name,
+    updatedAt: new Date(),
+  };
+  projects[index] = nextProject;
+  return nextProject;
+}
+
+export function deleteProject(id: string) {
+  const index = projects.findIndex((project) => project.id === id);
+  if (index === -1) return;
+  const columnIds = new Set(
+    columns
+      .filter((column) => column.projectId === id)
+      .map((column) => column.id),
+  );
+  for (let i = tasks.length - 1; i >= 0; i--) {
+    if (columnIds.has(tasks[i].columnId)) tasks.splice(i, 1);
+  }
+  for (let i = columns.length - 1; i >= 0; i--) {
+    if (columns[i].projectId === id) columns.splice(i, 1);
+  }
+  projects.splice(index, 1);
+}
+
+export function listColumnsFor(projectId: string) {
+  return columns
+    .filter((column) => column.projectId === projectId)
+    .toSorted((left, right) => left.order - right.order);
+}
+
+export function insertColumn(input: CreateColumnInput): Column {
+  const projectId = resolveProjectId(input.projectId ?? null);
+  if (!projectId) throw new MockApiError("projectId is required", 400);
+  if (!projects.some((project) => project.id === projectId)) {
+    throw new MockApiError("Unknown project", 400);
+  }
+  const nextOrder =
+    columns
+      .filter((column) => column.projectId === projectId)
+      .reduce((max, column) => Math.max(max, column.order), -1) + 1;
+  const column = columnFromJson({
+    id: input.id ?? crypto.randomUUID(),
+    projectId,
+    title: input.title,
+    order: nextOrder,
+  } satisfies ColumnJson);
+  columns.push(column);
+  return column;
+}
+
+export function updateColumn(
+  id: string,
+  payload: Pick<ColumnJson, "title">,
+): Column {
+  const index = columns.findIndex((column) => column.id === id);
+  if (index === -1) throw new MockApiError(`Column ${id} not found`, 404);
+  const title = payload.title.trim();
+  if (!title) throw new MockApiError("title is required", 400);
+  const nextColumn = { ...columns[index], title };
+  columns[index] = nextColumn;
+  return nextColumn;
+}
+
+export function deleteColumn(id: string) {
+  const index = columns.findIndex((column) => column.id === id);
+  if (index === -1) return;
+  for (let i = tasks.length - 1; i >= 0; i--) {
+    if (tasks[i].columnId === id) tasks.splice(i, 1);
+  }
+  columns.splice(index, 1);
+}
+
+function matchesFilters(task: Task, filters: TaskListFilters) {
+  if (filters.columnId !== undefined && task.columnId !== filters.columnId)
+    return false;
+  if (filters.category !== undefined && task.category !== filters.category)
+    return false;
+  if (filters.priority !== undefined && task.priority !== filters.priority)
+    return false;
+  return true;
+}
+
+export function listTasks(filters: TaskListFilters) {
+  return tasks.filter((task) => matchesFilters(task, filters));
+}
+
+export function findTask(id: string) {
+  return tasks.find((task) => task.id === id) ?? null;
+}
+
+export function insertTask(input: CreateTaskInput): Task {
+  if (!columns.some((column) => column.id === input.columnId)) {
+    throw new MockApiError("Unknown column", 400);
+  }
+  const task: Task = {
+    ...input,
+    id: input.id ?? crypto.randomUUID(),
+    createdAt: new Date(),
+  };
+  tasks.push(task);
+  return task;
+}
+
+export function replaceTask(id: string, payload: TaskJson): Task {
+  const index = tasks.findIndex((task) => task.id === id);
+  if (index === -1) throw new MockApiError(`Task ${id} not found`, 404);
+  const nextTask = taskFromJson({ ...payload, id });
+  tasks[index] = nextTask;
+  return nextTask;
+}
+
+export function deleteTask(id: string) {
+  const index = tasks.findIndex((task) => task.id === id);
+  if (index !== -1) tasks.splice(index, 1);
+}
+
+function respond<T>(run: () => T, status = 200) {
+  try {
+    const value = run();
+    if (value === undefined) return new Response(null, { status: 204 });
+    return Response.json(value, { status });
+  } catch (error) {
+    if (error instanceof MockApiError)
+      return jsonError(error.message, error.status);
+    throw error;
+  }
+}
+
+export async function handleMock(request: Request, apiPath: string) {
+  const url = new URL(request.url);
+  const segments = apiPath.split("/").filter(Boolean);
+
+  if (request.method === "GET" && apiPath === "/api/projects") {
+    return respond(() => projects.map(projectToJson));
+  }
+  if (request.method === "POST" && apiPath === "/api/projects") {
+    const input = (await request.json()) as CreateProjectInput;
+    return respond(() => projectToJson(insertProject(input)), 201);
+  }
+  if (
+    segments[0] === "api" &&
+    segments[1] === "projects" &&
+    segments.length === 3
+  ) {
+    const id = segments[2];
+    if (request.method === "GET") {
+      return respond(() => {
+        const project = findProject(id);
+        if (!project) throw new MockApiError(`Project ${id} not found`, 404);
+        return projectToJson(project);
+      });
+    }
+    if (request.method === "PUT") {
+      const payload = (await request.json()) as Pick<ProjectJson, "name">;
+      return respond(() => projectToJson(updateProject(id, payload)));
+    }
+    if (request.method === "DELETE") {
+      deleteProject(id);
+      return new Response(null, { status: 204 });
+    }
+  }
+
+  if (request.method === "GET" && apiPath === "/api/columns") {
+    return respond(() => {
+      const projectId = resolveProjectId(url.searchParams.get("projectId"));
+      if (!projectId) throw new MockApiError("projectId is required", 400);
+      return listColumnsFor(projectId).map(columnToJson);
+    });
+  }
+  if (request.method === "POST" && apiPath === "/api/columns") {
+    const input = (await request.json()) as CreateColumnInput;
+    return respond(() => columnToJson(insertColumn(input)), 201);
+  }
+  if (
+    segments[0] === "api" &&
+    segments[1] === "columns" &&
+    segments.length === 3
+  ) {
+    const id = segments[2];
+    if (request.method === "PUT") {
+      const payload = (await request.json()) as Pick<ColumnJson, "title">;
+      return respond(() => columnToJson(updateColumn(id, payload)));
+    }
+    if (request.method === "DELETE") {
+      deleteColumn(id);
+      return new Response(null, { status: 204 });
+    }
+  }
+
+  if (request.method === "GET" && apiPath === "/api/tasks") {
+    const priority = url.searchParams.get("priority");
+    return respond(() =>
+      listTasks({
+        columnId: url.searchParams.get("columnId") ?? undefined,
+        category: url.searchParams.get("category") ?? undefined,
+        priority:
+          priority === "low" || priority === "medium" || priority === "high"
+            ? priority
+            : undefined,
+      }).map(taskToJson),
+    );
+  }
+  if (request.method === "POST" && apiPath === "/api/tasks") {
+    const input = (await request.json()) as CreateTaskInput;
+    return respond(() => taskToJson(insertTask(input)), 201);
+  }
+  if (
+    segments[0] === "api" &&
+    segments[1] === "tasks" &&
+    segments.length === 3
+  ) {
+    const id = segments[2];
+    if (request.method === "GET") {
+      return respond(() => {
+        const task = findTask(id);
+        if (!task) throw new MockApiError(`Task ${id} not found`, 404);
+        return taskToJson(task);
+      });
+    }
+    if (request.method === "PUT") {
+      const payload = (await request.json()) as TaskJson;
+      return respond(() => taskToJson(replaceTask(id, payload)));
+    }
+    if (request.method === "DELETE") {
+      deleteTask(id);
+      return new Response(null, { status: 204 });
+    }
+  }
+
+  return jsonError("Not found", 404);
+}
