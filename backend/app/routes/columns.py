@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from ..extensions import db
 from ..http import error_response
-from ..lookups import UnknownEntityError, resolve_project_id
+from ..lookups import UnknownEntityError, get_column, resolve_project_id
 from ..models import BoardColumn
 from ..validation import json_error, parse_optional_id, require_title
 
@@ -57,3 +57,32 @@ def create_column():
     db.session.add(column)
     db.session.commit()
     return jsonify(column.to_dict()), 201
+
+
+@columns_bp.put("/api/columns/<column_id>")
+def update_column(column_id: str):
+    try:
+        column = get_column(column_id)
+    except UnknownEntityError as exc:
+        return error_response(str(exc), 404)
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return error_response("JSON body required", 400)
+
+    try:
+        column.title = require_title(payload)
+    except ValueError as exc:
+        return json_error(exc)
+
+    db.session.commit()
+    return jsonify(column.to_dict())
+
+
+@columns_bp.delete("/api/columns/<column_id>")
+def delete_column(column_id: str):
+    column = db.session.get(BoardColumn, column_id)
+    if column is not None:
+        db.session.delete(column)
+        db.session.commit()
+    return ("", 204)

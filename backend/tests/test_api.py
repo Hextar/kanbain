@@ -62,6 +62,38 @@ def test_create_and_filter_tasks(client):
     assert [item["title"] for item in filtered.get_json()] == ["Write API"]
 
 
+def test_column_title_update_and_delete(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    doing_id = columns[1]["id"]
+    client.post("/api/tasks", json={"title": "Card", "columnId": todo_id})
+
+    renamed = client.put(f"/api/columns/{todo_id}", json={"title": "Backlog"})
+    assert renamed.status_code == 200
+    assert renamed.get_json()["title"] == "Backlog"
+    assert renamed.get_json()["order"] == 0
+
+    deleted = client.delete(f"/api/columns/{todo_id}")
+    assert deleted.status_code == 204
+    remaining = client.get("/api/columns").get_json()
+    assert [column["id"] for column in remaining] == [doing_id, columns[2]["id"]]
+    assert client.get("/api/tasks").get_json() == []
+    assert client.delete("/api/columns/00000000-0000-0000-0000-000000000000").status_code == 204
+
+
+def test_project_name_update_and_delete(client):
+    project = default_project(client)
+    renamed = client.put(f"/api/projects/{project['id']}", json={"name": "KanbAIn"})
+    assert renamed.status_code == 200
+    assert renamed.get_json()["name"] == "KanbAIn"
+    assert renamed.get_json()["deadlineKind"] == "ongoing"
+
+    deleted = client.delete(f"/api/projects/{project['id']}")
+    assert deleted.status_code == 204
+    assert client.get("/api/projects").get_json() == []
+    assert client.delete(f"/api/projects/{project['id']}").status_code == 204
+
+
 def test_task_crud(client):
     todo_id = client.get("/api/columns").get_json()[0]["id"]
     created = client.post(

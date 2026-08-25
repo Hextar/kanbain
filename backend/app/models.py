@@ -151,7 +151,7 @@ class BoardColumn(db.Model):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     order: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    tasks: Mapped[list["Task"]] = relationship(back_populates="column")
+    tasks: Mapped[list["Task"]] = relationship(back_populates="column", cascade="all, delete-orphan")
     project: Mapped[Project] = relationship(back_populates="columns")
 
     def to_dict(self) -> dict:
