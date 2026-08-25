@@ -1,82 +1,67 @@
-# task-dashboard
+# KanbAIn frontend
 
-A React 19 kanban dashboard built with Vite and TypeScript. Task data lives in the `Task` feature module and is loaded through TanStack Query over `fetch('/api/tasks')`. In development, [MSW](https://mswjs.io/) intercepts those requests with an in-memory mock (refresh clears tasks). `npm run dev:prod` skips MSW and sends `/api` to the Flask backend (Vite proxies to `http://localhost:3000`).
+Next.js App Router UI for the Flask Kanban API. The project list is a Server Component. Creating a project is a Server Action. The board is a client component (TanStack Query) hydrated with columns fetched on the server.
 
-**Repository:** https://github.com/Hextar/kanban-dashboard
-
-## Features
-
-- Kanban board with user-named columns
-- Add columns and tasks over HTTP (`/api/columns`, `/api/tasks`), mocked with MSW in development
+**Repository:** https://github.com/Hextar/kanbain
 
 ## Tech stack
 
+- Next.js 16 (App Router, Server Components, Server Actions, React Compiler)
 - React 19 + TypeScript
-- Vite 8
 - Tailwind CSS 4
-- [TanStack Query](https://tanstack.com/query) for task data
+- [TanStack Query](https://tanstack.com/query) for board mutations
 - [Lucide](https://lucide.dev/) for icons
-- [MSW](https://mswjs.io/) to mock `/api` in development
-- React Compiler enabled via Babel plugin
 
 ## Getting started
 
+### Mock API (no Docker)
+
+In-memory projects/columns/tasks. Refresh keeps data until you restart Next.
+
 ```bash
 npm install
-npm run dev          # MSW mocks
-# npm run dev:prod   # real Flask API (see below)
+npm run dev:mock
 ```
 
-Open http://localhost:5173 (or the port shown in the terminal).
+Open the URL Next prints (http://localhost:3000). The list starts empty; **Create new project** seeds To Do / In Progress / Done.
+
+### Real API
+
+Flask and Postgres must be running (`docker compose up --build database backend` from the repo root).
+
+```bash
+npm install
+cp .env.example .env.local   # API_URL=http://localhost:3000
+npm run dev
+```
+
+Open the URL Next prints. Flask already uses port 3000, so Next will typically choose **3001**. `/api` is proxied to Flask.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start dev server with MSW mocks |
-| `npm run dev:prod` | Start dev server against the real Flask API |
-| `npm run build` | Typecheck and production build |
-| `npm run preview` | Preview production build |
+| `npm run dev` | Next.js against Flask (`API_URL`) |
+| `npm run dev:mock` | Next.js with an in-memory mock API |
+| `npm run build` | Production build |
+| `npm run start` | Production server on port 8080 |
 | `npm run lint` | Run ESLint |
 | `npm run format` | Format with Prettier |
+
+## Routes
+
+| Path | What it is |
+|------|------------|
+| `/` | Project list (RSC) |
+| `/project/[projectId]` | Kanban board for that project |
 
 ## Project structure
 
 ```
 src/
-  App.tsx              # composes feature modules
-  main.tsx             # app shell (QueryClientProvider)
+  app/                 # App Router: layout, pages, /api proxy-or-mock
+  api/                 # Flask client + in-memory mock store
+  Project/             # list UI, server actions, project fetch
+  Task/                # board UI + column/task client API
   uiKit/               # shared UI primitives
-  Task/                # task board feature module
-    index.ts           # public API
-    KanbanBoard.tsx
-    components/        # board UI
-    api/               # fetch client + MSW handlers
-    hooks/             # TanStack Query hooks (CRUD)
-    types/
-    helpers/           # JSON <-> Task mapping
-  mocks/               # MSW worker (starts in dev)
 ```
-
-In development, MSW intercepts `/api/*` before Vite unless mocks are disabled. Vite proxies `/api` to `http://localhost:3000`.
-
-To develop against a real backend, start Postgres and Flask from the repo root, then run Vite with mocks off:
-
-```bash
-docker compose up --build database backend
-npm run dev:prod
-```
-
-That is the usual path for frontend work against real data. Run Flask on the host only when you are changing the API (see [backend/README.md](../backend/README.md)).
-
-## Query keys
-
-`Task/api/taskKeys.ts` names TanStack Query cache entries. They are cache addresses, not fields on `Task`.
-
-| Key | Cache entry | CRUD |
-|---|---|---|
-| `taskKeys.list(filters?)` | task list | Read collection (`columnId` filter) |
-| `taskKeys.detail(id)` | one task (`Task['id']`) | Read / Update |
-| `taskKeys.lists()` | prefix for every list | invalidate after Create / Update / Delete |
-| `taskKeys.all` | prefix for every task query | invalidate everything |
-| `columnKeys.list()` | column list | Read / Create columns |

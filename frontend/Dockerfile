@@ -1,46 +1,43 @@
 # =========================================
-# Stage 1: Build the React.js Application
+# Stage 1: Build the Next.js application
 # =========================================
 ARG NODE_VERSION=24.12.0-alpine
-ARG NGINX_VERSION=alpine3.22
 
-# Use a lightweight Node.js image for building (customizable via ARG)
 FROM node:${NODE_VERSION} AS builder
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy package-related files first to leverage Docker's caching mechanism
 COPY package.json package-lock.json* ./
-
-# Install project dependencies using npm ci (ensures a clean, reproducible install)
 RUN --mount=type=cache,target=/root/.npm npm ci
 
-# Copy the rest of the application source code into the container
 COPY . .
 
-# Build the React.js application (outputs to /app/dist)
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV API_URL=http://backend:3000
+
 RUN npm run build
 
 # =========================================
-# Stage 2: Prepare Nginx to Serve Static Files
+# Stage 2: Run the standalone Next.js server
 # =========================================
+FROM node:${NODE_VERSION} AS runner
 
-FROM nginxinc/nginx-unprivileged:${NGINX_VERSION} AS runner
+WORKDIR /app
 
-# Copy custom Nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8080
+ENV HOSTNAME=0.0.0.0
+ENV API_URL=http://backend:3000
 
-# Copy the static build output from the build stage to Nginx's default HTML serving directory
-COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-# Use a built-in non-root user for security best practices
-USER nginx
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Expose port 8080 to allow HTTP traffic
-# Note: The default NGINX container now listens on port 8080 instead of 80
+USER nextjs
+
 EXPOSE 8080
 
-# Start Nginx directly with custom config
-ENTRYPOINT ["nginx", "-c", "/etc/nginx/nginx.conf"]
-CMD ["-g", "daemon off;"]
+CMD ["node", "server.js"]

@@ -2,29 +2,23 @@
 node_modules/
 dist/
 out/
+.next/
 .tmp/
 .cache/
 
-# Ignore Vite, Webpack, and React-specific build artifacts
-.vite/
-.vitepress/
+# Ignore build artifacts
 .eslintcache
 .npm/
 coverage/
-jest/
-cypress/
-cypress/screenshots/
-cypress/videos/
-reports/
 
 # Ignore environment and config files (sensitive data)
 *.env*
+!*.env.example
 *.log
 
-# Ignore TypeScript build artifacts (if using TypeScript)
+# Ignore TypeScript build artifacts
 *.tsbuildinfo
 
-# Ignore lockfiles (optional if using Docker for package installation)
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -39,11 +33,8 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Ignore Docker-related files (to avoid copying unnecessary configs)
+# Ignore Docker-related files
 Dockerfile
 .dockerignore
 docker-compose.yml
 docker-compose.override.yml
-
-# Ignore build-specific cache files
-*.lock
