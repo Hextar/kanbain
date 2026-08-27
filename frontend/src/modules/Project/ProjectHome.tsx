@@ -2,9 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import ConfirmDialog from "@uiKit/ConfirmDialog";
 import NewProjectForm from "./components/NewProjectForm";
 import ProjectCard from "./components/ProjectCard";
 import ProjectEmptyState from "./components/ProjectEmptyState";
+import { deleteProjectAction } from "./actions/deleteProject";
 import { retryProjectPlanAction } from "./actions/retryPlan";
 import { projectKeys } from "./api/projectKeys";
 import { reviveProject } from "./helpers/projectJson";
@@ -20,6 +22,8 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   const [initial] = useState(() => initialProjects.map(reviveProject));
   const { data: projects = [] } = useProjects(initial);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const hasProjects = projects.length > 0;
 
   function remember(project: Project) {
@@ -43,6 +47,22 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
     }
   }
 
+  async function handleDelete(projectId: string) {
+    const previous = queryClient.getQueryData<Project[]>(projectKeys.list());
+    queryClient.setQueryData<Project[]>(projectKeys.list(), (current) =>
+      (current ?? []).filter((item) => item.id !== projectId),
+    );
+    setDeletingId(projectId);
+    try {
+      await deleteProjectAction(projectId);
+      queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) });
+    } catch {
+      if (previous) queryClient.setQueryData(projectKeys.list(), previous);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="flex min-h-dvh w-full flex-col">
       <header className="flex items-center justify-between gap-4 p-6">
@@ -54,8 +74,10 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
           {projects.map((project) => (
             <li key={project.id} className="min-w-0">
               <ProjectCard
+                isDeleting={deletingId === project.id}
                 isRetrying={retryingId === project.id}
                 project={project}
+                onDelete={() => setProjectToDelete(project)}
                 onRetry={handleRetry}
               />
             </li>
@@ -64,6 +86,20 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       ) : (
         <ProjectEmptyState onCreated={remember} />
       )}
+      <ConfirmDialog
+        open={projectToDelete !== null}
+        title={`Delete “${projectToDelete?.name ?? "this project"}”?`}
+        description="This will permanently delete this project and all of its boards, tasks, and milestones. This cannot be undone."
+        confirmLabel="Delete project"
+        variant="danger"
+        onCancel={() => setProjectToDelete(null)}
+        onConfirm={() => {
+          const project = projectToDelete;
+          if (!project) return;
+          setProjectToDelete(null);
+          void handleDelete(project.id);
+        }}
+      />
     </div>
   );
 }

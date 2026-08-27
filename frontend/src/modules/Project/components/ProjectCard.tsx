@@ -1,10 +1,12 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Trash } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import Button from "@uiKit/Button";
+import IconButton from "@uiKit/IconButton";
 import type { Project } from "../types/Project";
 
 const DEADLINE_LABELS: Record<Project["deadlineKind"], string> = {
@@ -14,18 +16,27 @@ const DEADLINE_LABELS: Record<Project["deadlineKind"], string> = {
 };
 
 const CARD_CLASS =
-  "flex h-full min-h-20 max-h-40 min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-zinc-800 p-5 text-left";
+  "flex h-full min-h-20 max-h-40 min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-zinc-800 p-5 pr-12 text-left";
 
 type ProjectCardProps = {
   project: Project;
   onRetry?: (projectId: string) => void;
+  onDelete?: (projectId: string) => void;
   isRetrying?: boolean;
+  isDeleting?: boolean;
 };
+
+function stopCardNavigation(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 export default function ProjectCard({
   project,
   onRetry,
+  onDelete,
   isRetrying = false,
+  isDeleting = false,
 }: ProjectCardProps) {
   const createdLabel = project.createdAt
     ? format(project.createdAt, "d MMM yyyy")
@@ -115,6 +126,25 @@ export default function ProjectCard({
           {body}
         </Link>
       )}
+      {onDelete ? (
+        <div
+          className="absolute top-3 right-3 z-20"
+          onClick={stopCardNavigation}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <IconButton
+            aria-label={`Delete ${project.name}`}
+            className="bg-zinc-800"
+            disabled={isDeleting}
+            size="xs"
+            type="button"
+            variant="secondary"
+            onClick={() => onDelete(project.id)}
+          >
+            <Trash size={16} />
+          </IconButton>
+        </div>
+      ) : null}
     </article>
   );
 }
