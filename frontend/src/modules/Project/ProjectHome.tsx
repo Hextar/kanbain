@@ -52,7 +52,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       {hasProjects ? (
         <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 pb-8 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
-            <li key={project.id}>
+            <li key={project.id} className="min-w-0">
               <ProjectCard
                 isRetrying={retryingId === project.id}
                 project={project}
