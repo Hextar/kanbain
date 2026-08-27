@@ -16,16 +16,24 @@ export default function KanbanBoard({
   project,
   initialColumns,
 }: KanbanBoardProps) {
-  const { columns, createColumn, deleteColumn } = useColumns(project.id, initialColumns);
+  const { columns, createColumn, deleteColumn } = useColumns(
+    project.id,
+    initialColumns,
+  );
 
   return (
     <div className="flex h-dvh w-full max-w-full flex-col items-start justify-center">
-      <KanbanHeader className="w-full" projectName={project.name} />
+      <KanbanHeader
+        className="w-full"
+        projectId={project.id}
+        projectName={project.name}
+      />
       <div className="flex h-full max-w-full flex-row items-start justify-start gap-4 overflow-x-auto p-4 pt-0">
         {columns.map((column) => (
           <TaskColumn
             key={column.id}
             column={column}
+            projectId={project.id}
             onDelete={() => deleteColumn(column.id)}
           />
         ))}
