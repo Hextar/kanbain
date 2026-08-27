@@ -1,6 +1,6 @@
 "use client";
 
-import Button from "@/uiKit/Button";
+import Button from "@uiKit/Button";
 
 export default function Error({
   reset,

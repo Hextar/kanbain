@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { apiOrigin, isMockApi } from "@/api/env";
-import { handleMock } from "@/api/mockDb";
+import { apiOrigin, isMockApi } from "@api/env";
+import { handleMock } from "@api/mockDb";
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;

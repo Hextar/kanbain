@@ -23,9 +23,11 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@uiKit/*": ["./src/uiKit/*"],
+      "@libraries/*": ["./src/libraries/*"],
+      "@api/*": ["./src/api/*"]
     }
   },
   "include": [
