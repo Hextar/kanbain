@@ -4,7 +4,7 @@ import KanbanHeader from "./components/KanbanHeader";
 import NewColumn from "./components/NewColumn";
 import TaskColumn from "./components/TaskColumn";
 import { useColumns } from "./hooks/useColumns";
-import type { Project } from "@/Project/types/Project";
+import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
 
 type KanbanBoardProps = {

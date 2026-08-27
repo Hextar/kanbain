@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import KanbanBoard from "@/Task/KanbanBoard";
-import { getProject } from "@/Project/api/projects";
-import { getColumns } from "@/Task/api/columns";
+import KanbanBoard from "@modules/Task/KanbanBoard";
+import { getProject } from "@modules/Project/api/projects";
+import { getColumns } from "@modules/Task/api/columns";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import ProjectList from "@/Project/ProjectList";
+import ProjectList from "@modules/Project/ProjectList";
 
 export const dynamic = "force-dynamic";
 

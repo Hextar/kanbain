@@ -1,7 +1,7 @@
 import { cache } from "react";
-import { apiFetch, isMockApi, readJson } from "@/api/env";
-import * as mockDb from "@/api/mockDb";
-import { createColumn } from "@/Task/api/columns";
+import { apiFetch, isMockApi, readJson } from "@api/env";
+import * as mockDb from "@api/mockDb";
+import { createColumn } from "@modules/Task/api/columns";
 import { projectFromJson, type ProjectJson } from "../helpers/projectJson";
 import type { CreateProjectInput, Project } from "../types/Project";
 

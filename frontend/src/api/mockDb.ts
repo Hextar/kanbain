@@ -2,26 +2,26 @@ import {
   projectFromJson,
   projectToJson,
   type ProjectJson,
-} from "@/Project/helpers/projectJson";
+} from "@modules/Project/helpers/projectJson";
 import {
   columnFromJson,
   columnToJson,
   type ColumnJson,
-} from "@/Project/helpers/columnJson";
-import type { CreateProjectInput, Project } from "@/Project/types/Project";
-import type { Column, CreateColumnInput } from "@/Task/types/Column";
-import type { Assignee, Milestone, Tag } from "@/Task/types/Catalog";
-import type { CreateTaskInput, Task, TaskListFilters } from "@/Task/types/Task";
+} from "@modules/Project/helpers/columnJson";
+import type { CreateProjectInput, Project } from "@modules/Project/types/Project";
+import type { Column, CreateColumnInput } from "@modules/Task/types/Column";
+import type { Assignee, Milestone, Tag } from "@modules/Task/types/Catalog";
+import type { CreateTaskInput, Task, TaskListFilters } from "@modules/Task/types/Task";
 import {
   milestoneFromJson,
   milestoneToJson,
   type MilestoneJson,
-} from "@/Task/helpers/milestoneJson";
+} from "@modules/Task/helpers/milestoneJson";
 import {
   taskFromJson,
   taskToJson,
   type TaskJson,
-} from "@/Task/helpers/taskJson";
+} from "@modules/Task/helpers/taskJson";
 
 const projects: Project[] = [];
 const columns: Column[] = [];

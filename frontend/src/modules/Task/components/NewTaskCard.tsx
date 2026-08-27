@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import Button from "@/uiKit/Button";
+import Button from "@uiKit/Button";
 import TaskCardFrame from "./TaskCardFrame";
 
 type NewTaskCardProps = {

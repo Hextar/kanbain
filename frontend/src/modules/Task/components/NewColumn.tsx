@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Plus } from "lucide-react";
-import Button from "@/uiKit/Button";
-import Input from "@/uiKit/Input";
+import Button from "@uiKit/Button";
+import Input from "@uiKit/Input";
 
 type NewColumnProps = {
   className?: string;

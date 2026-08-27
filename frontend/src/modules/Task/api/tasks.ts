@@ -1,5 +1,5 @@
-import { apiFetch, isMockApi, readJson } from "@/api/env";
-import * as mockDb from "@/api/mockDb";
+import { apiFetch, isMockApi, readJson } from "@api/env";
+import * as mockDb from "@api/mockDb";
 import type { CreateTaskInput, Task, TaskListFilters } from "../types/Task";
 import { taskFromJson, taskToJson, type TaskJson } from "../helpers/taskJson";
 

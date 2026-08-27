@@ -1,9 +1,9 @@
-import { apiFetch, isMockApi, readJson } from "@/api/env";
-import * as mockDb from "@/api/mockDb";
+import { apiFetch, isMockApi, readJson } from "@api/env";
+import * as mockDb from "@api/mockDb";
 import {
   columnFromJson,
   type ColumnJson,
-} from "@/Project/helpers/columnJson";
+} from "@modules/Project/helpers/columnJson";
 import type { Column, CreateColumnInput } from "../types/Column";
 
 const COLUMNS_URL = "/api/columns";

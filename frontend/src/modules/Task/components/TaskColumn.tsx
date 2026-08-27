@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Plus, Trash } from "lucide-react";
-import Button from "@/uiKit/Button";
-import ConfirmDialog from "@/uiKit/ConfirmDialog";
+import Button from "@uiKit/Button";
+import ConfirmDialog from "@uiKit/ConfirmDialog";
 import { twMerge } from "tailwind-merge";
-import IconButton from "@/uiKit/IconButton";
+import IconButton from "@uiKit/IconButton";
 import { useTasks } from "../hooks/useTasks";
 import type { ColumnItem } from "../types/Column";
 import NewTaskCard from "./NewTaskCard";

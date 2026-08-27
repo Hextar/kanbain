@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Flag, Plus } from "lucide-react";
-import Button from "@/uiKit/Button";
-import Input from "@/uiKit/Input";
+import Button from "@uiKit/Button";
+import Input from "@uiKit/Input";
 import { useCreateMilestone, useMilestones } from "../hooks/useCatalog";
 
 type HeaderProps = {

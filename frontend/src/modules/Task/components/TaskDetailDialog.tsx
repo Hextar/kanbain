@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { twMerge } from "tailwind-merge";
-import Button from "@/uiKit/Button";
-import Dialog from "@/uiKit/Dialog";
+import Button from "@uiKit/Button";
+import Dialog from "@uiKit/Dialog";
 import {
   useAssignees,
   useCreateAssignee,

@@ -3,8 +3,8 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { Plus } from "lucide-react";
-import Button from "@/uiKit/Button";
-import Input from "@/uiKit/Input";
+import Button from "@uiKit/Button";
+import Input from "@uiKit/Input";
 import { createProjectAction } from "../actions/createProject";
 
 type NewProjectFormProps = {
