@@ -26,7 +26,7 @@ The interesting part is not generating the first board. It is treating the AI as
 
 ## Current status
 
-The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. The wizard UI, planner, and estimate feedback are not shipped yet.
+The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. New projects go through a wizard; a background stub planner fills the board. Swap `PLANNER=stub` for a real LLM later.
 
 - Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
@@ -38,7 +38,7 @@ On macOS, start the Docker client before building.
 ### Full stack (built frontend)
 
 ```bash
-# Frontend (:8080), Flask API (:3000), Postgres (:5432)
+# Frontend (:8080), Flask API (:3000), planner worker, Redis, Postgres (:5432)
 docker compose up --build
 ```
 
@@ -46,10 +46,10 @@ docker compose up --build
 
 ### Frontend development against the real API
 
-Skip the frontend container. Run Postgres and Flask in Docker, then Next.js on the host:
+Skip the frontend container. Run Postgres, Redis, Flask, and the planner worker in Docker, then Next.js on the host:
 
 ```bash
-docker compose up -d --build database backend
+docker compose up -d --build database backend worker
 ```
 
 In another terminal:

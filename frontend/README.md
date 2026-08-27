@@ -23,11 +23,11 @@ npm install
 npm run dev:mock
 ```
 
-Open the URL Next prints (http://localhost:3000). The list starts empty; **Create new project** seeds To Do / In Progress / Done.
+Open the URL Next prints (http://localhost:3000). The list starts empty; **Create new project** opens a wizard. The new card stays on the home page and fills in after the stub planner finishes.
 
 ### Real API
 
-Flask and Postgres must be running (`docker compose up --build database backend` from the repo root).
+Flask, Redis, Postgres, and the planner worker must be running (`docker compose up --build database backend worker` from the repo root).
 
 ```bash
 npm install
