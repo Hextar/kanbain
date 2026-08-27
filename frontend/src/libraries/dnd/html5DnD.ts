@@ -13,6 +13,8 @@ export function setDragData(
   dataTransfer.setData("text/plain", payload);
 }
 
+const DRAG_IMAGE_TILT_DEG = 5;
+
 export function setDragImageAtCursor(
   dataTransfer: DataTransfer,
   source: HTMLElement,
@@ -22,21 +24,32 @@ export function setDragImageAtCursor(
   const rect = source.getBoundingClientRect();
   const offsetX = clientX - rect.left;
   const offsetY = clientY - rect.top;
+  const tiltRad = (DRAG_IMAGE_TILT_DEG * Math.PI) / 180;
+  const pad = Math.ceil(
+    Math.abs(rect.width * Math.sin(tiltRad)) +
+      Math.abs(rect.height * Math.sin(tiltRad)),
+  );
+
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "fixed";
+  wrapper.style.top = "-2000px";
+  wrapper.style.left = "0";
+  wrapper.style.padding = `${pad}px`;
+  wrapper.style.pointerEvents = "none";
+  wrapper.setAttribute("aria-hidden", "true");
 
   const clone = source.cloneNode(true) as HTMLElement;
-  clone.style.position = "fixed";
-  clone.style.top = "-1000px";
-  clone.style.left = "-1000px";
   clone.style.width = `${rect.width}px`;
   clone.style.margin = "0";
-  clone.style.pointerEvents = "none";
-  clone.setAttribute("aria-hidden", "true");
-  document.body.appendChild(clone);
+  clone.style.transformOrigin = `${offsetX}px ${offsetY}px`;
+  clone.style.transform = `rotate(${DRAG_IMAGE_TILT_DEG}deg)`;
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
 
-  dataTransfer.setDragImage(clone, offsetX, offsetY);
+  dataTransfer.setDragImage(wrapper, offsetX + pad, offsetY + pad);
 
   requestAnimationFrame(() => {
-    clone.remove();
+    wrapper.remove();
   });
 }
 
