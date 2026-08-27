@@ -45,10 +45,12 @@ export default function ConfirmDialog({
 
     if (open) {
       if (!dialog.open) dialog.showModal();
-      confirmRef.current?.focus();
-    } else if (dialog.open) {
-      dialog.close();
+      const focusTimer = window.setTimeout(() => {
+        confirmRef.current?.focus();
+      }, 0);
+      return () => window.clearTimeout(focusTimer);
     }
+    if (dialog.open) dialog.close();
   }, [open]);
 
   function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
