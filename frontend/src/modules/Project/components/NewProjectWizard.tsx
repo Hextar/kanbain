@@ -13,6 +13,7 @@ import type {
   DeadlineKind,
   Methodology,
   Project,
+  ProjectMemberInput,
   QualityBar,
   RiskTolerance,
   Seniority,
@@ -509,31 +510,30 @@ function toCreateInput(draft: WizardDraft): CreateProjectInput {
   const members = draft.members.flatMap((member) => {
     const name = member.name.trim();
     if (!name) return [];
-    const capacity = member.capacity ? Number(member.capacity) : undefined;
-    return [
-      {
-        name,
-        role: member.role.trim() || undefined,
-        seniority: member.seniority || undefined,
-        capacity: Number.isFinite(capacity) ? capacity : undefined,
-      },
-    ];
+    const next: ProjectMemberInput = { name };
+    const role = member.role.trim();
+    if (role) next.role = role;
+    if (member.seniority) next.seniority = member.seniority;
+    const capacity = Number(member.capacity);
+    if (member.capacity && Number.isFinite(capacity)) next.capacity = capacity;
+    return [next];
   });
+  const prdUrl = draft.prdUrl.trim();
   const designUrl = draft.designUrl.trim();
+  const repoUrl = draft.repoUrl.trim();
   return {
     name: draft.name.trim(),
     goal: draft.goal.trim(),
-    prdUrl: draft.prdUrl.trim() || undefined,
-    designUrls: designUrl ? [designUrl] : undefined,
-    repoUrl: draft.repoUrl.trim() || undefined,
+    ...(prdUrl ? { prdUrl } : {}),
+    ...(designUrl ? { designUrls: [designUrl] } : {}),
+    ...(repoUrl ? { repoUrl } : {}),
     deadlineKind: draft.deadlineKind,
-    deadlineAt:
-      draft.deadlineKind === "ongoing" || !draft.deadlineDate
-        ? undefined
-        : `${draft.deadlineDate}T00:00:00Z`,
+    ...(draft.deadlineKind !== "ongoing" && draft.deadlineDate
+      ? { deadlineAt: `${draft.deadlineDate}T00:00:00Z` }
+      : {}),
     methodology: draft.methodology,
     qualityBar: draft.qualityBar,
     riskTolerance: draft.riskTolerance,
-    members: members.length ? members : undefined,
+    ...(members.length ? { members } : {}),
   };
 }

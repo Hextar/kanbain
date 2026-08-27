@@ -6,6 +6,17 @@ import type { CreateProjectInput, Project } from "../types/Project";
 
 const PROJECTS_URL = "/api/projects";
 
+/** Next.js Flight encodes `undefined` action fields as this string. */
+const FLIGHT_UNDEFINED = "$undefined";
+
+function dropFlightUndefined<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_key, nested) =>
+      nested === FLIGHT_UNDEFINED ? undefined : nested,
+    ),
+  ) as T;
+}
+
 export async function getProjects(): Promise<Project[]> {
   if (typeof window === "undefined" && isMockApi()) return mockDb.listProjects();
   const response = await apiFetch(PROJECTS_URL);
@@ -33,15 +44,16 @@ export const getProject = cache(async (id: Project["id"]): Promise<Project> => {
 export async function createProject(
   input: CreateProjectInput,
 ): Promise<Project> {
+  const payload = dropFlightUndefined(input);
   if (isMockApi()) {
-    return mockDb.insertProject(input);
+    return mockDb.insertProject(payload);
   }
   return projectFromJson(
     await readJson<ProjectJson>(
       await apiFetch(PROJECTS_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        body: JSON.stringify(payload),
       }),
       "Failed to create project",
     ),
