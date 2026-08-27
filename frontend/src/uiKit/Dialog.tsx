@@ -74,7 +74,7 @@ export default function Dialog({
           <X size={16} />
         </IconButton>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto py-4">{children}</div>
+      <div className="app-dialog-body">{children}</div>
       {footer ? (
         <div className="shrink-0 border-t border-zinc-700/80 bg-zinc-800 pt-4">
           {footer}

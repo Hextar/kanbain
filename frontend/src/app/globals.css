@@ -37,6 +37,16 @@ body {
   overflow: hidden;
 }
 
+.app-dialog-body {
+  min-height: 0;
+  flex: 1 1 0%;
+  overflow-y: auto;
+  padding-block: 1rem;
+  padding-inline: 0.25rem;
+  margin-inline: -0.25rem;
+  scrollbar-gutter: stable;
+}
+
 .app-dialog:not([open]) {
   display: none;
 }
