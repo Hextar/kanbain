@@ -103,7 +103,6 @@ class ProjectMember(db.Model):
     capacity: Mapped[Decimal | None] = mapped_column(Numeric(6, 2))
 
     project: Mapped[Project] = relationship(back_populates="members")
-    tasks: Mapped[list["Task"]] = relationship(back_populates="assignee")
 
     def to_dict(self) -> dict:
         payload = {"id": self.id, "projectId": self.project_id, "name": self.name}
@@ -114,6 +113,32 @@ class ProjectMember(db.Model):
         if self.capacity is not None:
             payload["capacity"] = dump_number(self.capacity)
         return payload
+
+
+class Assignee(db.Model):
+    """Global role-style assignee shared across projects (e.g. Frontend Developer)."""
+
+    __tablename__ = "assignees"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+
+    tasks: Mapped[list["Task"]] = relationship(back_populates="assignee")
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name}
+
+
+class Tag(db.Model):
+    """Global tag catalog shared across projects."""
+
+    __tablename__ = "tags"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name}
 
 
 class Milestone(db.Model):
@@ -199,7 +224,7 @@ class Task(db.Model):
     estimate_points: Mapped[int | None] = mapped_column(Integer)
     estimate_hours: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     assignee_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("project_members.id", ondelete="SET NULL"), index=True
+        String(36), ForeignKey("assignees.id", ondelete="SET NULL"), index=True
     )
     milestone_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("milestones.id", ondelete="SET NULL"), index=True
@@ -219,7 +244,7 @@ class Task(db.Model):
         foreign_keys=[parent_id],
         back_populates="parent",
     )
-    assignee: Mapped[ProjectMember | None] = relationship(back_populates="tasks")
+    assignee: Mapped[Assignee | None] = relationship(back_populates="tasks")
     milestone: Mapped[Milestone | None] = relationship(back_populates="tasks")
     dependencies: Mapped[list["TaskDependency"]] = relationship(
         foreign_keys="TaskDependency.task_id",

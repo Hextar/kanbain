@@ -4,9 +4,10 @@ from ..extensions import db
 from ..http import error_response
 from ..lookups import (
     UnknownEntityError,
+    get_assignee,
     get_column,
-    get_member,
     get_milestone,
+    get_tags_by_names,
     get_task,
     resolve_project_id,
 )
@@ -120,9 +121,7 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         if assignee_id is None:
             task.assignee_id = None
         else:
-            member = get_member(assignee_id)
-            if member.project_id != task.project_id:
-                raise ValueError("assigneeId must belong to the same project")
+            get_assignee(assignee_id)
             task.assignee_id = assignee_id
 
     if "milestoneId" in payload:
@@ -136,7 +135,14 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
             task.milestone_id = milestone_id
 
     if "tags" in payload:
-        task.tags = parse_string_list(payload.get("tags"), "tags")
+        tags = parse_string_list(payload.get("tags"), "tags")
+        if tags is None:
+            task.tags = None
+        else:
+            # Deduplicate while preserving order; names must exist in the catalog.
+            unique_tags = list(dict.fromkeys(tag.strip() for tag in tags if tag.strip()))
+            get_tags_by_names(unique_tags)
+            task.tags = unique_tags or None
     if "attachments" in payload:
         task.attachments = parse_string_list(payload.get("attachments"), "attachments")
     if "comments" in payload:

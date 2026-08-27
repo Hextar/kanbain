@@ -1,5 +1,5 @@
 from .extensions import db
-from .models import BoardColumn, Milestone, Project, ProjectMember, Task
+from .models import Assignee, BoardColumn, Milestone, Project, ProjectMember, Tag, Task
 from .validation import parse_optional_id
 
 
@@ -38,6 +38,31 @@ def get_member(member_id: str) -> ProjectMember:
     if member is None:
         raise UnknownEntityError("Unknown member")
     return member
+
+
+def get_assignee(assignee_id: str) -> Assignee:
+    assignee = db.session.get(Assignee, assignee_id)
+    if assignee is None:
+        raise UnknownEntityError("Unknown assignee")
+    return assignee
+
+
+def get_tag(tag_id: str) -> Tag:
+    tag = db.session.get(Tag, tag_id)
+    if tag is None:
+        raise UnknownEntityError("Unknown tag")
+    return tag
+
+
+def get_tags_by_names(names: list[str]) -> list[Tag]:
+    if not names:
+        return []
+    tags = list(db.session.scalars(db.select(Tag).where(Tag.name.in_(names))))
+    found = {tag.name for tag in tags}
+    missing = [name for name in names if name not in found]
+    if missing:
+        raise UnknownEntityError(f"Unknown tag(s): {', '.join(missing)}")
+    return tags
 
 
 def get_milestone(milestone_id: str) -> Milestone:

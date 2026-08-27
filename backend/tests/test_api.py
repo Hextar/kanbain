@@ -185,10 +185,11 @@ def test_columns_are_scoped_to_a_project(client):
 
 def test_task_planning_fields(client):
     project_id = default_project(client)["id"]
-    member = client.post(
-        f"/api/projects/{project_id}/members",
-        json={"name": "Ada", "role": "engineer", "seniority": "senior"},
+    assignee = client.post(
+        "/api/assignees",
+        json={"name": "Senior Frontend Developer"},
     ).get_json()
+    tag = client.post("/api/tags", json={"name": "frontend"}).get_json()
     milestone = client.post(
         f"/api/projects/{project_id}/milestones",
         json={"title": "Beta"},
@@ -218,8 +219,10 @@ def test_task_planning_fields(client):
             "estimateTshirt": "m",
             "estimatePoints": 3,
             "estimateHours": 4,
-            "assigneeId": member["id"],
+            "priority": "high",
+            "assigneeId": assignee["id"],
             "milestoneId": milestone["id"],
+            "tags": [tag["name"]],
             "dependsOn": [story["id"]],
         },
     ).get_json()
@@ -229,6 +232,38 @@ def test_task_planning_fields(client):
     assert task["estimateTshirt"] == "m"
     assert task["estimatePoints"] == 3
     assert task["estimateHours"] == 4
-    assert task["assigneeId"] == member["id"]
+    assert task["priority"] == "high"
+    assert task["assigneeId"] == assignee["id"]
     assert task["milestoneId"] == milestone["id"]
+    assert task["tags"] == ["frontend"]
     assert task["dependsOn"] == [story["id"]]
+
+
+def test_global_assignees_and_tags(client):
+    assert client.get("/api/assignees").get_json() == []
+    assert client.get("/api/tags").get_json() == []
+
+    created_assignee = client.post(
+        "/api/assignees",
+        json={"name": "Full Stack Developer"},
+    )
+    assert created_assignee.status_code == 201
+    assert created_assignee.get_json()["name"] == "Full Stack Developer"
+    assert [item["name"] for item in client.get("/api/assignees").get_json()] == [
+        "Full Stack Developer"
+    ]
+    assert (
+        client.post("/api/assignees", json={"name": "Full Stack Developer"}).status_code
+        == 409
+    )
+
+    created_tag = client.post("/api/tags", json={"name": "design"})
+    assert created_tag.status_code == 201
+    assert [item["name"] for item in client.get("/api/tags").get_json()] == ["design"]
+
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    missing = client.post(
+        "/api/tasks",
+        json={"title": "Needs tag", "columnId": todo_id, "tags": ["missing"]},
+    )
+    assert missing.status_code == 400
