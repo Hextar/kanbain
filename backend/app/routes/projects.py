@@ -5,6 +5,8 @@ from ..extensions import db
 from ..http import error_response
 from ..lookups import UnknownEntityError, get_member, get_project
 from ..models import Project, ProjectMember, new_id
+from ..queue import enqueue_plan
+from ..seed import add_default_columns
 from ..serialize import parse_datetime, utcnow
 from ..validation import (
     DEADLINE_KINDS,
@@ -122,7 +124,13 @@ def create_project():
         return json_error(exc)
 
     db.session.add(project)
+    db.session.flush()
+    add_default_columns(project.id)
+    project.plan_status = "planning"
+    project.plan_error = None
     db.session.commit()
+    enqueue_plan(project.id)
+    db.session.refresh(project)
     return jsonify(project.to_dict()), 201
 
 
@@ -237,3 +245,22 @@ def delete_member(project_id: str, member_id: str):
     db.session.delete(member)
     db.session.commit()
     return ("", 204)
+
+
+@projects_bp.post("/api/projects/<project_id>/plan")
+def enqueue_project_plan(project_id: str):
+    try:
+        project = get_project(project_id)
+    except UnknownEntityError as exc:
+        return error_response(str(exc), 404)
+
+    if project.plan_status == "planning":
+        return jsonify(project.to_dict())
+
+    project.plan_status = "planning"
+    project.plan_error = None
+    project.updated_at = utcnow()
+    db.session.commit()
+    enqueue_plan(project.id)
+    db.session.refresh(project)
+    return jsonify(project.to_dict()), 202

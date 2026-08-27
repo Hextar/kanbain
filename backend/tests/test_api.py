@@ -14,6 +14,7 @@ def test_lists_seeded_project_and_columns(client):
     assert project["deadlineKind"] == "ongoing"
     assert project["methodology"] == "kanban"
     assert project["members"] == []
+    assert project["planStatus"] == "ready"
 
     response = client.get("/api/columns")
     assert response.status_code == 200
@@ -194,6 +195,9 @@ def test_create_project_with_wizard_fields(client):
     assert project["qualityBar"] == "mvp"
     assert [member["name"] for member in project["members"]] == ["Ada"]
     assert project["members"][0]["capacity"] == 1
+    assert project["planStatus"] == "planning"
+    columns = client.get(f"/api/columns?projectId={project['id']}").get_json()
+    assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
 
 
 def test_columns_are_scoped_to_a_project(client):
@@ -206,7 +210,9 @@ def test_columns_are_scoped_to_a_project(client):
     assert created.get_json()["projectId"] == other["id"]
 
     listed = client.get(f"/api/columns?projectId={other['id']}")
-    assert [column["title"] for column in listed.get_json()] == ["Backlog"]
+    titles = [column["title"] for column in listed.get_json()]
+    assert titles[:3] == ["To Do", "In Progress", "Done"]
+    assert titles[-1] == "Backlog"
     assert client.get("/api/columns").status_code == 400
 
 

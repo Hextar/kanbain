@@ -20,7 +20,7 @@ docker compose up --build
 
 ## Run locally
 
-Postgres must be up (`docker compose up database` is enough). Then:
+Postgres and Redis must be up (`docker compose up database redis` is enough). Then:
 
 ```bash
 python3 -m venv .venv
@@ -30,6 +30,13 @@ cp .env.example .env
 flask db upgrade
 flask seed
 flask run --host 127.0.0.1 --port 3000
+```
+
+In another terminal, start the planner worker:
+
+```bash
+source .venv/bin/activate
+python -m app.worker
 ```
 
 Point the Next.js app at this API with `npm run dev` from `frontend/`.
@@ -49,8 +56,9 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/health` | Checks the database connection |
-| GET / POST | `/api/projects` | Wizard fields: goal, PRD/designs/repo, deadline, methodology, quality bar, risk, members |
+| GET / POST | `/api/projects` | Wizard fields; creates default columns; enqueues the planner (`planStatus: planning`) |
 | GET / PUT / DELETE | `/api/projects/<id>` | DELETE cascades board data |
+| POST | `/api/projects/<id>/plan` | Re-enqueue the planner (`failed` or `ready`) |
 | GET / POST | `/api/projects/<id>/members` | Team: name, role, seniority, capacity |
 | PUT / DELETE | `/api/projects/<id>/members/<id>` | |
 | GET / POST | `/api/projects/<id>/milestones` | |
@@ -65,6 +73,6 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | PUT | `/api/tasks/<id>` | Full update; 404 if missing |
 | DELETE | `/api/tasks/<id>` | 204 even if the task is already gone |
 
-Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`.
+Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`. Projects expose `planStatus` (`planning` \| `ready` \| `failed`). `PLANNER=stub` is the default; a future LLM planner is a new class behind that env var.
 
 On first boot the database is seeded with an **Untitled project** and columns **To Do**, **In Progress**, and **Done**.

@@ -21,10 +21,15 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      REDIS_URL: redis://redis:6379/0
+      PLANNER: stub
+      PLANNER_DELAY_SECONDS: "2"
       PORT: 3000
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -37,6 +42,27 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  worker:
+    build:
+      context: ./backend
+    entrypoint: ["python", "-m", "app.worker"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      REDIS_URL: redis://redis:6379/0
+      PLANNER: stub
+      PLANNER_DELAY_SECONDS: "2"
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
 
   database:
     image: postgres:15
