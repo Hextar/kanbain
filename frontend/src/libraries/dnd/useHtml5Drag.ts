@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { DragEvent } from "react";
-import { setDragData } from "./html5DnD";
+import { setDragData, setDragImageAtCursor } from "./html5DnD";
 
 type UseHtml5DragOptions<T> = {
   data: T;
@@ -29,6 +29,12 @@ export function useHtml5Drag<T>({
       }
       event.dataTransfer.effectAllowed = "move";
       setDragData(event.dataTransfer, mimeType, data);
+      setDragImageAtCursor(
+        event.dataTransfer,
+        event.currentTarget,
+        event.clientX,
+        event.clientY,
+      );
       setIsDragging(true);
       onDragStart?.(event);
     },
