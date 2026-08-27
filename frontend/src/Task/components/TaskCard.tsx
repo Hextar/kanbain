@@ -1,167 +1,115 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+"use client";
+
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-import Button from "@/uiKit/Button";
-import IconButton from "@/uiKit/IconButton";
+import { useAssignees, useMilestones } from "../hooks/useCatalog";
 import type { Task, TaskItem } from "../types/Task";
 import TaskCardFrame from "./TaskCardFrame";
+import TaskDetailDialog from "./TaskDetailDialog";
 
 type TaskCardProps = {
   task: TaskItem;
+  projectId: string;
   onUpdate: (task: Task) => void;
   onDelete: (id: Task["id"]) => void;
 };
 
 const priorityStyles = {
-  low: "bg-zinc-800 text-zinc-300",
+  low: "bg-zinc-700 text-zinc-300",
   medium: "bg-amber-500/15 text-amber-300",
   high: "bg-rose-500/15 text-rose-300",
 } as const;
 
-export default function TaskCard({ task, onUpdate, onDelete }: TaskCardProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(task.title);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const trimmedTitle = title.trim();
+export default function TaskCard({
+  task,
+  projectId,
+  onUpdate,
+  onDelete,
+}: TaskCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { data: assignees = [] } = useAssignees();
+  const { data: milestones = [] } = useMilestones(projectId);
 
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (menuRef.current?.contains(event.target as Node)) return;
-      setIsMenuOpen(false);
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [isMenuOpen]);
-
-  function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!trimmedTitle || trimmedTitle === task.title) {
-      setIsEditing(false);
-      setTitle(task.title);
-      return;
-    }
-
-    onUpdate({ ...task, title: trimmedTitle, updatedAt: new Date() });
-    setIsEditing(false);
-  }
-
-  if (isEditing) {
-    return (
-      <form onSubmit={handleSave}>
-        <TaskCardFrame className="flex min-h-[88px] flex-col justify-between gap-3 ring-1 ring-purple-500/40">
-          <textarea
-            autoFocus
-            className="min-h-[40px] w-full resize-none bg-transparent text-sm leading-snug font-medium text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none"
-            rows={2}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                setTitle(task.title);
-                setIsEditing(false);
-              }
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-          />
-          <div className="flex flex-row items-center justify-end gap-2">
-            <Button
-              kind="outline"
-              size="xs"
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                setTitle(task.title);
-                setIsEditing(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button disabled={!trimmedTitle} size="xs" type="submit">
-              Save
-            </Button>
-          </div>
-        </TaskCardFrame>
-      </form>
-    );
-  }
+  const assigneeName = assignees.find(
+    (assignee) => assignee.id === task.assigneeId,
+  )?.name;
+  const milestoneTitle = milestones.find(
+    (milestone) => milestone.id === task.milestoneId,
+  )?.title;
 
   return (
-    <article>
-      <TaskCardFrame
-        className={twMerge(
-          "flex min-h-2 flex-col justify-between gap-3 transition-colors hover:border-zinc-500",
-          task.isSaving && "opacity-70",
-        )}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm leading-snug font-medium break-words text-zinc-100">
-            {task.title}
-          </h3>
-          <div className="relative shrink-0" ref={menuRef}>
-            <IconButton
-              aria-label={`Card actions for ${task.title}`}
-              disabled={task.isSaving}
-              size="xs"
-              type="button"
-              variant="secondary"
-              onClick={() => setIsMenuOpen((open) => !open)}
-            >
-              <EllipsisVertical size={16} />
-            </IconButton>
-            {isMenuOpen ? (
-              <div className="absolute top-full right-0 z-10 mt-1 min-w-[148px] rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-lg">
-                <button
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
-                  type="button"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setTitle(task.title);
-                    setIsEditing(true);
-                  }}
+    <>
+      <article>
+        <button
+          className="w-full cursor-pointer text-left"
+          disabled={task.isSaving}
+          type="button"
+          onClick={() => setIsOpen(true)}
+        >
+          <TaskCardFrame
+            className={twMerge(
+              "flex min-h-2 flex-col gap-2 transition-colors hover:border-zinc-500",
+              task.isSaving && "opacity-70",
+            )}
+          >
+            <h3 className="text-sm leading-snug font-medium break-words text-zinc-100">
+              {task.title}
+            </h3>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {task.priority ? (
+                <span
+                  className={twMerge(
+                    "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                    priorityStyles[task.priority],
+                  )}
                 >
-                  <Pencil size={14} />
-                  Edit
-                </button>
-                <button
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm text-rose-400 hover:bg-zinc-800"
-                  type="button"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    onDelete(task.id);
-                  }}
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
+                  {task.priority}
+                </span>
+              ) : null}
+              {task.estimateTshirt ? (
+                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-medium tracking-wide text-sky-300 uppercase">
+                  {task.estimateTshirt}
+                </span>
+              ) : null}
+              {assigneeName ? (
+                <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200">
+                  {assigneeName}
+                </span>
+              ) : null}
+              {milestoneTitle ? (
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
+                  {milestoneTitle}
+                </span>
+              ) : null}
+              {task.isSaving ? (
+                <span className="text-[11px] text-zinc-500">Saving…</span>
+              ) : null}
+            </div>
+            {task.tags?.length ? (
+              <div className="flex flex-wrap gap-1">
+                {task.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
             ) : null}
-          </div>
-        </div>
-        <div className="flex min-h-2 items-center justify-between gap-2">
-          {task.priority ? (
-            <span
-              className={twMerge(
-                "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                priorityStyles[task.priority],
-              )}
-            >
-              {task.priority}
-            </span>
-          ) : (
-            <span />
-          )}
-          {task.isSaving ? (
-            <span className="text-[11px] text-zinc-500">Saving…</span>
-          ) : null}
-        </div>
-      </TaskCardFrame>
-    </article>
+          </TaskCardFrame>
+        </button>
+      </article>
+      {isOpen ? (
+        <TaskDetailDialog
+          open
+          projectId={projectId}
+          task={task}
+          onClose={() => setIsOpen(false)}
+          onDelete={onDelete}
+          onSave={onUpdate}
+        />
+      ) : null}
+    </>
   );
 }

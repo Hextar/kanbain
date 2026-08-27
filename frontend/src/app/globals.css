@@ -7,9 +7,9 @@ body {
   background-color: var(--color-zinc-900);
 }
 
-.confirm-dialog {
+.confirm-dialog,
+.app-dialog {
   margin: auto;
-  width: min(100%, 24rem);
   border-radius: 0.5rem;
   border: 1px solid var(--color-zinc-700);
   background-color: var(--color-zinc-800);
@@ -25,19 +25,38 @@ body {
     display 160ms allow-discrete;
 }
 
-.confirm-dialog[open] {
+.confirm-dialog {
+  width: min(100%, 24rem);
+}
+
+.app-dialog {
+  width: min(100% - 2rem, 40rem);
+  max-height: min(90dvh, 44rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-dialog:not([open]) {
+  display: none;
+}
+
+.confirm-dialog[open],
+.app-dialog[open] {
   opacity: 1;
   transform: scale(1);
 }
 
 @starting-style {
-  .confirm-dialog[open] {
+  .confirm-dialog[open],
+  .app-dialog[open] {
     opacity: 0;
     transform: scale(0.98);
   }
 }
 
-.confirm-dialog::backdrop {
+.confirm-dialog::backdrop,
+.app-dialog::backdrop {
   background-color: rgb(0 0 0 / 0%);
   transition:
     background-color 160ms ease,
@@ -45,19 +64,23 @@ body {
     display 160ms allow-discrete;
 }
 
-.confirm-dialog[open]::backdrop {
+.confirm-dialog[open]::backdrop,
+.app-dialog[open]::backdrop {
   background-color: rgb(0 0 0 / 0.55);
 }
 
 @starting-style {
-  .confirm-dialog[open]::backdrop {
+  .confirm-dialog[open]::backdrop,
+  .app-dialog[open]::backdrop {
     background-color: rgb(0 0 0 / 0%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .confirm-dialog,
-  .confirm-dialog::backdrop {
+  .confirm-dialog::backdrop,
+  .app-dialog,
+  .app-dialog::backdrop {
     transition: none;
   }
 }

@@ -12,12 +12,14 @@ import TaskCard from "./TaskCard";
 type TaskColumnProps = {
   className?: string;
   column: ColumnItem;
+  projectId: string;
   onDelete: () => void;
 };
 
 export default function TaskColumn({
   className,
   column,
+  projectId,
   onDelete,
 }: TaskColumnProps) {
   const [isComposing, setIsComposing] = useState(false);
@@ -35,7 +37,7 @@ export default function TaskColumn({
   return (
     <div
       className={twMerge(
-        "flex min-w-[260px] flex-col gap-3 rounded-lg bg-zinc-800 p-4",
+        "flex min-w-[280px] flex-col gap-3 rounded-lg bg-zinc-800 p-4",
         column.isSaving && "opacity-70",
         className,
       )}
@@ -54,6 +56,7 @@ export default function TaskColumn({
       {tasks.map((task) => (
         <TaskCard
           key={task.id}
+          projectId={projectId}
           task={task}
           onDelete={deleteTask}
           onUpdate={updateTask}
