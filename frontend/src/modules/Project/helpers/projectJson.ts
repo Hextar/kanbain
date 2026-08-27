@@ -5,15 +5,29 @@ export type ProjectJson = {
   name: string;
   goal?: string;
   description?: string;
+  prdUrl?: string;
+  designUrls?: string[];
+  repoUrl?: string;
   deadlineKind: Project["deadlineKind"];
   deadlineAt?: string;
   methodology: Project["methodology"];
   qualityBar: Project["qualityBar"];
   riskTolerance: Project["riskTolerance"];
+  planStatus?: Project["planStatus"];
+  planError?: string;
   createdAt?: string;
   updatedAt?: string;
   members?: Project["members"];
 };
+
+export function reviveProject(project: Project): Project {
+  return {
+    ...project,
+    deadlineAt: project.deadlineAt ? new Date(project.deadlineAt) : undefined,
+    createdAt: project.createdAt ? new Date(project.createdAt) : undefined,
+    updatedAt: project.updatedAt ? new Date(project.updatedAt) : undefined,
+  };
+}
 
 export function projectFromJson(json: ProjectJson): Project {
   return {
@@ -21,11 +35,16 @@ export function projectFromJson(json: ProjectJson): Project {
     name: json.name,
     goal: json.goal,
     description: json.description,
+    prdUrl: json.prdUrl,
+    designUrls: json.designUrls,
+    repoUrl: json.repoUrl,
     deadlineKind: json.deadlineKind,
     deadlineAt: json.deadlineAt ? new Date(json.deadlineAt) : undefined,
     methodology: json.methodology,
     qualityBar: json.qualityBar,
     riskTolerance: json.riskTolerance,
+    planStatus: json.planStatus ?? "ready",
+    planError: json.planError,
     createdAt: json.createdAt ? new Date(json.createdAt) : undefined,
     updatedAt: json.updatedAt ? new Date(json.updatedAt) : undefined,
     members: json.members ?? [],
@@ -38,11 +57,16 @@ export function projectToJson(project: Project): ProjectJson {
     name: project.name,
     goal: project.goal,
     description: project.description,
+    prdUrl: project.prdUrl,
+    designUrls: project.designUrls,
+    repoUrl: project.repoUrl,
     deadlineKind: project.deadlineKind,
     deadlineAt: project.deadlineAt?.toISOString(),
     methodology: project.methodology,
     qualityBar: project.qualityBar,
     riskTolerance: project.riskTolerance,
+    planStatus: project.planStatus,
+    planError: project.planError,
     createdAt: project.createdAt?.toISOString(),
     updatedAt: project.updatedAt?.toISOString(),
     members: project.members,
