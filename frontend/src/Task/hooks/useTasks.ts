@@ -1,4 +1,4 @@
-import { useOptimistic, useState, useTransition } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createTask,
@@ -15,12 +15,13 @@ import type {
   TaskListFilters,
 } from "../types/Task";
 
-type TaskOptimisticAction =
-  | { type: "add"; task: Task }
-  | { type: "update"; task: Task }
-  | { type: "delete"; id: Task["id"] };
+function withoutSaving(task: TaskItem | Task): Task {
+  const { isSaving: _isSaving, ...rest } = task as TaskItem;
+  return rest;
+}
 
 export function useTasks(filters: TaskListFilters = {}) {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () => getTasks(filters),
@@ -28,43 +29,29 @@ export function useTasks(filters: TaskListFilters = {}) {
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
   const { mutateAsync: deleteTaskMutation } = useDeleteTask();
-  const [, startTransition] = useTransition();
   const [savingTaskIds, setSavingTaskIds] = useState<ReadonlySet<Task["id"]>>(
     new Set(),
   );
 
-  const tasks = query.data ?? [];
-  const [optimisticTasks, applyOptimistic] = useOptimistic(
-    tasks,
-    (currentTasks: Task[], action: TaskOptimisticAction) => {
-      switch (action.type) {
-        case "add":
-          if (currentTasks.some((task) => task.id === action.task.id))
-            return currentTasks;
-          return [...currentTasks, action.task];
-        case "update":
-          return currentTasks.map((task) =>
-            task.id === action.task.id ? action.task : task,
-          );
-        case "delete":
-          return currentTasks.filter((task) => task.id !== action.id);
-      }
-    },
-  );
+  const listKey = taskKeys.list(filters);
 
-  function withSaving(id: Task["id"], action: () => Promise<unknown>) {
-    startTransition(async () => {
-      setSavingTaskIds((current) => new Set(current).add(id));
-      try {
-        await action();
-      } finally {
-        setSavingTaskIds((current) => {
-          const next = new Set(current);
-          next.delete(id);
-          return next;
-        });
-      }
-    });
+  function setListData(updater: (current: Task[]) => Task[]) {
+    queryClient.setQueryData<Task[]>(listKey, (current) =>
+      updater(current ?? []),
+    );
+  }
+
+  async function withSaving(id: Task["id"], action: () => Promise<unknown>) {
+    setSavingTaskIds((current) => new Set(current).add(id));
+    try {
+      await action();
+    } finally {
+      setSavingTaskIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
   }
 
   function create(
@@ -82,29 +69,66 @@ export function useTasks(filters: TaskListFilters = {}) {
       description: input.description,
       priority: input.priority,
       category: input.category,
+      estimateTshirt: input.estimateTshirt,
+      assigneeId: input.assigneeId,
+      milestoneId: input.milestoneId,
+      tags: input.tags,
     };
 
-    withSaving(task.id, async () => {
-      applyOptimistic({ type: "add", task });
-      await createTaskMutation({ ...input, id: task.id, columnId });
+    void withSaving(task.id, async () => {
+      setListData((current) =>
+        current.some((item) => item.id === task.id)
+          ? current
+          : [...current, task],
+      );
+      try {
+        await createTaskMutation({ ...input, id: task.id, columnId });
+      } catch (error) {
+        setListData((current) => current.filter((item) => item.id !== task.id));
+        throw error;
+      }
     });
   }
 
-  function update(task: Task) {
-    withSaving(task.id, async () => {
-      applyOptimistic({ type: "update", task });
-      await updateTaskMutation(task);
+  function update(task: Task | TaskItem) {
+    const nextTask = withoutSaving(task);
+    const previous =
+      queryClient.getQueryData<Task[]>(listKey)?.find(
+        (item) => item.id === nextTask.id,
+      ) ?? null;
+
+    void withSaving(nextTask.id, async () => {
+      setListData((current) =>
+        current.map((item) => (item.id === nextTask.id ? nextTask : item)),
+      );
+      try {
+        await updateTaskMutation(nextTask);
+      } catch (error) {
+        if (previous) {
+          setListData((current) =>
+            current.map((item) => (item.id === previous.id ? previous : item)),
+          );
+        }
+        throw error;
+      }
     });
   }
 
   function remove(id: Task["id"]) {
-    withSaving(id, async () => {
-      applyOptimistic({ type: "delete", id });
-      await deleteTaskMutation(id);
+    const previous = queryClient.getQueryData<Task[]>(listKey) ?? [];
+
+    void withSaving(id, async () => {
+      setListData((current) => current.filter((item) => item.id !== id));
+      try {
+        await deleteTaskMutation(id);
+      } catch (error) {
+        queryClient.setQueryData<Task[]>(listKey, previous);
+        throw error;
+      }
     });
   }
 
-  const taskItems: TaskItem[] = optimisticTasks.map((task) => ({
+  const taskItems: TaskItem[] = (query.data ?? []).map((task) => ({
     ...task,
     isSaving: savingTaskIds.has(task.id),
   }));
@@ -138,11 +162,14 @@ export function useCreateTask() {
         taskKeys.list({ columnId: created.columnId }),
         (current) => {
           if (!current) return [created];
-          if (current.some((task) => task.id === created.id)) return current;
+          if (current.some((task) => task.id === created.id)) {
+            return current.map((task) =>
+              task.id === created.id ? created : task,
+            );
+          }
           return [...current, created];
         },
       );
-      void queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
   });
 }
@@ -158,10 +185,7 @@ export function useUpdateTask() {
         (current) =>
           current?.map((item) => (item.id === task.id ? task : item)),
       );
-      void queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      void queryClient.invalidateQueries({
-        queryKey: taskKeys.detail(task.id),
-      });
+      queryClient.setQueryData(taskKeys.detail(task.id), task);
     },
   });
 }
@@ -171,16 +195,12 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: deleteTask,
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists() });
-    },
     onSuccess: (_result, id) => {
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists() },
         (current) => current?.filter((task) => task.id !== id),
       );
       queryClient.removeQueries({ queryKey: taskKeys.detail(id) });
-      void queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
   });
 }

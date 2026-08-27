@@ -10,7 +10,13 @@ import {
 } from "@/Project/helpers/columnJson";
 import type { CreateProjectInput, Project } from "@/Project/types/Project";
 import type { Column, CreateColumnInput } from "@/Task/types/Column";
+import type { Assignee, Milestone, Tag } from "@/Task/types/Catalog";
 import type { CreateTaskInput, Task, TaskListFilters } from "@/Task/types/Task";
+import {
+  milestoneFromJson,
+  milestoneToJson,
+  type MilestoneJson,
+} from "@/Task/helpers/milestoneJson";
 import {
   taskFromJson,
   taskToJson,
@@ -20,6 +26,9 @@ import {
 const projects: Project[] = [];
 const columns: Column[] = [];
 const tasks: Task[] = [];
+const assignees: Assignee[] = [];
+const tags: Tag[] = [];
+const milestones: Milestone[] = [];
 
 class MockApiError extends Error {
   constructor(
@@ -96,6 +105,9 @@ export function deleteProject(id: string) {
   for (let i = columns.length - 1; i >= 0; i--) {
     if (columns[i].projectId === id) columns.splice(i, 1);
   }
+  for (let i = milestones.length - 1; i >= 0; i--) {
+    if (milestones[i].projectId === id) milestones.splice(i, 1);
+  }
   projects.splice(index, 1);
 }
 
@@ -166,12 +178,31 @@ export function findTask(id: string) {
 }
 
 export function insertTask(input: CreateTaskInput): Task {
-  if (!columns.some((column) => column.id === input.columnId)) {
-    throw new MockApiError("Unknown column", 400);
+  const column = columns.find((item) => item.id === input.columnId);
+  if (!column) throw new MockApiError("Unknown column", 400);
+  if (input.assigneeId && !assignees.some((item) => item.id === input.assigneeId)) {
+    throw new MockApiError("Unknown assignee", 400);
+  }
+  if (
+    input.milestoneId &&
+    !milestones.some(
+      (item) =>
+        item.id === input.milestoneId && item.projectId === column.projectId,
+    )
+  ) {
+    throw new MockApiError("Unknown milestone", 400);
+  }
+  if (input.tags?.length) {
+    const known = new Set(tags.map((tag) => tag.name));
+    const missing = input.tags.filter((tag) => !known.has(tag));
+    if (missing.length) {
+      throw new MockApiError(`Unknown tag(s): ${missing.join(", ")}`, 400);
+    }
   }
   const task: Task = {
     ...input,
     id: input.id ?? crypto.randomUUID(),
+    projectId: column.projectId,
     createdAt: new Date(),
   };
   tasks.push(task);
@@ -181,7 +212,31 @@ export function insertTask(input: CreateTaskInput): Task {
 export function replaceTask(id: string, payload: TaskJson): Task {
   const index = tasks.findIndex((task) => task.id === id);
   if (index === -1) throw new MockApiError(`Task ${id} not found`, 404);
-  const nextTask = taskFromJson({ ...payload, id });
+  const column = columns.find((item) => item.id === payload.columnId);
+  if (!column) throw new MockApiError("Unknown column", 400);
+  if (
+    payload.assigneeId &&
+    !assignees.some((item) => item.id === payload.assigneeId)
+  ) {
+    throw new MockApiError("Unknown assignee", 400);
+  }
+  if (
+    payload.milestoneId &&
+    !milestones.some(
+      (item) =>
+        item.id === payload.milestoneId && item.projectId === column.projectId,
+    )
+  ) {
+    throw new MockApiError("Unknown milestone", 400);
+  }
+  if (payload.tags?.length) {
+    const known = new Set(tags.map((tag) => tag.name));
+    const missing = payload.tags.filter((tag) => !known.has(tag));
+    if (missing.length) {
+      throw new MockApiError(`Unknown tag(s): ${missing.join(", ")}`, 400);
+    }
+  }
+  const nextTask = taskFromJson({ ...payload, id, projectId: column.projectId });
   tasks[index] = nextTask;
   return nextTask;
 }
@@ -301,6 +356,86 @@ export async function handleMock(request: Request, apiPath: string) {
     if (request.method === "DELETE") {
       deleteTask(id);
       return new Response(null, { status: 204 });
+    }
+  }
+
+  if (request.method === "GET" && apiPath === "/api/assignees") {
+    return respond(() =>
+      assignees.toSorted((left, right) => left.name.localeCompare(right.name)),
+    );
+  }
+  if (request.method === "POST" && apiPath === "/api/assignees") {
+    const payload = (await request.json()) as { name?: string };
+    return respond(() => {
+      const name = payload.name?.trim();
+      if (!name) throw new MockApiError("name is required", 400);
+      if (assignees.some((item) => item.name === name)) {
+        throw new MockApiError(`Assignee '${name}' already exists`, 409);
+      }
+      const assignee = { id: crypto.randomUUID(), name };
+      assignees.push(assignee);
+      return assignee;
+    }, 201);
+  }
+
+  if (request.method === "GET" && apiPath === "/api/tags") {
+    return respond(() =>
+      tags.toSorted((left, right) => left.name.localeCompare(right.name)),
+    );
+  }
+  if (request.method === "POST" && apiPath === "/api/tags") {
+    const payload = (await request.json()) as { name?: string };
+    return respond(() => {
+      const name = payload.name?.trim();
+      if (!name) throw new MockApiError("name is required", 400);
+      if (tags.some((item) => item.name === name)) {
+        throw new MockApiError(`Tag '${name}' already exists`, 409);
+      }
+      const tag = { id: crypto.randomUUID(), name };
+      tags.push(tag);
+      return tag;
+    }, 201);
+  }
+
+  if (
+    segments[0] === "api" &&
+    segments[1] === "projects" &&
+    segments[3] === "milestones" &&
+    segments.length === 4
+  ) {
+    const projectId = segments[2];
+    if (request.method === "GET") {
+      return respond(() => {
+        if (!findProject(projectId)) {
+          throw new MockApiError("Unknown project", 404);
+        }
+        return milestones
+          .filter((milestone) => milestone.projectId === projectId)
+          .toSorted((left, right) => left.order - right.order)
+          .map(milestoneToJson);
+      });
+    }
+    if (request.method === "POST") {
+      const payload = (await request.json()) as { title?: string };
+      return respond(() => {
+        if (!findProject(projectId)) {
+          throw new MockApiError("Unknown project", 404);
+        }
+        const title = payload.title?.trim();
+        if (!title) throw new MockApiError("title is required", 400);
+        const order =
+          milestones
+            .filter((milestone) => milestone.projectId === projectId)
+            .reduce((max, milestone) => Math.max(max, milestone.order), -1) + 1;
+        const milestone = milestoneFromJson({
+          id: crypto.randomUUID(),
+          projectId,
+          title,
+          order,
+        } satisfies MilestoneJson);
+        milestones.push(milestone);
+        return milestoneToJson(milestone);
+      }, 201);
     }
   }
 
