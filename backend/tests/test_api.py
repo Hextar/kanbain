@@ -122,6 +122,33 @@ def test_task_crud(client):
     assert client.get(f"/api/tasks/{task_id}").status_code == 404
 
 
+def test_move_task_to_another_column(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    doing_id = columns[1]["id"]
+
+    created = client.post(
+        "/api/tasks",
+        json={"title": "Move me", "columnId": todo_id, "priority": "high"},
+    )
+    assert created.status_code == 201
+    task = created.get_json()
+    task_id = task["id"]
+
+    moved = client.put(f"/api/tasks/{task_id}", json={"columnId": doing_id})
+    assert moved.status_code == 200
+    body = moved.get_json()
+    assert body["columnId"] == doing_id
+    assert body["title"] == "Move me"
+    assert body["priority"] == "high"
+    assert body["projectId"] == default_project(client)["id"]
+
+    todo_tasks = client.get(f"/api/tasks?columnId={todo_id}").get_json()
+    doing_tasks = client.get(f"/api/tasks?columnId={doing_id}").get_json()
+    assert [item["id"] for item in todo_tasks] == []
+    assert [item["id"] for item in doing_tasks] == [task_id]
+
+
 def test_unknown_column_is_rejected(client):
     response = client.post(
         "/api/tasks",
