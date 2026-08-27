@@ -3,7 +3,7 @@ from .models import BoardColumn, Project
 from .serialize import utcnow
 
 
-DEFAULT_COLUMNS = ("To Do", "In Progress", "Done")
+DEFAULT_COLUMNS = ("To Do", "In Progress", "In Review", "Done")
 DEFAULT_PROJECT_NAME = "Untitled project"
 
 
