@@ -28,7 +28,7 @@ export default function KanbanBoard({
         projectId={project.id}
         projectName={project.name}
       />
-      <div className="flex h-full max-w-full flex-row items-start justify-start gap-4 overflow-x-auto p-4 pt-0">
+      <div className="flex h-full max-w-full flex-row items-start justify-start gap-4 overflow-x-auto p-4">
         {columns.map((column) => (
           <TaskColumn
             key={column.id}

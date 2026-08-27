@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
+import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useAssignees, useMilestones } from "../hooks/useCatalog";
 import type { Task, TaskItem } from "../types/Task";
 import TaskCardFrame from "./TaskCardFrame";
@@ -27,8 +29,27 @@ export default function TaskCard({
   onDelete,
 }: TaskCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const skipClickRef = useRef(false);
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
+
+  const handleDragStart = useCallback(() => {
+    skipClickRef.current = true;
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    window.setTimeout(() => {
+      skipClickRef.current = false;
+    }, 0);
+  }, []);
+
+  const { isDragging, dragProps } = useHtml5Drag<TaskDragPayload>({
+    mimeType: TASK_DRAG_MIME,
+    data: { taskId: task.id, sourceColumnId: task.columnId },
+    disabled: Boolean(task.isSaving),
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
+  });
 
   const assigneeName = assignees.find(
     (assignee) => assignee.id === task.assigneeId,
@@ -39,12 +60,21 @@ export default function TaskCard({
 
   return (
     <>
-      <article>
+      <article {...dragProps} className={twMerge(isDragging && "opacity-50")}>
         <button
-          className="w-full cursor-pointer text-left"
+          className={twMerge(
+            "w-full text-left select-none",
+            isDragging ? "cursor-grabbing" : "cursor-grab",
+          )}
           disabled={task.isSaving}
+          draggable={dragProps.draggable}
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            if (skipClickRef.current) return;
+            setIsOpen(true);
+          }}
+          onDragStart={dragProps.onDragStart}
+          onDragEnd={dragProps.onDragEnd}
         >
           <TaskCardFrame
             className={twMerge(

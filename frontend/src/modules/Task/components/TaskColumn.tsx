@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Plus, Trash } from "lucide-react";
 import Button from "@uiKit/Button";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import { twMerge } from "tailwind-merge";
 import IconButton from "@uiKit/IconButton";
-import { useTasks } from "../hooks/useTasks";
+import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
+import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
+import { useMoveTask, useTasks } from "../hooks/useTasks";
 import type { ColumnItem } from "../types/Column";
 import NewTaskCard from "./NewTaskCard";
 import TaskCard from "./TaskCard";
+
+function isTaskDragPayload(value: unknown): value is TaskDragPayload {
+  if (typeof value !== "object" || value === null) return false;
+  return (
+    "taskId" in value &&
+    "sourceColumnId" in value &&
+    typeof value.taskId === "string" &&
+    typeof value.sourceColumnId === "string"
+  );
+}
 
 type TaskColumnProps = {
   className?: string;
@@ -27,6 +39,20 @@ export default function TaskColumn({
   const { tasks, createTask, updateTask, deleteTask } = useTasks({
     columnId: column.id,
   });
+  const { moveTask } = useMoveTask();
+
+  const onDropTask = useCallback(
+    (payload: TaskDragPayload) => {
+      if (!isTaskDragPayload(payload)) return;
+      moveTask(payload.taskId, payload.sourceColumnId, column.id);
+    },
+    [column.id, moveTask],
+  );
+
+  const { isOver, dropProps } = useHtml5Drop<TaskDragPayload>({
+    mimeType: TASK_DRAG_MIME,
+    onDrop: onDropTask,
+  });
 
   const taskCount = tasks.length;
   const deleteDescription =
@@ -36,8 +62,10 @@ export default function TaskColumn({
 
   return (
     <div
+      {...dropProps}
       className={twMerge(
-        "flex min-w-[280px] flex-col gap-3 rounded-lg bg-zinc-800 p-4",
+        "flex min-w-[280px] flex-col gap-3 rounded-lg border-2 border-dashed border-transparent bg-zinc-800 p-4",
+        isOver && "border-zinc-400",
         column.isSaving && "opacity-70",
         className,
       )}
