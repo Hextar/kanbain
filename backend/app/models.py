@@ -33,6 +33,10 @@ class Project(db.Model):
             "risk_tolerance IN ('low', 'medium', 'high')",
             name="ck_projects_risk_tolerance",
         ),
+        CheckConstraint(
+            "plan_status IN ('planning', 'ready', 'failed')",
+            name="ck_projects_plan_status",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -47,6 +51,9 @@ class Project(db.Model):
     methodology: Mapped[str] = mapped_column(String(32), nullable=False, default="kanban")
     quality_bar: Mapped[str] = mapped_column(String(32), nullable=False, default="mvp")
     risk_tolerance: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
+    plan_status: Mapped[str] = mapped_column(String(16), nullable=False, default="ready")
+    plan_error: Mapped[str | None] = mapped_column(Text)
+    plan_markdown: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -71,6 +78,7 @@ class Project(db.Model):
             "methodology": self.methodology,
             "qualityBar": self.quality_bar,
             "riskTolerance": self.risk_tolerance,
+            "planStatus": self.plan_status,
         }
         optional = {
             "goal": self.goal,
@@ -79,6 +87,7 @@ class Project(db.Model):
             "designUrls": self.design_urls,
             "repoUrl": self.repo_url,
             "deadlineAt": dump_datetime(self.deadline_at),
+            "planError": self.plan_error,
             "createdAt": dump_datetime(self.created_at),
             "updatedAt": dump_datetime(self.updated_at),
         }
