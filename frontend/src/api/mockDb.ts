@@ -60,17 +60,36 @@ export function findProject(id: string) {
 export function insertProject(input: CreateProjectInput): Project {
   const name = input.name.trim();
   if (!name) throw new MockApiError("name is required", 400);
+  const id = input.id ?? crypto.randomUUID();
+  const members = (input.members ?? []).map((member) => ({
+    id: crypto.randomUUID(),
+    projectId: id,
+    name: member.name,
+    role: member.role,
+    seniority: member.seniority,
+    capacity: member.capacity,
+  }));
   const project = projectFromJson({
-    id: input.id ?? crypto.randomUUID(),
+    id,
     name,
-    deadlineKind: "ongoing",
-    methodology: "kanban",
-    qualityBar: "mvp",
-    riskTolerance: "medium",
+    goal: input.goal,
+    prdUrl: input.prdUrl,
+    designUrls: input.designUrls,
+    repoUrl: input.repoUrl,
+    deadlineKind: input.deadlineKind ?? "ongoing",
+    deadlineAt: input.deadlineAt,
+    methodology: input.methodology ?? "kanban",
+    qualityBar: input.qualityBar ?? "mvp",
+    riskTolerance: input.riskTolerance ?? "medium",
+    planStatus: "planning",
     createdAt: new Date().toISOString(),
-    members: [],
+    members,
   } satisfies ProjectJson);
   projects.push(project);
+  for (const title of ["To Do", "In Progress", "Done"] as const) {
+    insertColumn({ title, projectId: project.id });
+  }
+  scheduleMockPlan(project.id);
   return project;
 }
 
@@ -109,6 +128,102 @@ export function deleteProject(id: string) {
     if (milestones[i].projectId === id) milestones.splice(i, 1);
   }
   projects.splice(index, 1);
+}
+
+const MOCK_PLAN_DELAY_MS = 1500;
+
+function upsertAssignee(name: string): string {
+  const existing = assignees.find((item) => item.name === name);
+  if (existing) return existing.id;
+  const assignee = { id: crypto.randomUUID(), name };
+  assignees.push(assignee);
+  return assignee.id;
+}
+
+function applyMockPlan(projectId: string) {
+  const project = findProject(projectId);
+  if (!project) return;
+  const todo = listColumnsFor(projectId)[0];
+  if (!todo) throw new MockApiError("project has no columns", 400);
+
+  for (let i = tasks.length - 1; i >= 0; i--) {
+    if (tasks[i].projectId === projectId) tasks.splice(i, 1);
+  }
+  for (let i = milestones.length - 1; i >= 0; i--) {
+    if (milestones[i].projectId === projectId) milestones.splice(i, 1);
+  }
+
+  const names =
+    project.members.length > 0
+      ? project.members.map((member) => member.name)
+      : ["Unassigned"];
+  const ownerId = upsertAssignee(names[0]);
+  const helperId = upsertAssignee(names[1] ?? names[0]);
+  const milestone = milestoneFromJson({
+    id: crypto.randomUUID(),
+    projectId,
+    title: "Launch",
+    order: 0,
+    dueAt: project.deadlineAt?.toISOString(),
+  } satisfies MilestoneJson);
+  milestones.push(milestone);
+
+  insertTask({
+    title: project.name,
+    columnId: todo.id,
+    priority: "high",
+    assigneeId: ownerId,
+    milestoneId: milestone.id,
+  });
+  insertTask({
+    title: "Capture constraints",
+    columnId: todo.id,
+    priority: "high",
+    assigneeId: ownerId,
+    milestoneId: milestone.id,
+    estimateTshirt: "s",
+  });
+  insertTask({
+    title: "Seed the backlog",
+    columnId: todo.id,
+    priority: "medium",
+    assigneeId: helperId,
+    milestoneId: milestone.id,
+    estimateTshirt: "s",
+  });
+  insertTask({
+    title: "Review the plan against the deadline",
+    columnId: todo.id,
+    priority: "high",
+    assigneeId: helperId,
+    milestoneId: milestone.id,
+    estimateTshirt: "s",
+  });
+  project.planStatus = "ready";
+  project.planError = undefined;
+}
+
+function scheduleMockPlan(projectId: string) {
+  setTimeout(() => {
+    try {
+      applyMockPlan(projectId);
+    } catch {
+      const project = findProject(projectId);
+      if (!project) return;
+      project.planStatus = "failed";
+      project.planError = "Could not plan this project.";
+    }
+  }, MOCK_PLAN_DELAY_MS);
+}
+
+export function enqueuePlan(id: string): Project {
+  const project = findProject(id);
+  if (!project) throw new MockApiError(`Project ${id} not found`, 404);
+  if (project.planStatus === "planning") return project;
+  project.planStatus = "planning";
+  project.planError = undefined;
+  scheduleMockPlan(id);
+  return project;
 }
 
 export function listColumnsFor(projectId: string) {
@@ -290,6 +405,16 @@ export async function handleMock(request: Request, apiPath: string) {
       deleteProject(id);
       return new Response(null, { status: 204 });
     }
+  }
+
+  if (
+    segments[0] === "api" &&
+    segments[1] === "projects" &&
+    segments[3] === "plan" &&
+    segments.length === 4 &&
+    request.method === "POST"
+  ) {
+    return respond(() => projectToJson(enqueuePlan(segments[2])), 202);
   }
 
   if (request.method === "GET" && apiPath === "/api/columns") {

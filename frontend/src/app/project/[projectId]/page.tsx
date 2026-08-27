@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import KanbanBoard from "@modules/Task/KanbanBoard";
+import ProjectWorkspace from "@modules/Project/components/ProjectWorkspace";
 import { getProject } from "@modules/Project/api/projects";
 import { getColumns } from "@modules/Task/api/columns";
 
@@ -22,5 +22,5 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   }
 
   const columns = await columnsPromise;
-  return <KanbanBoard initialColumns={columns} project={project} />;
+  return <ProjectWorkspace initialColumns={columns} project={project} />;
 }
