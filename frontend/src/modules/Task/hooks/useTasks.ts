@@ -35,6 +35,9 @@ function filtersFromListKey(queryKey: readonly unknown[]): TaskListFilters {
 }
 
 function taskMatchesFilters(task: Task, filters: TaskListFilters): boolean {
+  if (filters.projectId !== undefined && task.projectId !== filters.projectId) {
+    return false;
+  }
   if (filters.columnId !== undefined && task.columnId !== filters.columnId) {
     return false;
   }
@@ -69,11 +72,15 @@ function syncTaskInListCaches(queryClient: QueryClient, task: Task) {
   queryClient.setQueryData(taskKeys.detail(task.id), task);
 }
 
-export function useTasks(filters: TaskListFilters = {}) {
+export function useTasks(
+  filters: TaskListFilters = {},
+  initialTasks?: Task[],
+) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () => getTasks(filters),
+    initialData: initialTasks,
   });
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
@@ -115,6 +122,7 @@ export function useTasks(filters: TaskListFilters = {}) {
       id: input.id ?? crypto.randomUUID(),
       title: input.title,
       columnId,
+      projectId: input.projectId ?? filters.projectId,
       description: input.description,
       priority: input.priority,
       category: input.category,
@@ -208,7 +216,10 @@ export function useCreateTask() {
     mutationFn: createTask,
     onSuccess: (created) => {
       queryClient.setQueryData<Task[]>(
-        taskKeys.list({ columnId: created.columnId }),
+        taskKeys.list({
+          columnId: created.columnId,
+          projectId: created.projectId,
+        }),
         (current) => {
           if (!current) return [created];
           if (current.some((task) => task.id === created.id)) {
@@ -243,11 +254,18 @@ export function useMoveTask() {
       taskId: Task["id"],
       sourceColumnId: Task["columnId"],
       targetColumnId: Task["columnId"],
+      projectId?: Task["projectId"],
     ) => {
       if (sourceColumnId === targetColumnId) return;
 
-      const sourceKey = taskKeys.list({ columnId: sourceColumnId });
-      const targetKey = taskKeys.list({ columnId: targetColumnId });
+      const sourceKey = taskKeys.list({
+        columnId: sourceColumnId,
+        projectId,
+      });
+      const targetKey = taskKeys.list({
+        columnId: targetColumnId,
+        projectId,
+      });
       const sourceList = queryClient.getQueryData<Task[]>(sourceKey) ?? [];
       const task = sourceList.find((item) => item.id === taskId);
       if (!task) return;

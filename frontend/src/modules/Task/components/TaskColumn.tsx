@@ -8,6 +8,7 @@ import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useMoveTask, useTasks } from "../hooks/useTasks";
 import type { ColumnItem } from "../types/Column";
+import type { Task } from "../types/Task";
 import NewTaskCard from "./NewTaskCard";
 import TaskCard from "./TaskCard";
 
@@ -25,6 +26,7 @@ type TaskColumnProps = {
   className?: string;
   column: ColumnItem;
   projectId: string;
+  initialTasks?: Task[];
   onDelete: () => void;
 };
 
@@ -32,21 +34,26 @@ export default function TaskColumn({
   className,
   column,
   projectId,
+  initialTasks,
   onDelete,
 }: TaskColumnProps) {
   const [isComposing, setIsComposing] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const { tasks, createTask, updateTask, deleteTask } = useTasks({
-    columnId: column.id,
-  });
+  const { tasks, createTask, updateTask, deleteTask } = useTasks(
+    {
+      columnId: column.id,
+      projectId,
+    },
+    initialTasks,
+  );
   const { moveTask } = useMoveTask();
 
   const onDropTask = useCallback(
     (payload: TaskDragPayload) => {
       if (!isTaskDragPayload(payload)) return;
-      moveTask(payload.taskId, payload.sourceColumnId, column.id);
+      moveTask(payload.taskId, payload.sourceColumnId, column.id, projectId);
     },
-    [column.id, moveTask],
+    [column.id, moveTask, projectId],
   );
 
   const { isOver, dropProps } = useHtml5Drop<TaskDragPayload>({

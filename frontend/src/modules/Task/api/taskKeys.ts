@@ -9,7 +9,7 @@ import type { Task, TaskListFilters } from "../types/Task";
  *
  *   ['tasks']
  *   ['tasks', 'list', {}]
- *   ['tasks', 'list', { columnId: '<Column.id>' }]
+ *   ['tasks', 'list', { projectId: '<Project.id>', columnId: '<Column.id>' }]
  *   ['tasks', 'detail', '<Task.id>']
  */
 export const taskKeys = {

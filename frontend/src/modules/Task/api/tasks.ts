@@ -7,6 +7,7 @@ const TASKS_URL = "/api/tasks";
 
 function tasksUrl(filters: TaskListFilters = {}) {
   const params = new URLSearchParams();
+  if (filters.projectId) params.set("projectId", filters.projectId);
   if (filters.columnId) params.set("columnId", filters.columnId);
   if (filters.category) params.set("category", filters.category);
   if (filters.priority) params.set("priority", filters.priority);

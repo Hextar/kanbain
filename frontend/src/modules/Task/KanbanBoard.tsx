@@ -6,19 +6,26 @@ import TaskColumn from "./components/TaskColumn";
 import { useColumns } from "./hooks/useColumns";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
+import type { Task } from "./types/Task";
 
 type KanbanBoardProps = {
   project: Pick<Project, "id" | "name">;
   initialColumns?: Column[];
+  initialTasks?: Task[];
 };
 
 export default function KanbanBoard({
   project,
   initialColumns,
+  initialTasks,
 }: KanbanBoardProps) {
   const { columns, createColumn, deleteColumn } = useColumns(
     project.id,
     initialColumns,
+  );
+  const groupedTasks = groupTasksByColumn(
+    initialColumns ?? columns,
+    initialTasks,
   );
 
   return (
@@ -33,6 +40,9 @@ export default function KanbanBoard({
           <TaskColumn
             key={column.id}
             column={column}
+            initialTasks={
+              groupedTasks ? (groupedTasks.get(column.id) ?? []) : undefined
+            }
             projectId={project.id}
             onDelete={() => deleteColumn(column.id)}
           />
@@ -41,4 +51,21 @@ export default function KanbanBoard({
       </div>
     </div>
   );
+}
+
+function groupTasksByColumn(columns: Column[], tasks: Task[] | undefined) {
+  if (tasks === undefined) return undefined;
+  const grouped = new Map<string, Task[]>();
+  for (const column of columns) {
+    grouped.set(column.id, []);
+  }
+  for (const task of tasks) {
+    const list = grouped.get(task.columnId);
+    if (list) {
+      list.push(task);
+      continue;
+    }
+    grouped.set(task.columnId, [task]);
+  }
+  return grouped;
 }

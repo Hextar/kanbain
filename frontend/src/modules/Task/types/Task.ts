@@ -24,6 +24,7 @@ export type CreateTaskInput = {
   id?: Task["id"];
   title: string;
   columnId: Column["id"];
+  projectId?: Task["projectId"];
   description?: string;
   priority?: Task["priority"];
   category?: Task["category"];
@@ -34,6 +35,7 @@ export type CreateTaskInput = {
 };
 
 export type TaskListFilters = {
+  projectId?: Task["projectId"];
   columnId?: Column["id"];
   category?: Task["category"];
   priority?: Task["priority"];

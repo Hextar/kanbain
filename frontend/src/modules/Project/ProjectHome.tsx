@@ -20,7 +20,7 @@ type ProjectHomeProps = {
 export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   const queryClient = useQueryClient();
   const [initial] = useState(() => initialProjects.map(reviveProject));
-  const { data: projects = [] } = useProjects(initial);
+  const { data: projects = [], warmingIds } = useProjects(initial);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -56,6 +56,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
     try {
       await deleteProjectAction(projectId);
       queryClient.removeQueries({ queryKey: projectKeys.detail(projectId) });
+      queryClient.removeQueries({ queryKey: projectKeys.board(projectId) });
     } catch {
       if (previous) queryClient.setQueryData(projectKeys.list(), previous);
     } finally {
@@ -65,7 +66,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
 
   return (
     <div className="flex min-h-dvh w-full flex-col">
-      <header className="flex items-center justify-between gap-4 p-6">
+      <header className="flex items-center justify-between gap-4 p-6 pr-20">
         <h1 className="text-3xl font-bold text-white">KanbAIn</h1>
         {hasProjects ? <NewProjectForm onCreated={remember} /> : null}
       </header>
@@ -75,6 +76,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
             <li key={project.id} className="min-w-0">
               <ProjectCard
                 isDeleting={deletingId === project.id}
+                isOpening={warmingIds.has(project.id)}
                 isRetrying={retryingId === project.id}
                 project={project}
                 onDelete={() => setProjectToDelete(project)}
