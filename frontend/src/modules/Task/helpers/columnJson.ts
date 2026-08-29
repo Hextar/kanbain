@@ -1,4 +1,4 @@
-import type { Column } from "../../Task/types/Column";
+import type { Column } from "../types/Column";
 
 export type ColumnJson = {
   id: string;

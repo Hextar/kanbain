@@ -2,7 +2,7 @@ import { apiFetch, expectOk, readJson } from "@api/env";
 import {
   columnFromJson,
   type ColumnJson,
-} from "@modules/Project/helpers/columnJson";
+} from "../helpers/columnJson";
 import type { Column, CreateColumnInput } from "../types/Column";
 
 const COLUMNS_URL = "/api/columns";

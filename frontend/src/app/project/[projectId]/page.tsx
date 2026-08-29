@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import ProjectWorkspace from "@modules/Project/components/ProjectWorkspace";
 import { getProject } from "@modules/Project/api/projects";
-import { getColumns } from "@modules/Task/api/columns";
-import { getTasks } from "@modules/Task/api/tasks";
+import { fetchProjectBoard } from "@modules/Project/helpers/projectBoard";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +12,7 @@ type ProjectPageProps = {
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = await params;
   const projectPromise = getProject(projectId);
-  const columnsPromise = getColumns(projectId);
-  const tasksPromise = getTasks({ projectId });
+  const boardPromise = fetchProjectBoard(projectId);
 
   let project;
   try {
@@ -23,11 +21,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound();
   }
 
-  const [columns, tasks] = await Promise.all([columnsPromise, tasksPromise]);
+  const board = await boardPromise;
   return (
     <ProjectWorkspace
-      initialColumns={columns}
-      initialTasks={project.planStatus === "ready" ? tasks : undefined}
+      initialColumns={board.columns}
+      initialTasks={project.planStatus === "ready" ? board.tasks : undefined}
       project={project}
     />
   );

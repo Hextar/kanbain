@@ -3,6 +3,7 @@ import { getColumns } from "@modules/Task/api/columns";
 import { columnKeys } from "@modules/Task/api/columnKeys";
 import { getTasks } from "@modules/Task/api/tasks";
 import { taskKeys } from "@modules/Task/api/taskKeys";
+import { groupTasksByColumn } from "@modules/Task/helpers/groupTasksByColumn";
 import type { Column } from "@modules/Task/types/Column";
 import type { Task } from "@modules/Task/types/Task";
 import { projectKeys } from "../api/projectKeys";
@@ -20,19 +21,7 @@ export async function fetchProjectBoard(projectId: string): Promise<ProjectBoard
 }
 
 export function tasksByColumnId(board: ProjectBoard): Map<string, Task[]> {
-  const grouped = new Map<string, Task[]>();
-  for (const column of board.columns) {
-    grouped.set(column.id, []);
-  }
-  for (const task of board.tasks) {
-    const tasks = grouped.get(task.columnId);
-    if (tasks) {
-      tasks.push(task);
-      continue;
-    }
-    grouped.set(task.columnId, [task]);
-  }
-  return grouped;
+  return groupTasksByColumn(board.columns, board.tasks);
 }
 
 export function seedProjectBoard(

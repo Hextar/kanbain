@@ -7,7 +7,7 @@ import {
   columnFromJson,
   columnToJson,
   type ColumnJson,
-} from "@modules/Project/helpers/columnJson";
+} from "@modules/Task/helpers/columnJson";
 import type { CreateProjectInput, Project } from "@modules/Project/types/Project";
 import type { Column, CreateColumnInput } from "@modules/Task/types/Column";
 import type { Assignee, Milestone, Tag } from "@modules/Task/types/Catalog";

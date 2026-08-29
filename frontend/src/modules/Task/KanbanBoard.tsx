@@ -7,7 +7,7 @@ import { useColumns } from "./hooks/useColumns";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
 import type { Task } from "./types/Task";
-import { compareTasksByOrder } from "./helpers/taskOrder";
+import { groupTasksByColumn } from "./helpers/groupTasksByColumn";
 
 type KanbanBoardProps = {
   project: Pick<Project, "id" | "name">;
@@ -24,10 +24,10 @@ export default function KanbanBoard({
     project.id,
     initialColumns,
   );
-  const groupedTasks = groupTasksByColumn(
-    initialColumns ?? columns,
-    initialTasks,
-  );
+  const groupedTasks =
+    initialTasks === undefined
+      ? undefined
+      : groupTasksByColumn(initialColumns ?? columns, initialTasks);
 
   return (
     <div className="flex h-dvh w-full max-w-full flex-col items-start justify-center">
@@ -52,27 +52,4 @@ export default function KanbanBoard({
       </div>
     </div>
   );
-}
-
-function groupTasksByColumn(columns: Column[], tasks: Task[] | undefined) {
-  if (tasks === undefined) return undefined;
-  const grouped = new Map<string, Task[]>();
-  for (const column of columns) {
-    grouped.set(column.id, []);
-  }
-  for (const task of tasks) {
-    const list = grouped.get(task.columnId);
-    if (list) {
-      list.push(task);
-      continue;
-    }
-    grouped.set(task.columnId, [task]);
-  }
-  for (const [columnId, list] of grouped) {
-    grouped.set(
-      columnId,
-      list.toSorted(compareTasksByOrder),
-    );
-  }
-  return grouped;
 }
