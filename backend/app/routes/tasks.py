@@ -161,13 +161,21 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
 
 
 def _task_filters():
-    project_id = resolve_project_id(request.args.get("projectId"))
-    statement = db.select(Task).where(Task.project_id == project_id)
     column_id = request.args.get("columnId")
     category = request.args.get("category")
     priority = request.args.get("priority")
     work_kind = request.args.get("workKind")
 
+    if column_id:
+        column = get_column(column_id)
+        project_id = column.project_id
+        explicit = parse_optional_id(request.args.get("projectId"), "projectId")
+        if explicit and explicit != project_id:
+            raise ValueError("projectId does not match the column's project")
+    else:
+        project_id = resolve_project_id(request.args.get("projectId"))
+
+    statement = db.select(Task).where(Task.project_id == project_id)
     if column_id:
         statement = statement.where(Task.column_id == column_id)
     if category:

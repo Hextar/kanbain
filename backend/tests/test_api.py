@@ -63,6 +63,26 @@ def test_create_and_filter_tasks(client):
     assert [item["title"] for item in filtered.get_json()] == ["Write API"]
 
 
+def test_list_tasks_by_column_when_multiple_projects_exist(client):
+    first = default_project(client)
+    second = client.post("/api/projects", json={"name": "Second"}).get_json()
+    columns = client.get(f"/api/columns?projectId={first['id']}").get_json()
+    todo_id = columns[0]["id"]
+    client.post("/api/tasks", json={"title": "From first", "columnId": todo_id})
+
+    by_column = client.get(f"/api/tasks?columnId={todo_id}")
+    assert by_column.status_code == 200
+    assert [item["title"] for item in by_column.get_json()] == ["From first"]
+
+    by_project = client.get(f"/api/tasks?projectId={first['id']}&columnId={todo_id}")
+    assert by_project.status_code == 200
+    assert [item["title"] for item in by_project.get_json()] == ["From first"]
+
+    other = client.get(f"/api/tasks?projectId={second['id']}")
+    assert other.status_code == 200
+    assert other.get_json() == []
+
+
 def test_column_title_update_and_delete(client):
     columns = client.get("/api/columns").get_json()
     todo_id = columns[0]["id"]
@@ -80,6 +100,14 @@ def test_column_title_update_and_delete(client):
     assert [column["id"] for column in remaining] == [doing_id, columns[2]["id"]]
     assert client.get("/api/tasks").get_json() == []
     assert client.delete("/api/columns/00000000-0000-0000-0000-000000000000").status_code == 204
+
+
+def test_projects_list_newest_first(client):
+    older = default_project(client)
+    newer = client.post("/api/projects", json={"name": "Newest"}).get_json()
+    names = [project["name"] for project in client.get("/api/projects").get_json()]
+    assert names[0] == newer["name"]
+    assert older["name"] in names
 
 
 def test_project_name_update_and_delete(client):

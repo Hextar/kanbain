@@ -82,7 +82,9 @@ def _member_from_payload(project_id: str, payload: dict) -> ProjectMember:
 @projects_bp.get("/api/projects")
 def list_projects():
     projects = db.session.execute(
-        db.select(Project).options(selectinload(Project.members)).order_by(Project.created_at.asc())
+        db.select(Project)
+        .options(selectinload(Project.members))
+        .order_by(Project.created_at.desc())
     ).scalars()
     return jsonify([project.to_dict() for project in projects])
 
