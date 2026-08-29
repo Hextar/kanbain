@@ -29,6 +29,7 @@ const tasks: Task[] = [];
 const assignees: Assignee[] = [];
 const tags: Tag[] = [];
 const milestones: Milestone[] = [];
+let openaiApiKeyHint: string | null = null;
 
 class MockApiError extends Error {
   constructor(
@@ -43,6 +44,16 @@ function jsonError(message: string, status: number) {
   return Response.json({ message }, { status });
 }
 
+function mockSettings() {
+  if (!openaiApiKeyHint) {
+    return { openaiApiKeyConfigured: false };
+  }
+  return {
+    openaiApiKeyConfigured: true,
+    openaiApiKeyHint,
+  };
+}
+
 function resolveProjectId(requested: string | null) {
   if (requested) return requested;
   if (projects.length === 1) return projects[0].id;
@@ -50,7 +61,11 @@ function resolveProjectId(requested: string | null) {
 }
 
 export function listProjects() {
-  return projects;
+  return projects.toSorted((left, right) => {
+    const leftTime = left.createdAt?.getTime() ?? 0;
+    const rightTime = right.createdAt?.getTime() ?? 0;
+    return rightTime - leftTime;
+  });
 }
 
 export function findProject(id: string) {
@@ -275,6 +290,8 @@ export function deleteColumn(id: string) {
 }
 
 function matchesFilters(task: Task, filters: TaskListFilters) {
+  if (filters.projectId !== undefined && task.projectId !== filters.projectId)
+    return false;
   if (filters.columnId !== undefined && task.columnId !== filters.columnId)
     return false;
   if (filters.category !== undefined && task.category !== filters.category)
@@ -377,6 +394,29 @@ export async function handleMock(request: Request, apiPath: string) {
   const url = new URL(request.url);
   const segments = apiPath.split("/").filter(Boolean);
 
+  if (apiPath === "/api/settings") {
+    if (request.method === "GET") {
+      return respond(() => mockSettings());
+    }
+    if (request.method === "PUT") {
+      const payload = (await request.json()) as { openaiApiKey?: string | null };
+      return respond(() => {
+        if (!("openaiApiKey" in payload)) {
+          throw new MockApiError("openaiApiKey is required", 400);
+        }
+        const key =
+          typeof payload.openaiApiKey === "string"
+            ? payload.openaiApiKey.trim()
+            : payload.openaiApiKey;
+        if (key !== null && key !== undefined && typeof key !== "string") {
+          throw new MockApiError("openaiApiKey must be a string", 400);
+        }
+        openaiApiKeyHint = key ? key.slice(-4) : null;
+        return mockSettings();
+      });
+    }
+  }
+
   if (request.method === "GET" && apiPath === "/api/projects") {
     return respond(() => projects.map(projectToJson));
   }
@@ -446,16 +486,34 @@ export async function handleMock(request: Request, apiPath: string) {
 
   if (request.method === "GET" && apiPath === "/api/tasks") {
     const priority = url.searchParams.get("priority");
-    return respond(() =>
-      listTasks({
-        columnId: url.searchParams.get("columnId") ?? undefined,
+    const columnId = url.searchParams.get("columnId");
+    const requestedProjectId = url.searchParams.get("projectId");
+    return respond(() => {
+      let projectId = requestedProjectId;
+      if (columnId) {
+        const column = columns.find((item) => item.id === columnId);
+        if (!column) throw new MockApiError("Unknown column", 400);
+        if (projectId && projectId !== column.projectId) {
+          throw new MockApiError(
+            "projectId does not match the column's project",
+            400,
+          );
+        }
+        projectId = column.projectId;
+      } else {
+        projectId = resolveProjectId(projectId);
+        if (!projectId) throw new MockApiError("projectId is required", 400);
+      }
+      return listTasks({
+        projectId,
+        columnId: columnId ?? undefined,
         category: url.searchParams.get("category") ?? undefined,
         priority:
           priority === "low" || priority === "medium" || priority === "high"
             ? priority
             : undefined,
-      }).map(taskToJson),
-    );
+      }).map(taskToJson);
+    });
   }
   if (request.method === "POST" && apiPath === "/api/tasks") {
     const input = (await request.json()) as CreateTaskInput;

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Flag, Plus } from "lucide-react";
+import { ChevronRight, Flag, Plus } from "lucide-react";
 import Button from "@uiKit/Button";
 import Input from "@uiKit/Input";
 import { useCreateMilestone, useMilestones } from "../hooks/useCatalog";
@@ -33,7 +33,7 @@ export default function Header({
   }
 
   return (
-    <div className={`flex justify-between gap-3 p-4 ${className}`}>
+    <div className={`flex justify-between gap-3 p-4 pr-20 ${className}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <Link

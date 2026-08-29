@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import AppSettings from "@modules/Settings/components/AppSettings";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -13,7 +14,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className="min-h-dvh w-full">
         <Providers>
-          <div className="flex min-h-dvh w-full flex-col">{children}</div>
+          <div className="flex min-h-dvh w-full flex-col">
+            <AppSettings />
+            {children}
+          </div>
         </Providers>
       </body>
     </html>
