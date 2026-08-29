@@ -15,8 +15,8 @@ export default function ProjectEmptyState({ onCreated }: ProjectEmptyStateProps)
       <div className="flex max-w-md flex-col gap-2">
         <h2 className="text-3xl font-bold text-white">No projects yet</h2>
         <p className="text-base text-zinc-400">
-          Describe the work, the team, and the deadline. The planner fills the
-          board while you keep using the rest of the app.
+          Add a title and a short description. The planner can fill the board,
+          or start from an empty one.
         </p>
       </div>
       <NewProjectForm size="hero" onCreated={onCreated} />

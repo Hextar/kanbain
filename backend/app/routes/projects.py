@@ -125,13 +125,23 @@ def create_project():
     except ValueError as exc:
         return json_error(exc)
 
+    skip_plan = payload.get("skipPlan")
+    if skip_plan is None:
+        skip_plan = False
+    elif not isinstance(skip_plan, bool):
+        return json_error(ValueError("skipPlan must be a boolean"))
+
     db.session.add(project)
     db.session.flush()
     add_default_columns(project.id)
-    project.plan_status = "planning"
     project.plan_error = None
-    db.session.commit()
-    enqueue_plan(project.id)
+    if skip_plan:
+        project.plan_status = "ready"
+        db.session.commit()
+    else:
+        project.plan_status = "planning"
+        db.session.commit()
+        enqueue_plan(project.id)
     db.session.refresh(project)
     return jsonify(project.to_dict()), 201
 

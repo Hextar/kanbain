@@ -54,4 +54,5 @@ export type CreateProjectInput = {
   qualityBar?: QualityBar;
   riskTolerance?: RiskTolerance;
   members?: ProjectMemberInput[];
+  skipPlan?: boolean;
 };

@@ -301,6 +301,31 @@ def test_create_project_with_wizard_fields(client):
     assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
 
 
+def test_create_empty_project_skips_planning(client):
+    response = client.post(
+        "/api/projects",
+        json={"name": "Blank board", "skipPlan": True},
+    )
+    assert response.status_code == 201
+    project = response.get_json()
+    assert project["name"] == "Blank board"
+    assert project["planStatus"] == "ready"
+    assert "planError" not in project
+    columns = client.get(f"/api/columns?projectId={project['id']}").get_json()
+    assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
+    tasks = client.get(f"/api/tasks?projectId={project['id']}").get_json()
+    assert tasks == []
+
+
+def test_skip_plan_must_be_boolean(client):
+    response = client.post(
+        "/api/projects",
+        json={"name": "Bad flag", "skipPlan": "yes"},
+    )
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "skipPlan must be a boolean"
+
+
 def test_columns_are_scoped_to_a_project(client):
     other = client.post("/api/projects", json={"name": "Other"}).get_json()
     created = client.post(

@@ -85,6 +85,7 @@ export function insertProject(input: CreateProjectInput): Project {
     seniority: member.seniority,
     capacity: member.capacity,
   }));
+  const skipPlan = input.skipPlan === true;
   const project = projectFromJson({
     id,
     name,
@@ -97,7 +98,7 @@ export function insertProject(input: CreateProjectInput): Project {
     methodology: input.methodology ?? "kanban",
     qualityBar: input.qualityBar ?? "mvp",
     riskTolerance: input.riskTolerance ?? "medium",
-    planStatus: "planning",
+    planStatus: skipPlan ? "ready" : "planning",
     createdAt: new Date().toISOString(),
     members,
   } satisfies ProjectJson);
@@ -105,7 +106,9 @@ export function insertProject(input: CreateProjectInput): Project {
   for (const title of ["To Do", "In Progress", "Done"] as const) {
     insertColumn({ title, projectId: project.id });
   }
-  scheduleMockPlan(project.id);
+  if (!skipPlan) {
+    scheduleMockPlan(project.id);
+  }
   return project;
 }
 

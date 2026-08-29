@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import Button from "@uiKit/Button";
 import Input from "@uiKit/Input";
 import Textarea from "@uiKit/Textarea";
@@ -19,8 +19,6 @@ import type {
   Seniority,
 } from "../types/Project";
 
-const STEPS = ["Project", "Team", "Deadline", "How you work"] as const;
-
 type MemberDraft = {
   key: string;
   name: string;
@@ -32,9 +30,6 @@ type MemberDraft = {
 type WizardDraft = {
   name: string;
   goal: string;
-  prdUrl: string;
-  designUrl: string;
-  repoUrl: string;
   members: MemberDraft[];
   deadlineKind: DeadlineKind;
   deadlineDate: string;
@@ -46,9 +41,6 @@ type WizardDraft = {
 const EMPTY_DRAFT: WizardDraft = {
   name: "",
   goal: "",
-  prdUrl: "",
-  designUrl: "",
-  repoUrl: "",
   members: [],
   deadlineKind: "ongoing",
   deadlineDate: "",
@@ -68,15 +60,21 @@ export default function NewProjectWizard({
   onClose,
   onCreated,
 }: NewProjectWizardProps) {
-  const [step, setStep] = useState(0);
+  const advancedId = useId();
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const [pending, setPending] = useState<"plan" | "empty" | null>(null);
+  const isPending = pending !== null;
+  const hasName = draft.name.trim().length > 0;
+  const hasGoal = draft.goal.trim().length > 0;
+  const canPlan = hasName && hasGoal && deadlineIsValid(draft);
+  const canCreateEmpty = hasName && deadlineIsValid(draft);
 
   function resetAndClose() {
     if (isPending) return;
-    setStep(0);
     setDraft(EMPTY_DRAFT);
+    setShowAdvanced(false);
     setError(null);
     onClose();
   }
@@ -85,75 +83,61 @@ export default function NewProjectWizard({
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
-  const canContinue = stepIsValid(step, draft);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canContinue || isPending) return;
-    if (step < STEPS.length - 1) {
-      setStep((current) => current + 1);
-      return;
-    }
+  async function handleCreate(skipPlan: boolean) {
+    if (isPending) return;
+    if (skipPlan ? !canCreateEmpty : !canPlan) return;
     setError(null);
-    setIsPending(true);
+    setPending(skipPlan ? "empty" : "plan");
     try {
-      const project = await createProjectAction(toCreateInput(draft));
-      setStep(0);
+      const project = await createProjectAction(toCreateInput(draft, skipPlan));
       setDraft(EMPTY_DRAFT);
+      setShowAdvanced(false);
       onCreated(project);
       onClose();
     } catch {
       setError("Could not create the project.");
     } finally {
-      setIsPending(false);
+      setPending(null);
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void handleCreate(false);
   }
 
   return (
     <Dialog
       open={open}
       title="Create new project"
-      className="max-h-[min(90dvh,40rem)]"
       onClose={resetAndClose}
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-400">
-            Step {step + 1} of {STEPS.length} · {STEPS[step]}
-          </p>
-          <div className="flex flex-row items-center gap-2">
-            {step > 0 ? (
-              <Button
-                disabled={isPending}
-                kind="outline"
-                type="button"
-                variant="secondary"
-                onClick={() => setStep((current) => current - 1)}
-              >
-                Back
-              </Button>
-            ) : (
-              <Button
-                disabled={isPending}
-                kind="outline"
-                type="button"
-                variant="secondary"
-                onClick={resetAndClose}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button
-              disabled={!canContinue || isPending}
-              form="new-project-wizard"
-              type="submit"
-            >
-              {isPending
-                ? "Planning…"
-                : step === STEPS.length - 1
-                  ? "Create project"
-                  : "Continue"}
-            </Button>
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            disabled={isPending}
+            kind="outline"
+            type="button"
+            variant="secondary"
+            onClick={resetAndClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={!canCreateEmpty || isPending}
+            kind="outline"
+            type="button"
+            variant="secondary"
+            onClick={() => void handleCreate(true)}
+          >
+            {pending === "empty" ? "Creating…" : "Create empty board"}
+          </Button>
+          <Button
+            disabled={!canPlan || isPending}
+            form="new-project-wizard"
+            type="submit"
+          >
+            {pending === "plan" ? "Planning…" : "Generate board"}
+          </Button>
         </div>
       }
     >
@@ -162,79 +146,59 @@ export default function NewProjectWizard({
         id="new-project-wizard"
         onSubmit={handleSubmit}
       >
-        {step === 0 ? <ProjectStep draft={draft} onChange={update} /> : null}
-        {step === 1 ? (
-          <TeamStep
-            members={draft.members}
-            onChange={(members) => update("members", members)}
+        <Field htmlFor="wizard-name" label="Title">
+          <Input
+            autoFocus
+            className="bg-zinc-900"
+            id="wizard-name"
+            placeholder="KanbAIn"
+            required
+            value={draft.name}
+            onChange={(event) => update("name", event.target.value)}
           />
-        ) : null}
-        {step === 2 ? <DeadlineStep draft={draft} onChange={update} /> : null}
-        {step === 3 ? <WorkStep draft={draft} onChange={update} /> : null}
+        </Field>
+        <Field htmlFor="wizard-goal" label="Description">
+          <Textarea
+            className="bg-zinc-900"
+            id="wizard-goal"
+            placeholder="What are you building? Constraints, outcomes, anything the planner should know."
+            value={draft.goal}
+            onChange={(event) => update("goal", event.target.value)}
+          />
+        </Field>
+        <div>
+          <Button
+            aria-controls={showAdvanced ? advancedId : undefined}
+            aria-expanded={showAdvanced}
+            className="px-0"
+            kind="ghost"
+            size="sm"
+            type="button"
+            onClick={() => setShowAdvanced((current) => !current)}
+          >
+            <span className="inline-flex items-center gap-1">
+              <ChevronDown
+                aria-hidden
+                className={`transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+                size={16}
+              />
+              Advanced
+            </span>
+          </Button>
+          {showAdvanced ? (
+            <div className="mt-4 flex flex-col gap-5" id={advancedId}>
+              <TeamStep
+                members={draft.members}
+                onChange={(members) => update("members", members)}
+              />
+              <DeadlineStep draft={draft} onChange={update} />
+              <WorkStep draft={draft} onChange={update} />
+            </div>
+          ) : null}
+        </div>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
       </form>
     </Dialog>
-  );
-}
-
-function ProjectStep({
-  draft,
-  onChange,
-}: {
-  draft: WizardDraft;
-  onChange: <K extends keyof WizardDraft>(key: K, value: WizardDraft[K]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <Field label="Project name" htmlFor="wizard-name">
-        <Input
-          autoFocus
-          className="bg-zinc-900"
-          id="wizard-name"
-          placeholder="KanbAIn"
-          required
-          value={draft.name}
-          onChange={(event) => onChange("name", event.target.value)}
-        />
-      </Field>
-      <Field label="What are you building?" htmlFor="wizard-goal">
-        <Textarea
-          className="bg-zinc-900"
-          id="wizard-goal"
-          placeholder="Describe the goal, constraints, and anything the planner should know."
-          required
-          value={draft.goal}
-          onChange={(event) => onChange("goal", event.target.value)}
-        />
-      </Field>
-      <Field label="PRD URL (optional)" htmlFor="wizard-prd">
-        <Input
-          className="bg-zinc-900"
-          id="wizard-prd"
-          placeholder="https://"
-          value={draft.prdUrl}
-          onChange={(event) => onChange("prdUrl", event.target.value)}
-        />
-      </Field>
-      <Field label="Design URL (optional)" htmlFor="wizard-design">
-        <Input
-          className="bg-zinc-900"
-          id="wizard-design"
-          placeholder="https://"
-          value={draft.designUrl}
-          onChange={(event) => onChange("designUrl", event.target.value)}
-        />
-      </Field>
-      <Field label="Repo URL (optional)" htmlFor="wizard-repo">
-        <Input
-          className="bg-zinc-900"
-          id="wizard-repo"
-          placeholder="https://"
-          value={draft.repoUrl}
-          onChange={(event) => onChange("repoUrl", event.target.value)}
-        />
-      </Field>
-    </div>
   );
 }
 
@@ -246,10 +210,8 @@ function TeamStep({
   onChange: (members: MemberDraft[]) => void;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-zinc-400">
-        Add the people the planner should assign work to. You can skip this.
-      </p>
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-zinc-300">Team</p>
       {members.map((member) => (
         <div
           className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-zinc-700 p-3 sm:grid-cols-[1fr_1fr_8rem_5rem_auto]"
@@ -387,7 +349,7 @@ function DeadlineStep({
         onChange={(value) => onChange("deadlineKind", value as DeadlineKind)}
       />
       {needsDate ? (
-        <Field label="Target date" htmlFor="wizard-deadline">
+        <Field htmlFor="wizard-deadline" label="Target date">
           <Input
             className="bg-zinc-900 [color-scheme:dark]"
             id="wizard-deadline"
@@ -498,15 +460,11 @@ function ChoiceGroup({
   );
 }
 
-function stepIsValid(step: number, draft: WizardDraft) {
-  if (step === 0) return draft.name.trim().length > 0 && draft.goal.trim().length > 0;
-  if (step === 2 && draft.deadlineKind !== "ongoing") {
-    return draft.deadlineDate.length > 0;
-  }
-  return true;
+function deadlineIsValid(draft: WizardDraft) {
+  return draft.deadlineKind === "ongoing" || draft.deadlineDate.length > 0;
 }
 
-function toCreateInput(draft: WizardDraft): CreateProjectInput {
+function toCreateInput(draft: WizardDraft, skipPlan: boolean): CreateProjectInput {
   const members = draft.members.flatMap((member) => {
     const name = member.name.trim();
     if (!name) return [];
@@ -518,15 +476,10 @@ function toCreateInput(draft: WizardDraft): CreateProjectInput {
     if (member.capacity && Number.isFinite(capacity)) next.capacity = capacity;
     return [next];
   });
-  const prdUrl = draft.prdUrl.trim();
-  const designUrl = draft.designUrl.trim();
-  const repoUrl = draft.repoUrl.trim();
+  const goal = draft.goal.trim();
   return {
     name: draft.name.trim(),
-    goal: draft.goal.trim(),
-    ...(prdUrl ? { prdUrl } : {}),
-    ...(designUrl ? { designUrls: [designUrl] } : {}),
-    ...(repoUrl ? { repoUrl } : {}),
+    ...(goal ? { goal } : {}),
     deadlineKind: draft.deadlineKind,
     ...(draft.deadlineKind !== "ongoing" && draft.deadlineDate
       ? { deadlineAt: `${draft.deadlineDate}T00:00:00Z` }
@@ -535,5 +488,6 @@ function toCreateInput(draft: WizardDraft): CreateProjectInput {
     qualityBar: draft.qualityBar,
     riskTolerance: draft.riskTolerance,
     ...(members.length ? { members } : {}),
+    ...(skipPlan ? { skipPlan: true } : {}),
   };
 }
