@@ -161,7 +161,8 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         depends_on = parse_string_list(payload.get("dependsOn"), "dependsOn")
         _replace_dependencies(task, depends_on or [])
 
-    if creating or "order" in payload or "columnId" in payload:
+    column_changed = not creating and source_column_id != task.column_id
+    if creating or "order" in payload or column_changed:
         order = parse_int(payload.get("order"), "order") if "order" in payload else None
         _place_task(
             task,

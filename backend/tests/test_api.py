@@ -207,6 +207,24 @@ def test_reorder_task_within_column(client):
     assert listed[1]["id"] == first["id"]
 
 
+def test_update_task_keeps_order_when_column_unchanged(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    first = client.post("/api/tasks", json={"title": "First", "columnId": todo_id}).get_json()
+    client.post("/api/tasks", json={"title": "Second", "columnId": todo_id})
+    client.post("/api/tasks", json={"title": "Third", "columnId": todo_id})
+
+    updated = client.put(
+        f"/api/tasks/{first['id']}",
+        json={"title": "Renamed", "columnId": todo_id},
+    )
+    assert updated.status_code == 200
+    assert updated.get_json()["order"] == 0
+
+    listed = client.get(f"/api/tasks?columnId={todo_id}").get_json()
+    assert [item["title"] for item in listed] == ["Renamed", "Second", "Third"]
+    assert [item["order"] for item in listed] == [0, 1, 2]
+
+
 def test_move_task_to_column_at_index(client):
     columns = client.get("/api/columns").get_json()
     todo_id = columns[0]["id"]
