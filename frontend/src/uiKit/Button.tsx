@@ -90,7 +90,7 @@ export default function Button({
       {...props}
       ref={ref}
       className={twMerge(
-        `rounded-md text-white ${sizeStyles} ${colorStyles} ${reactiveStyles}`,
+        `inline-flex items-center justify-center gap-1.5 rounded-md text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none ${sizeStyles} ${colorStyles} ${reactiveStyles}`,
         className,
       )}
       onClick={() => _onClick(props.disabled, onClick)}

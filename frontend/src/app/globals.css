@@ -35,12 +35,23 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.app-dialog[data-height-ready] {
+  transition:
+    height 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    overlay 160ms allow-discrete,
+    display 160ms allow-discrete;
 }
 
 .app-dialog-body {
   min-height: 0;
-  flex: 1 1 0%;
+  flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-block: 1rem;
   padding-inline: 0.25rem;
   margin-inline: -0.25rem;
@@ -90,6 +101,7 @@ body {
   .confirm-dialog,
   .confirm-dialog::backdrop,
   .app-dialog,
+  .app-dialog[data-height-ready],
   .app-dialog::backdrop {
     transition: none;
   }

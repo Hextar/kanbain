@@ -170,20 +170,18 @@ export default function NewProjectWizard({
           <Button
             aria-controls={showAdvanced ? advancedId : undefined}
             aria-expanded={showAdvanced}
-            className="px-0"
             kind="ghost"
             size="sm"
             type="button"
+            variant="secondary"
             onClick={() => setShowAdvanced((current) => !current)}
           >
-            <span className="inline-flex items-center gap-1">
-              <ChevronDown
-                aria-hidden
-                className={`transition-transform ${showAdvanced ? "rotate-180" : ""}`}
-                size={16}
-              />
-              Advanced
+            <span
+              className={`inline-flex transition-transform motion-reduce:transition-none ${showAdvanced ? "rotate-180" : ""}`}
+            >
+              <ChevronDown aria-hidden size={16} />
             </span>
+            Advanced
           </Button>
           {showAdvanced ? (
             <div className="mt-4 flex flex-col gap-5" id={advancedId}>
