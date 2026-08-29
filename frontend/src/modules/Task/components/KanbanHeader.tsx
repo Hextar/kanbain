@@ -33,7 +33,9 @@ export default function Header({
   }
 
   return (
-    <div className={`flex justify-between gap-3 p-4 pr-20 ${className}`}>
+    <div
+      className={`relative z-10 flex justify-between gap-3 bg-zinc-900 p-4 pr-20 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.75)] ${className}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <Link
