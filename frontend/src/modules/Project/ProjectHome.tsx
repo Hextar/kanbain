@@ -11,6 +11,7 @@ import { retryProjectPlanAction } from "./actions/retryPlan";
 import { projectKeys } from "./api/projectKeys";
 import { reviveProject } from "./helpers/projectJson";
 import { useProjects } from "./hooks/useProjects";
+import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import type { Project } from "./types/Project";
 
 type ProjectHomeProps = {
@@ -21,6 +22,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   const queryClient = useQueryClient();
   const [initial] = useState(() => initialProjects.map(reviveProject));
   const { data: projects = [], warmingIds } = useProjects(initial);
+  const requirePlannerKey = useRequirePlannerKey();
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -39,6 +41,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   }
 
   async function handleRetry(projectId: string) {
+    if (!(await requirePlannerKey())) return;
     setRetryingId(projectId);
     try {
       remember(await retryProjectPlanAction(projectId));

@@ -1,7 +1,11 @@
 from flask import Blueprint, jsonify, request
 
 from ..http import error_response
-from ..planner.keys import openai_api_key_hint, set_openai_api_key
+from ..planner.keys import (
+    openai_api_key_hint,
+    openai_api_keys_revoked,
+    set_openai_api_key,
+)
 from ..validation import json_error
 
 settings_bp = Blueprint("settings", __name__)
@@ -30,7 +34,11 @@ def update_settings():
 
 def _settings_payload() -> dict:
     hint = openai_api_key_hint()
-    payload = {"openaiApiKeyConfigured": hint is not None}
+    configured = hint is not None
+    payload = {
+        "openaiApiKeyConfigured": configured,
+        "openaiApiKeyRevoked": openai_api_keys_revoked() and not configured,
+    }
     if hint:
         payload["openaiApiKeyHint"] = hint
     return payload

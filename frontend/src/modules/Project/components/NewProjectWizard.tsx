@@ -7,6 +7,7 @@ import Input from "@uiKit/Input";
 import Textarea from "@uiKit/Textarea";
 import Dialog from "@uiKit/Dialog";
 import IconButton from "@uiKit/IconButton";
+import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import { createProjectAction } from "../actions/createProject";
 import type {
   CreateProjectInput,
@@ -65,6 +66,7 @@ export default function NewProjectWizard({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"plan" | "empty" | null>(null);
+  const requirePlannerKey = useRequirePlannerKey();
   const isPending = pending !== null;
   const hasName = draft.name.trim().length > 0;
   const hasGoal = draft.goal.trim().length > 0;
@@ -86,6 +88,7 @@ export default function NewProjectWizard({
   async function handleCreate(skipPlan: boolean) {
     if (isPending) return;
     if (skipPlan ? !canCreateEmpty : !canPlan) return;
+    if (!skipPlan && !(await requirePlannerKey())) return;
     setError(null);
     setPending(skipPlan ? "empty" : "plan");
     try {

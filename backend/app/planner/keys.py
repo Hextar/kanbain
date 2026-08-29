@@ -5,7 +5,10 @@ from typing import Protocol
 from flask import current_app
 from redis import Redis
 
+from ..crypto import decrypt_secret, encrypt_secret, is_encrypted
+
 REDIS_KEY = "kanbain:openai_api_key"
+REVOKED_KEY = "kanbain:openai_api_keys_revoked"
 
 _memory: dict[str, str] = {}
 
@@ -34,7 +37,11 @@ def reset_key_store() -> None:
 def get_openai_api_key() -> str | None:
     stored = _decode(_store().get(REDIS_KEY))
     if stored:
-        return stored
+        plaintext = decrypt_secret(stored)
+        if plaintext:
+            if not is_encrypted(stored):
+                _store().set(REDIS_KEY, encrypt_secret(plaintext))
+            return plaintext
     env = current_app.config.get("OPENAI_API_KEY") or ""
     return env.strip() or None
 
@@ -53,9 +60,36 @@ def openai_api_key_hint() -> str | None:
 def set_openai_api_key(value: str | None) -> None:
     store = _store()
     if value:
-        store.set(REDIS_KEY, value)
+        store.set(REDIS_KEY, encrypt_secret(value))
+        store.delete(REVOKED_KEY)
         return
     store.delete(REDIS_KEY)
+
+
+def openai_api_keys_revoked() -> bool:
+    return _decode(_store().get(REVOKED_KEY)) is not None
+
+
+def invalidate_stored_openai_api_keys() -> int:
+    store = _store()
+    existed = _decode(store.get(REDIS_KEY)) is not None
+    store.delete(REDIS_KEY)
+    store.set(REVOKED_KEY, "1")
+    return 1 if existed else 0
+
+
+def reencrypt_stored_openai_api_key(old_secret: str) -> str | None:
+    store = _store()
+    stored = _decode(store.get(REDIS_KEY))
+    if not stored:
+        return None
+    plaintext = decrypt_secret(stored, secret=old_secret)
+    if not plaintext:
+        raise ValueError(
+            "Could not decrypt the stored OpenAI API key with the old secret."
+        )
+    store.set(REDIS_KEY, encrypt_secret(plaintext))
+    return plaintext[-4:] if len(plaintext) >= 4 else plaintext
 
 
 def _store() -> OpenAIKeyStore:

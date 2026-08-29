@@ -1,4 +1,5 @@
 # Full stack: docker compose up --build
+# Requires SECRET_KEY in the project-root .env (see .env.example).
 # API + DB + planner worker for local Next.js (`npm run dev`):
 #   docker compose up -d --build database backend worker
 services:
@@ -21,7 +22,7 @@ services:
       - 3000:3000
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the project root .env}
       REDIS_URL: redis://redis:6379/0
       PLANNER: openai
       PLANNER_DELAY_SECONDS: "0"
@@ -52,7 +53,7 @@ services:
     entrypoint: ["python", "-m", "app.worker"]
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the project root .env}
       REDIS_URL: redis://redis:6379/0
       PLANNER: openai
       PLANNER_DELAY_SECONDS: "0"

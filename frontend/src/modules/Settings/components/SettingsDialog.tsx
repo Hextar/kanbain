@@ -5,10 +5,13 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import Button from "@uiKit/Button";
 import Dialog from "@uiKit/Dialog";
 import Input from "@uiKit/Input";
+import { OPENAI_API_KEY_DOCS_URL } from "../api/settings";
 
 type SettingsDialogProps = {
   open: boolean;
   configured: boolean;
+  revoked: boolean;
+  forPlanner: boolean;
   hint: string | undefined;
   apiKey: string;
   error: string | null;
@@ -24,6 +27,8 @@ type SettingsDialogProps = {
 export default function SettingsDialog({
   open,
   configured,
+  revoked,
+  forPlanner,
   hint,
   apiKey,
   error,
@@ -39,6 +44,7 @@ export default function SettingsDialog({
   const formId = useId();
   const inputId = useId();
   const trimmed = apiKey.trim();
+  const status = statusCopy({ configured, revoked, forPlanner, hint });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,37 +86,51 @@ export default function SettingsDialog({
     >
       <form className="flex flex-col gap-3" id={formId} onSubmit={handleSubmit}>
         <p className="text-sm text-zinc-300" id={descriptionId}>
-          The OpenAI API key is stored on the server so the planner worker can
+          The OpenAI API key is encrypted on the server so the planner worker can
           generate boards. It is never shown in full after you save it.
         </p>
         {loadFailed ? (
           <p className="rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-300" role="alert">
             Could not load settings from the server.
           </p>
-        ) : configured ? (
+        ) : (
           <div
-            className="flex items-start gap-2 rounded-md bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300"
-            role="status"
+            className={
+              status.tone === "ok"
+                ? "flex items-start gap-2 rounded-md bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300"
+                : status.tone === "warn"
+                  ? "flex items-start gap-2 rounded-md bg-amber-500/15 px-3 py-2 text-sm text-amber-200"
+                  : "flex items-start gap-2 rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-400"
+            }
+            role={status.tone === "ok" ? "status" : "alert"}
           >
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
+            {status.tone === "ok" ? (
+              <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
+            ) : (
+              <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
+            )}
             <div>
-              <p className="font-medium text-emerald-200">An API key is already saved</p>
-              <p className="text-emerald-300/90">
-                {hint
-                  ? `This key ends in ${hint}. Remove it, or paste a new key to replace it.`
-                  : "Remove it, or paste a new key to replace it."}
+              <p className={status.tone === "ok" ? "font-medium text-emerald-200" : "font-medium"}>
+                {status.title}
+              </p>
+              <p className={status.tone === "ok" ? "text-emerald-300/90" : undefined}>
+                {status.body}
               </p>
             </div>
           </div>
-        ) : (
-          <div
-            className="flex items-start gap-2 rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-400"
-            role="status"
-          >
-            <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
-            <p>No API key saved yet. Paste one below to enable planning.</p>
-          </div>
         )}
+        <p className="text-sm text-zinc-400">
+          Need a key?{" "}
+          <a
+            className="text-purple-400 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-300 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+            href={OPENAI_API_KEY_DOCS_URL}
+            rel="noreferrer"
+            target="_blank"
+          >
+            How to create an OpenAI API key
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+        </p>
         <label className="flex flex-col gap-1 text-sm text-zinc-300" htmlFor={inputId}>
           {configured ? "Replace OpenAI API key" : "OpenAI API key"}
           <Input
@@ -133,4 +153,47 @@ export default function SettingsDialog({
       </form>
     </Dialog>
   );
+}
+
+function statusCopy({
+  configured,
+  revoked,
+  forPlanner,
+  hint,
+}: {
+  configured: boolean;
+  revoked: boolean;
+  forPlanner: boolean;
+  hint: string | undefined;
+}): { tone: "ok" | "warn" | "muted"; title: string; body: string } {
+  if (configured) {
+    return {
+      tone: "ok",
+      title: "An API key is already saved",
+      body: hint
+        ? `This key ends in ${hint}. Remove it, or paste a new key to replace it.`
+        : "Remove it, or paste a new key to replace it.",
+    };
+  }
+  if (revoked) {
+    return {
+      tone: "warn",
+      title: "Stored API keys were revoked",
+      body: forPlanner
+        ? "Paste a new key to generate a board."
+        : "Paste a new key to enable planning.",
+    };
+  }
+  if (forPlanner) {
+    return {
+      tone: "warn",
+      title: "An OpenAI API key is required",
+      body: "Paste a key below to generate a board. You can still create an empty board without one.",
+    };
+  }
+  return {
+    tone: "muted",
+    title: "No API key saved yet",
+    body: "Paste one below to enable planning.",
+  };
 }

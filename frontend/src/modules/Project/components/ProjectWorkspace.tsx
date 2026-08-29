@@ -7,6 +7,7 @@ import { useState } from "react";
 import Button from "@uiKit/Button";
 import KanbanBoard from "@modules/Task/KanbanBoard";
 import { retryProjectPlanAction } from "@modules/Project/actions/retryPlan";
+import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import { projectKeys } from "@modules/Project/api/projectKeys";
 import {
   fetchProjectBoard,
@@ -56,6 +57,7 @@ export default function ProjectWorkspace({
     return next;
   });
   const { data } = useProject(initial);
+  const requirePlannerKey = useRequirePlannerKey();
   const [isRetrying, setIsRetrying] = useState(false);
   const current = data ?? initial;
   const ssrBoard =
@@ -75,6 +77,7 @@ export default function ProjectWorkspace({
   });
 
   async function handleRetry() {
+    if (!(await requirePlannerKey())) return;
     setIsRetrying(true);
     try {
       const next = reviveProject(await retryProjectPlanAction(current.id));

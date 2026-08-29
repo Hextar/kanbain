@@ -33,7 +33,49 @@ The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backe
 
 ## Docker
 
-On macOS, start the Docker client before building.
+On macOS, start the Docker client before building. Copy `.env.example` to `.env` and set `SECRET_KEY` — Compose will not start without it.
+
+### SECRET_KEY
+
+`SECRET_KEY` is a passphrase **you** choose. It lives only in the **repo-root** `.env` (never in `frontend/`, never committed). Docker Compose injects the same value into the API and the planner worker. Redis stores the OpenAI API key as ciphertext; the worker decrypts it on the server when it calls OpenAI. The browser never sees `SECRET_KEY` or the full OpenAI key.
+
+Put a long random passphrase in `.env` once, start the stack, then paste your OpenAI key in Settings. That is the normal path.
+
+**Changing `SECRET_KEY` does not change your OpenAI key.** It only changes the lock on the copy saved in Redis. After you change it, that saved copy is unreadable until you re-encrypt it or paste the OpenAI key again.
+
+Backend and worker must always share the same `SECRET_KEY`. If they differ, planning cannot decrypt the key. After any edit to `.env`, recreate both:
+
+```bash
+docker compose up -d --build backend worker
+```
+
+#### Rotating the passphrase
+
+You need the **old** passphrase and the **new** one at the same time. Redis has only ciphertext; there is no way to rotate from the new key alone.
+
+Do this **after** `.env` already contains the new `SECRET_KEY` and the containers have been recreated (so they are using the new key):
+
+```bash
+# From the repo root, not backend/
+docker compose exec backend flask rotate-encryption-key --old-secret 'the-previous-passphrase'
+```
+
+Success looks like `Re-encrypted the stored OpenAI API key (ends in …)`. If the old secret is wrong, the command refuses and leaves Redis unchanged.
+
+**Alternative:** skip the command and paste the OpenAI key again in Settings. The new `SECRET_KEY` encrypts whatever you save. Use this if you no longer have the old passphrase.
+
+If you change `SECRET_KEY` and neither rotate nor re-paste, Settings will look as if no key is saved, and the planner cannot call OpenAI, even though Redis still holds a blob.
+
+#### Invalidating stored OpenAI keys
+
+If you suspect a stored key was leaked, wipe every key saved through Settings (Redis ciphertext). This does **not** revoke the key at OpenAI — rotate it there too.
+
+```bash
+# From the repo root. --yes skips the confirmation prompt.
+docker compose exec backend flask invalidate-openai-keys --yes
+```
+
+The UI then treats planning as unconfigured and opens Settings if someone tries to generate a board. `OPENAI_API_KEY` in the environment is unchanged; that is an operator key, not a Settings-saved key.
 
 ### Full stack (built frontend)
 
