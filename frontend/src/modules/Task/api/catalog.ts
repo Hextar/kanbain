@@ -1,43 +1,35 @@
+import { apiFetch, readJson } from "@api/env";
 import type { Assignee, Tag } from "../types/Catalog";
 
 export async function getAssignees(): Promise<Assignee[]> {
-  const response = await fetch("/api/assignees");
-  if (!response.ok) throw new Error("Failed to load assignees");
-  return response.json();
+  return readJson<Assignee[]>(
+    await apiFetch("/api/assignees"),
+    "Failed to load assignees",
+  );
 }
 
 export async function createAssignee(name: string): Promise<Assignee> {
-  const response = await fetch("/api/assignees", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      message?: string;
-    } | null;
-    throw new Error(body?.message ?? "Failed to create assignee");
-  }
-  return response.json();
+  return readJson<Assignee>(
+    await apiFetch("/api/assignees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
+    "Failed to create assignee",
+  );
 }
 
 export async function getTags(): Promise<Tag[]> {
-  const response = await fetch("/api/tags");
-  if (!response.ok) throw new Error("Failed to load tags");
-  return response.json();
+  return readJson<Tag[]>(await apiFetch("/api/tags"), "Failed to load tags");
 }
 
 export async function createTag(name: string): Promise<Tag> {
-  const response = await fetch("/api/tags", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      message?: string;
-    } | null;
-    throw new Error(body?.message ?? "Failed to create tag");
-  }
-  return response.json();
+  return readJson<Tag>(
+    await apiFetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
+    "Failed to create tag",
+  );
 }

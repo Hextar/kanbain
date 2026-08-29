@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "../api/projectKeys";
-import { fetchProject, fetchProjects } from "../api/projectsClient";
+import { getProject, getProjects } from "../api/projects";
 import { warmupProjectBoard } from "../helpers/projectBoard";
 import { keepProjectListOrder } from "../helpers/projectList";
 import type { Project } from "../types/Project";
@@ -22,7 +22,7 @@ export function useProjects(initialProjects: Project[]) {
 
   const query = useQuery({
     queryKey: projectKeys.list(),
-    queryFn: fetchProjects,
+    queryFn: getProjects,
     initialData: initialProjects,
     structuralSharing: (current, incoming) =>
       keepProjectListOrder(
@@ -70,7 +70,7 @@ export function useProjects(initialProjects: Project[]) {
 export function useProject(initialProject: Project) {
   return useQuery({
     queryKey: projectKeys.detail(initialProject.id),
-    queryFn: () => fetchProject(initialProject.id),
+    queryFn: () => getProject(initialProject.id),
     initialData: initialProject,
     refetchInterval: (query) =>
       isPlanning(query.state.data) ? 2000 : false,
