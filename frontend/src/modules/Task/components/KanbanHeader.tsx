@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Flag, Plus } from "lucide-react";
 import Button from "@uiKit/Button";
 import Input from "@uiKit/Input";
+import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
 import { useCreateMilestone, useMilestones } from "../hooks/useCatalog";
 
 type HeaderProps = {
@@ -34,7 +35,7 @@ export default function Header({
 
   return (
     <div
-      className={`relative z-10 flex justify-between gap-3 bg-zinc-900 p-4 pr-20 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.75)] ${className}`}
+      className={`relative z-10 flex items-center justify-between gap-3 bg-zinc-900 p-4 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.75)] ${className}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
@@ -48,68 +49,71 @@ export default function Header({
           <h1 className="text-3xl font-bold text-white">{projectName}</h1>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-          <Flag size={12} />
-          Milestones
-        </span>
-        {milestones.map((milestone) => (
-          <span
-            key={milestone.id}
-            className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300"
-          >
-            {milestone.title}
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="inline-flex items-center gap-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+            <Flag size={12} />
+            Milestones
           </span>
-        ))}
-        {isAdding ? (
-          <form className="flex items-center gap-2" onSubmit={handleSubmit}>
-            <Input
-              autoFocus
-              className="h-8 min-w-[160px] bg-zinc-900 py-1 text-sm"
-              placeholder="Milestone title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
+          {milestones.map((milestone) => (
+            <span
+              key={milestone.id}
+              className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300"
+            >
+              {milestone.title}
+            </span>
+          ))}
+          {isAdding ? (
+            <form className="flex items-center gap-2" onSubmit={handleSubmit}>
+              <Input
+                autoFocus
+                className="h-8 min-w-[160px] bg-zinc-900 py-1 text-sm"
+                placeholder="Milestone title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setTitle("");
+                    setIsAdding(false);
+                  }
+                }}
+              />
+              <Button
+                disabled={!trimmedTitle || createMilestone.isPending}
+                size="xs"
+                type="submit"
+              >
+                Add
+              </Button>
+              <Button
+                kind="ghost"
+                size="xs"
+                type="button"
+                variant="secondary"
+                onClick={() => {
                   setTitle("");
                   setIsAdding(false);
-                }
-              }}
-            />
-            <Button
-              disabled={!trimmedTitle || createMilestone.isPending}
-              size="xs"
-              type="submit"
-            >
-              Add
-            </Button>
+                }}
+              >
+                Cancel
+              </Button>
+            </form>
+          ) : (
             <Button
               kind="ghost"
               size="xs"
               type="button"
               variant="secondary"
-              onClick={() => {
-                setTitle("");
-                setIsAdding(false);
-              }}
+              onClick={() => setIsAdding(true)}
             >
-              Cancel
+              <span className="inline-flex items-center gap-1">
+                <Plus size={14} />
+                Add milestone
+              </span>
             </Button>
-          </form>
-        ) : (
-          <Button
-            kind="ghost"
-            size="xs"
-            type="button"
-            variant="secondary"
-            onClick={() => setIsAdding(true)}
-          >
-            <span className="inline-flex items-center gap-1">
-              <Plus size={14} />
-              Add milestone
-            </span>
-          </Button>
-        )}
+          )}
+        </div>
+        <SettingsButton />
       </div>
     </div>
   );

@@ -32,6 +32,25 @@ export function useSettingsDialog() {
   return context;
 }
 
+export function SettingsButton() {
+  const { data } = useSettings();
+  const { openSettings } = useSettingsDialog();
+  const configured = data?.openaiApiKeyConfigured === true;
+
+  return (
+    <IconButton
+      aria-label={configured ? "Settings, API key saved" : "Settings"}
+      className={`shrink-0 ${configured ? "text-purple-400" : "text-zinc-400"}`}
+      size="md"
+      type="button"
+      variant="secondary"
+      onClick={() => openSettings()}
+    >
+      <Settings size={20} />
+    </IconButton>
+  );
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { data, isError } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -95,18 +114,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <SettingsDialogContext.Provider value={{ openSettings }}>
-      <div className="fixed top-6 right-6 z-50">
-        <IconButton
-          aria-label={configured ? "Settings, API key saved" : "Settings"}
-          className={configured ? "text-purple-400" : "text-zinc-400"}
-          size="md"
-          type="button"
-          variant="secondary"
-          onClick={() => openSettings()}
-        >
-          <Settings size={20} />
-        </IconButton>
-      </div>
       <SettingsDialog
         apiKey={apiKey}
         configured={configured}
