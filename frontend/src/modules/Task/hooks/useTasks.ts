@@ -26,6 +26,30 @@ function withoutSaving(task: TaskItem | Task): Task {
   return next;
 }
 
+function withRenumberedOrders(list: Task[]): Task[] {
+  return list.map((task, index) =>
+    task.order === index ? task : { ...task, order: index },
+  );
+}
+
+function insertTaskAt(list: Task[], task: Task, index: number): Task[] {
+  const clamped = Math.max(0, Math.min(index, list.length));
+  const moved = { ...task, order: clamped };
+  return withRenumberedOrders([
+    ...list.slice(0, clamped),
+    moved,
+    ...list.slice(clamped),
+  ]);
+}
+
+function removeTaskById(list: Task[], taskId: Task["id"]): Task[] {
+  return withRenumberedOrders(list.filter((item) => item.id !== taskId));
+}
+
+function insertByOrder(list: Task[], task: Task): Task[] {
+  return insertTaskAt(list, task, task.order);
+}
+
 function filtersFromListKey(queryKey: readonly unknown[]): TaskListFilters {
   const filters = queryKey[2];
   if (filters !== null && typeof filters === "object") {
@@ -66,7 +90,7 @@ function syncTaskInListCaches(queryClient: QueryClient, task: Task) {
       if (current.some((item) => item.id === task.id)) {
         return current.map((item) => (item.id === task.id ? task : item));
       }
-      return [...current, task];
+      return insertByOrder(current, task);
     });
   }
   queryClient.setQueryData(taskKeys.detail(task.id), task);
@@ -122,6 +146,7 @@ export function useTasks(
       id: input.id ?? crypto.randomUUID(),
       title: input.title,
       columnId,
+      order: input.order ?? queryClient.getQueryData<Task[]>(listKey)?.length ?? 0,
       projectId: input.projectId ?? filters.projectId,
       description: input.description,
       priority: input.priority,
@@ -185,10 +210,14 @@ export function useTasks(
     });
   }
 
-  const taskItems: TaskItem[] = (query.data ?? []).map((task) => ({
-    ...task,
-    isSaving: savingTaskIds.has(task.id),
-  }));
+  const taskItems: TaskItem[] = (query.data ?? [])
+    .toSorted(
+      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+    )
+    .map((task) => ({
+      ...task,
+      isSaving: savingTaskIds.has(task.id),
+    }));
 
   return {
     tasks: taskItems,
@@ -227,7 +256,7 @@ export function useCreateTask() {
               task.id === created.id ? created : task,
             );
           }
-          return [...current, created];
+          return insertByOrder(current, created);
         },
       );
     },
@@ -270,20 +299,25 @@ export function useMoveTask() {
       const task = sourceList.find((item) => item.id === taskId);
       if (!task) return;
 
-      const moved: Task = { ...withoutSaving(task), columnId: targetColumnId };
       const previousSource = queryClient.getQueryData<Task[]>(sourceKey);
       const previousTarget = queryClient.getQueryData<Task[]>(targetKey);
+      const destinationList = (
+        queryClient.getQueryData<Task[]>(targetKey) ?? []
+      ).filter((item) => item.id !== taskId);
+      const moved: Task = {
+        ...withoutSaving(task),
+        columnId: targetColumnId,
+        order: destinationList.length,
+      };
 
-      queryClient.setQueryData<Task[]>(sourceKey, (current) =>
-        (current ?? []).filter((item) => item.id !== taskId),
+      queryClient.setQueryData<Task[]>(
+        sourceKey,
+        removeTaskById(sourceList, taskId),
       );
-      queryClient.setQueryData<Task[]>(targetKey, (current) => {
-        const list = current ?? [];
-        if (list.some((item) => item.id === taskId)) {
-          return list.map((item) => (item.id === taskId ? moved : item));
-        }
-        return [...list, moved];
-      });
+      queryClient.setQueryData<Task[]>(
+        targetKey,
+        insertTaskAt(destinationList, moved, destinationList.length),
+      );
 
       void updateTaskMutation(moved).catch(() => {
         queryClient.setQueryData(sourceKey, previousSource);

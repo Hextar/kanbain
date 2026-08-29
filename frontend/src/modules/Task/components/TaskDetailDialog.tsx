@@ -80,6 +80,7 @@ export default function TaskDetailDialog({
       id: task.id,
       title: trimmedTitle,
       columnId: task.columnId,
+      order: task.order,
       projectId: task.projectId,
       description: description.trim() || undefined,
       createdAt: task.createdAt,

@@ -5,6 +5,7 @@ export type Task = {
   id: string;
   title: string;
   columnId: Column["id"];
+  order: number;
   projectId?: string;
   description?: string;
   createdAt?: Date;
@@ -24,6 +25,7 @@ export type CreateTaskInput = {
   id?: Task["id"];
   title: string;
   columnId: Column["id"];
+  order?: number;
   projectId?: Task["projectId"];
   description?: string;
   priority?: Task["priority"];

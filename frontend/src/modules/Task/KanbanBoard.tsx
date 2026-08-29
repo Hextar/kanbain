@@ -67,5 +67,13 @@ function groupTasksByColumn(columns: Column[], tasks: Task[] | undefined) {
     }
     grouped.set(task.columnId, [task]);
   }
+  for (const [columnId, list] of grouped) {
+    grouped.set(
+      columnId,
+      list.toSorted(
+        (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+      ),
+    );
+  }
   return grouped;
 }

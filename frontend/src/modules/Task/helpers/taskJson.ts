@@ -5,6 +5,7 @@ export type TaskJson = {
   id: string;
   title: string;
   columnId: string;
+  order?: number;
   projectId?: string;
   description?: string | null;
   createdAt?: string | null;
@@ -25,6 +26,7 @@ export function taskToJson(task: Task): TaskJson {
     id: task.id,
     title: task.title,
     columnId: task.columnId,
+    order: task.order,
     projectId: task.projectId,
     description: task.description ?? null,
     createdAt: task.createdAt?.toISOString() ?? null,
@@ -46,6 +48,7 @@ export function taskFromJson(json: TaskJson): Task {
     id: json.id,
     title: json.title,
     columnId: json.columnId,
+    order: json.order ?? 0,
     projectId: json.projectId ?? undefined,
     description: json.description ?? undefined,
     createdAt: json.createdAt ? new Date(json.createdAt) : undefined,

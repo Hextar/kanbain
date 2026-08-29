@@ -302,11 +302,59 @@ function matchesFilters(task: Task, filters: TaskListFilters) {
 }
 
 export function listTasks(filters: TaskListFilters) {
-  return tasks.filter((task) => matchesFilters(task, filters));
+  return tasks
+    .filter((task) => matchesFilters(task, filters))
+    .toSorted(
+      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+    );
 }
 
 export function findTask(id: string) {
   return tasks.find((task) => task.id === id) ?? null;
+}
+
+function nextTaskOrder(columnId: string) {
+  return (
+    tasks
+      .filter((task) => task.columnId === columnId)
+      .reduce((max, task) => Math.max(max, task.order), -1) + 1
+  );
+}
+
+function renumberColumnTasks(columnId: string) {
+  const siblings = tasks
+    .filter((task) => task.columnId === columnId)
+    .toSorted(
+      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+    );
+  siblings.forEach((task, index) => {
+    task.order = index;
+  });
+}
+
+function placeTask(
+  task: Task,
+  columnId: string,
+  order: number | undefined,
+  sourceColumnId: string,
+) {
+  const siblings = tasks
+    .filter((item) => item.columnId === columnId && item.id !== task.id)
+    .toSorted(
+      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
+    );
+  const insertAt =
+    order === undefined
+      ? siblings.length
+      : Math.max(0, Math.min(order, siblings.length));
+  task.columnId = columnId;
+  siblings.splice(insertAt, 0, task);
+  siblings.forEach((item, index) => {
+    item.order = index;
+  });
+  if (sourceColumnId !== columnId) {
+    renumberColumnTasks(sourceColumnId);
+  }
 }
 
 export function insertTask(input: CreateTaskInput): Task {
@@ -336,8 +384,12 @@ export function insertTask(input: CreateTaskInput): Task {
     id: input.id ?? crypto.randomUUID(),
     projectId: column.projectId,
     createdAt: new Date(),
+    order: input.order ?? nextTaskOrder(input.columnId),
   };
   tasks.push(task);
+  if (input.order !== undefined) {
+    placeTask(task, column.id, input.order, column.id);
+  }
   return task;
 }
 
@@ -368,8 +420,19 @@ export function replaceTask(id: string, payload: TaskJson): Task {
       throw new MockApiError(`Unknown tag(s): ${missing.join(", ")}`, 400);
     }
   }
+  const previous = tasks[index];
   const nextTask = taskFromJson({ ...payload, id, projectId: column.projectId });
   tasks[index] = nextTask;
+  const orderChanged = payload.order !== undefined;
+  const columnChanged = previous.columnId !== nextTask.columnId;
+  if (orderChanged || columnChanged) {
+    placeTask(
+      nextTask,
+      nextTask.columnId,
+      orderChanged ? payload.order : undefined,
+      previous.columnId,
+    );
+  }
   return nextTask;
 }
 
