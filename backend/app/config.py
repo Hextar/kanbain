@@ -15,8 +15,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-    PLANNER = os.environ.get("PLANNER", "stub")
+    PLANNER = os.environ.get("PLANNER", "openai")
     PLANNER_DELAY_SECONDS = float(os.environ.get("PLANNER_DELAY_SECONDS", "2"))
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
 
 
 class TestConfig(Config):
@@ -26,4 +28,6 @@ class TestConfig(Config):
         "connect_args": {"check_same_thread": False},
         "poolclass": StaticPool,
     }
+    PLANNER = "stub"
     PLANNER_DELAY_SECONDS = 0
+    OPENAI_API_KEY = ""

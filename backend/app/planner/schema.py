@@ -30,3 +30,10 @@ class ParsedPlan:
     title: str | None
     milestones: list[ParsedMilestone]
     tasks: list[ParsedTask]
+
+
+@dataclass
+class PlannerResult:
+    prompt: str
+    raw: str
+    plan: ParsedPlan

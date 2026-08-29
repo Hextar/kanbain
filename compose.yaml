@@ -1,5 +1,6 @@
 # Full stack: docker compose up --build
-# API + DB for local Next.js (`npm run dev`): docker compose up --build database backend
+# API + DB + planner worker for local Next.js (`npm run dev`):
+#   docker compose up -d --build database backend worker
 services:
   frontend:
     build:
@@ -22,8 +23,10 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
       REDIS_URL: redis://redis:6379/0
-      PLANNER: stub
-      PLANNER_DELAY_SECONDS: "2"
+      PLANNER: openai
+      PLANNER_DELAY_SECONDS: "0"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
       PORT: 3000
     depends_on:
       database:
@@ -51,8 +54,11 @@ services:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@database:5432/kanban_dashboard
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
       REDIS_URL: redis://redis:6379/0
-      PLANNER: stub
-      PLANNER_DELAY_SECONDS: "2"
+      PLANNER: openai
+      PLANNER_DELAY_SECONDS: "0"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      PYTHONUNBUFFERED: "1"
     depends_on:
       backend:
         condition: service_healthy

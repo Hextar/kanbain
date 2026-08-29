@@ -3,18 +3,30 @@ from __future__ import annotations
 from datetime import datetime
 
 from ..models import Project
+from .parse import parse_plan
+from .prompt import compose_messages, format_prompt_for_log
+from .schema import PlannerResult
 
 
 class StubPlanner:
-    def generate(self, project: Project) -> str:
-        assignee = project.members[0].name if project.members else "Unassigned"
-        extra = project.members[1].name if len(project.members) > 1 else assignee
-        goal = project.goal or f"Deliver {project.name}"
-        milestone_line = _milestone_line(project.name, project.deadline_at)
-        due_line = _due_line(project.deadline_at)
-        quality = "production-ready" if project.quality_bar == "production_grade" else "MVP"
-        cadence = "sprint-sized" if project.methodology == "scrum" else "continuous-flow"
-        return f"""# {project.name}
+    def generate(self, project: Project) -> PlannerResult:
+        markdown = _render(project)
+        return PlannerResult(
+            prompt=format_prompt_for_log(compose_messages(project)),
+            raw=markdown,
+            plan=parse_plan(markdown),
+        )
+
+
+def _render(project: Project) -> str:
+    assignee = project.members[0].name if project.members else "Unassigned"
+    extra = project.members[1].name if len(project.members) > 1 else assignee
+    goal = project.goal or f"Deliver {project.name}"
+    milestone_line = _milestone_line(project.deadline_at)
+    due_line = _due_line(project.deadline_at)
+    quality = "production-ready" if project.quality_bar == "production_grade" else "MVP"
+    cadence = "sprint-sized" if project.methodology == "scrum" else "continuous-flow"
+    return f"""# {project.name}
 
 ## Milestones
 {milestone_line}
@@ -87,7 +99,7 @@ class StubPlanner:
 """
 
 
-def _milestone_line(name: str, deadline_at: datetime | None) -> str:
+def _milestone_line(deadline_at: datetime | None) -> str:
     if deadline_at is None:
         return "- Launch | 2099-01-01"
     return f"- Launch | {deadline_at.date().isoformat()}"

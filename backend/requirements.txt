@@ -7,3 +7,4 @@ gunicorn==23.0.0
 python-dotenv==1.1.0
 redis==5.2.1
 rq==2.3.3
+openai==1.82.0
