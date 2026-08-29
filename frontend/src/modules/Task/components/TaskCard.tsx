@@ -60,7 +60,11 @@ export default function TaskCard({
 
   return (
     <>
-      <article {...dragProps} className={twMerge(isDragging && "opacity-50")}>
+      <article
+        {...dragProps}
+        data-dnd-item=""
+        className={twMerge(isDragging && "opacity-50")}
+      >
         <button
           className={twMerge(
             "w-full text-left select-none",

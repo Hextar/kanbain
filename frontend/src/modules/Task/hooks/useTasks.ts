@@ -283,10 +283,9 @@ export function useMoveTask() {
       taskId: Task["id"],
       sourceColumnId: Task["columnId"],
       targetColumnId: Task["columnId"],
+      targetIndex: number,
       projectId?: Task["projectId"],
     ) => {
-      if (sourceColumnId === targetColumnId) return;
-
       const sourceKey = taskKeys.list({
         columnId: sourceColumnId,
         projectId,
@@ -296,28 +295,46 @@ export function useMoveTask() {
         projectId,
       });
       const sourceList = queryClient.getQueryData<Task[]>(sourceKey) ?? [];
-      const task = sourceList.find((item) => item.id === taskId);
-      if (!task) return;
+      const sourceIndex = sourceList.findIndex((item) => item.id === taskId);
+      if (sourceIndex < 0) return;
 
+      const sameColumn = sourceColumnId === targetColumnId;
+      const insertAt = targetIndex;
+      if (sameColumn && insertAt === sourceIndex) return;
+
+      const task = sourceList[sourceIndex];
       const previousSource = queryClient.getQueryData<Task[]>(sourceKey);
       const previousTarget = queryClient.getQueryData<Task[]>(targetKey);
-      const destinationList = (
-        queryClient.getQueryData<Task[]>(targetKey) ?? []
-      ).filter((item) => item.id !== taskId);
+      const destinationList = sameColumn
+        ? sourceList.filter((item) => item.id !== taskId)
+        : (queryClient.getQueryData<Task[]>(targetKey) ?? []).filter(
+            (item) => item.id !== taskId,
+          );
+      const clampedIndex = Math.max(
+        0,
+        Math.min(insertAt, destinationList.length),
+      );
       const moved: Task = {
         ...withoutSaving(task),
         columnId: targetColumnId,
-        order: destinationList.length,
+        order: clampedIndex,
       };
 
-      queryClient.setQueryData<Task[]>(
-        sourceKey,
-        removeTaskById(sourceList, taskId),
-      );
-      queryClient.setQueryData<Task[]>(
-        targetKey,
-        insertTaskAt(destinationList, moved, destinationList.length),
-      );
+      if (sameColumn) {
+        queryClient.setQueryData<Task[]>(
+          sourceKey,
+          insertTaskAt(destinationList, moved, clampedIndex),
+        );
+      } else {
+        queryClient.setQueryData<Task[]>(
+          sourceKey,
+          removeTaskById(sourceList, taskId),
+        );
+        queryClient.setQueryData<Task[]>(
+          targetKey,
+          insertTaskAt(destinationList, moved, clampedIndex),
+        );
+      }
 
       void updateTaskMutation(moved).catch(() => {
         queryClient.setQueryData(sourceKey, previousSource);
