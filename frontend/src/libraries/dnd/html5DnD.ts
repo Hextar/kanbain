@@ -6,15 +6,14 @@ export type DragPreviewSize = {
   height: number;
 };
 
-let activeDragPreviewSize: DragPreviewSize | null = null;
+export type DropPlaceholder = {
+  index: number;
+  height: number;
+};
 
-export function setActiveDragPreviewSize(size: DragPreviewSize | null) {
-  activeDragPreviewSize = size;
-}
-
-export function getActiveDragPreviewSize() {
-  return activeDragPreviewSize;
-}
+const PREVIEW_HEIGHT_ATTR = "data-dnd-preview-height";
+const PREVIEW_WIDTH_ATTR = "data-dnd-preview-width";
+const FALLBACK_PREVIEW_HEIGHT = 72;
 
 export function hasDragMime(dataTransfer: DataTransfer, mimeType: string) {
   const types = Array.from(dataTransfer.types);
@@ -93,20 +92,34 @@ function isDraggingItem(element: HTMLElement) {
   return element.hasAttribute(DND_DRAGGING_ATTR);
 }
 
-export function markDragSource(source: HTMLElement) {
+export function markDragSource(source: HTMLElement, preview: DragPreviewSize) {
   clearDragSources();
   source.setAttribute(DND_DRAGGING_ATTR, "");
+  source.setAttribute(PREVIEW_WIDTH_ATTR, String(preview.width));
+  source.setAttribute(PREVIEW_HEIGHT_ATTR, String(preview.height));
 }
 
 export function clearDragSources() {
   document.querySelectorAll(`[${DND_DRAGGING_ATTR}]`).forEach((element) => {
     element.removeAttribute(DND_DRAGGING_ATTR);
+    element.removeAttribute(PREVIEW_WIDTH_ATTR);
+    element.removeAttribute(PREVIEW_HEIGHT_ATTR);
   });
+}
+
+function getActiveDragPreviewSize(): DragPreviewSize | null {
+  const source = document.querySelector<HTMLElement>(`[${DND_DRAGGING_ATTR}]`);
+  if (!source) return null;
+  const width = Number(source.getAttribute(PREVIEW_WIDTH_ATTR));
+  const height = Number(source.getAttribute(PREVIEW_HEIGHT_ATTR));
+  if (!width || !height) return null;
+  return { width, height };
 }
 
 export type VerticalInsert = {
   destIndex: number;
   visualIndex: number | null;
+  previewHeight: number;
 };
 
 export function getVerticalInsert(
@@ -132,14 +145,18 @@ export function getVerticalInsert(
     }
   }
 
+  const previewHeight =
+    getActiveDragPreviewSize()?.height ?? FALLBACK_PREVIEW_HEIGHT;
+
   if (draggingIndex < 0) {
-    return { destIndex, visualIndex: destIndex };
+    return { destIndex, visualIndex: destIndex, previewHeight };
   }
   if (destIndex === draggingIndex) {
-    return { destIndex, visualIndex: null };
+    return { destIndex, visualIndex: null, previewHeight };
   }
   return {
     destIndex,
     visualIndex: destIndex > draggingIndex ? destIndex + 1 : destIndex,
+    previewHeight,
   };
 }

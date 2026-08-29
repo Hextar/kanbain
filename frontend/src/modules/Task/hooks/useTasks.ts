@@ -13,6 +13,7 @@ import {
   updateTask,
 } from "../api/tasks";
 import { taskKeys } from "../api/taskKeys";
+import { compareTasksByOrder } from "../helpers/taskOrder";
 import type {
   CreateTaskInput,
   Task,
@@ -44,10 +45,6 @@ function insertTaskAt(list: Task[], task: Task, index: number): Task[] {
 
 function removeTaskById(list: Task[], taskId: Task["id"]): Task[] {
   return withRenumberedOrders(list.filter((item) => item.id !== taskId));
-}
-
-function insertByOrder(list: Task[], task: Task): Task[] {
-  return insertTaskAt(list, task, task.order);
 }
 
 function filtersFromListKey(queryKey: readonly unknown[]): TaskListFilters {
@@ -90,7 +87,7 @@ function syncTaskInListCaches(queryClient: QueryClient, task: Task) {
       if (current.some((item) => item.id === task.id)) {
         return current.map((item) => (item.id === task.id ? task : item));
       }
-      return insertByOrder(current, task);
+      return insertTaskAt(current, task, task.order);
     });
   }
   queryClient.setQueryData(taskKeys.detail(task.id), task);
@@ -211,9 +208,7 @@ export function useTasks(
   }
 
   const taskItems: TaskItem[] = (query.data ?? [])
-    .toSorted(
-      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-    )
+    .toSorted(compareTasksByOrder)
     .map((task) => ({
       ...task,
       isSaving: savingTaskIds.has(task.id),
@@ -256,7 +251,7 @@ export function useCreateTask() {
               task.id === created.id ? created : task,
             );
           }
-          return insertByOrder(current, created);
+          return insertTaskAt(current, created, created.order);
         },
       );
     },
@@ -299,41 +294,38 @@ export function useMoveTask() {
       if (sourceIndex < 0) return;
 
       const sameColumn = sourceColumnId === targetColumnId;
-      const insertAt = targetIndex;
-      if (sameColumn && insertAt === sourceIndex) return;
+      if (sameColumn && targetIndex === sourceIndex) return;
 
-      const task = sourceList[sourceIndex];
-      const previousSource = queryClient.getQueryData<Task[]>(sourceKey);
-      const previousTarget = queryClient.getQueryData<Task[]>(targetKey);
-      const destinationList = sameColumn
-        ? sourceList.filter((item) => item.id !== taskId)
-        : (queryClient.getQueryData<Task[]>(targetKey) ?? []).filter(
-            (item) => item.id !== taskId,
-          );
+      const destinationList = (
+        sameColumn
+          ? sourceList
+          : (queryClient.getQueryData<Task[]>(targetKey) ?? [])
+      ).filter((item) => item.id !== taskId);
       const clampedIndex = Math.max(
         0,
-        Math.min(insertAt, destinationList.length),
+        Math.min(targetIndex, destinationList.length),
       );
       const moved: Task = {
-        ...withoutSaving(task),
+        ...withoutSaving(sourceList[sourceIndex]),
         columnId: targetColumnId,
         order: clampedIndex,
       };
+      const nextDestination = insertTaskAt(
+        destinationList,
+        moved,
+        clampedIndex,
+      );
+      const previousSource = queryClient.getQueryData<Task[]>(sourceKey);
+      const previousTarget = queryClient.getQueryData<Task[]>(targetKey);
 
       if (sameColumn) {
-        queryClient.setQueryData<Task[]>(
-          sourceKey,
-          insertTaskAt(destinationList, moved, clampedIndex),
-        );
+        queryClient.setQueryData<Task[]>(sourceKey, nextDestination);
       } else {
         queryClient.setQueryData<Task[]>(
           sourceKey,
           removeTaskById(sourceList, taskId),
         );
-        queryClient.setQueryData<Task[]>(
-          targetKey,
-          insertTaskAt(destinationList, moved, clampedIndex),
-        );
+        queryClient.setQueryData<Task[]>(targetKey, nextDestination);
       }
 
       void updateTaskMutation(moved).catch(() => {

@@ -219,7 +219,7 @@ class Task(db.Model):
     column_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("columns.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    order: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    order: Mapped[int] = mapped_column(Integer, nullable=False)
     parent_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("tasks.id", ondelete="SET NULL"), index=True
     )

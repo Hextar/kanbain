@@ -7,6 +7,7 @@ import {
   getDragData,
   getVerticalInsert,
   hasDragMime,
+  type DropPlaceholder,
 } from "./html5DnD";
 
 type SortableOptions = {
@@ -32,6 +33,15 @@ function sortableItemSelector(
   return sortable.itemSelector ?? DND_ITEM_SELECTOR;
 }
 
+function placeholdersEqual(
+  left: DropPlaceholder | null,
+  right: DropPlaceholder | null,
+) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return left.index === right.index && left.height === right.height;
+}
+
 export function useHtml5Drop<T>({
   mimeType,
   onDrop,
@@ -39,36 +49,22 @@ export function useHtml5Drop<T>({
   sortable,
 }: UseHtml5DropOptions<T>) {
   const [isOver, setIsOver] = useState(false);
-  const [insertIndex, setInsertIndex] = useState<number | null>(null);
-  const [visualInsertIndex, setVisualInsertIndex] = useState<number | null>(
-    null,
-  );
+  const [placeholder, setPlaceholder] = useState<DropPlaceholder | null>(null);
   const enterCountRef = useRef(0);
-  const insertIndexRef = useRef<number | null>(null);
-  const visualInsertIndexRef = useRef<number | null>(null);
+  const placeholderRef = useRef<DropPlaceholder | null>(null);
   const itemSelector = sortableItemSelector(sortable);
 
-  const setInsertIfChanged = useCallback(
-    (destIndex: number | null, visualIndex: number | null) => {
-      if (
-        insertIndexRef.current === destIndex &&
-        visualInsertIndexRef.current === visualIndex
-      ) {
-        return;
-      }
-      insertIndexRef.current = destIndex;
-      visualInsertIndexRef.current = visualIndex;
-      setInsertIndex(destIndex);
-      setVisualInsertIndex(visualIndex);
-    },
-    [],
-  );
+  const setPlaceholderIfChanged = useCallback((next: DropPlaceholder | null) => {
+    if (placeholdersEqual(placeholderRef.current, next)) return;
+    placeholderRef.current = next;
+    setPlaceholder(next);
+  }, []);
 
   const resetOver = useCallback(() => {
     enterCountRef.current = 0;
     setIsOver(false);
-    setInsertIfChanged(null, null);
-  }, [setInsertIfChanged]);
+    setPlaceholderIfChanged(null);
+  }, [setPlaceholderIfChanged]);
 
   useEffect(() => {
     document.addEventListener("dragend", resetOver);
@@ -96,9 +92,13 @@ export function useHtml5Drop<T>({
         event.clientY,
         itemSelector,
       );
-      setInsertIfChanged(insert.destIndex, insert.visualIndex);
+      setPlaceholderIfChanged(
+        insert.visualIndex == null
+          ? null
+          : { index: insert.visualIndex, height: insert.previewHeight },
+      );
     },
-    [itemSelector, mimeType, setInsertIfChanged],
+    [itemSelector, mimeType, setPlaceholderIfChanged],
   );
 
   const handleDragLeave = useCallback(
@@ -137,8 +137,7 @@ export function useHtml5Drop<T>({
 
   return {
     isOver,
-    insertIndex,
-    visualInsertIndex,
+    placeholder,
     dropProps: {
       onDragEnter: handleDragEnter,
       onDragOver: handleDragOver,

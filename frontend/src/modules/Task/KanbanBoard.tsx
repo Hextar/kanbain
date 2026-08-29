@@ -7,6 +7,7 @@ import { useColumns } from "./hooks/useColumns";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
 import type { Task } from "./types/Task";
+import { compareTasksByOrder } from "./helpers/taskOrder";
 
 type KanbanBoardProps = {
   project: Pick<Project, "id" | "name">;
@@ -70,9 +71,7 @@ function groupTasksByColumn(columns: Column[], tasks: Task[] | undefined) {
   for (const [columnId, list] of grouped) {
     grouped.set(
       columnId,
-      list.toSorted(
-        (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-      ),
+      list.toSorted(compareTasksByOrder),
     );
   }
   return grouped;

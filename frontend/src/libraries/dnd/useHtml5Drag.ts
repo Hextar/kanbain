@@ -6,7 +6,6 @@ import {
   DND_ITEM_SELECTOR,
   clearDragSources,
   markDragSource,
-  setActiveDragPreviewSize,
   setDragData,
   setDragImageAtCursor,
 } from "./html5DnD";
@@ -39,9 +38,8 @@ export function useHtml5Drag<T>({
       const source =
         event.currentTarget.closest<HTMLElement>(DND_ITEM_SELECTOR) ??
         event.currentTarget;
-      markDragSource(source);
       const rect = source.getBoundingClientRect();
-      setActiveDragPreviewSize({ width: rect.width, height: rect.height });
+      markDragSource(source, { width: rect.width, height: rect.height });
       setDragData(event.dataTransfer, mimeType, data);
       setDragImageAtCursor(
         event.dataTransfer,
@@ -62,7 +60,6 @@ export function useHtml5Drag<T>({
     (event: DragEvent<HTMLElement>) => {
       cancelAnimationFrame(dragFrameRef.current);
       clearDragSources();
-      setActiveDragPreviewSize(null);
       setIsDragging(false);
       onDragEnd?.(event);
     },

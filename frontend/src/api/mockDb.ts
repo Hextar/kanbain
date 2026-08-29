@@ -12,6 +12,7 @@ import type { CreateProjectInput, Project } from "@modules/Project/types/Project
 import type { Column, CreateColumnInput } from "@modules/Task/types/Column";
 import type { Assignee, Milestone, Tag } from "@modules/Task/types/Catalog";
 import type { CreateTaskInput, Task, TaskListFilters } from "@modules/Task/types/Task";
+import { compareTasksByOrder } from "@modules/Task/helpers/taskOrder";
 import {
   milestoneFromJson,
   milestoneToJson,
@@ -304,29 +305,17 @@ function matchesFilters(task: Task, filters: TaskListFilters) {
 export function listTasks(filters: TaskListFilters) {
   return tasks
     .filter((task) => matchesFilters(task, filters))
-    .toSorted(
-      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-    );
+    .toSorted(compareTasksByOrder);
 }
 
 export function findTask(id: string) {
   return tasks.find((task) => task.id === id) ?? null;
 }
 
-function nextTaskOrder(columnId: string) {
-  return (
-    tasks
-      .filter((task) => task.columnId === columnId)
-      .reduce((max, task) => Math.max(max, task.order), -1) + 1
-  );
-}
-
 function renumberColumnTasks(columnId: string) {
   const siblings = tasks
     .filter((task) => task.columnId === columnId)
-    .toSorted(
-      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-    );
+    .toSorted(compareTasksByOrder);
   siblings.forEach((task, index) => {
     task.order = index;
   });
@@ -340,9 +329,7 @@ function placeTask(
 ) {
   const siblings = tasks
     .filter((item) => item.columnId === columnId && item.id !== task.id)
-    .toSorted(
-      (left, right) => left.order - right.order || left.id.localeCompare(right.id),
-    );
+    .toSorted(compareTasksByOrder);
   const insertAt =
     order === undefined
       ? siblings.length
@@ -384,12 +371,10 @@ export function insertTask(input: CreateTaskInput): Task {
     id: input.id ?? crypto.randomUUID(),
     projectId: column.projectId,
     createdAt: new Date(),
-    order: input.order ?? nextTaskOrder(input.columnId),
+    order: 0,
   };
   tasks.push(task);
-  if (input.order !== undefined) {
-    placeTask(task, column.id, input.order, column.id);
-  }
+  placeTask(task, column.id, input.order, column.id);
   return task;
 }
 
