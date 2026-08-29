@@ -55,6 +55,7 @@ def test_create_and_filter_tasks(client):
     assert task["projectId"] == default_project(client)["id"]
     assert task["workKind"] == "task"
     assert task["createdAt"]
+    assert task["order"] == 0
 
     client.post("/api/tasks", json={"title": "Other", "columnId": doing_id})
 
@@ -171,11 +172,65 @@ def test_move_task_to_another_column(client):
     assert body["title"] == "Move me"
     assert body["priority"] == "high"
     assert body["projectId"] == default_project(client)["id"]
+    assert body["order"] == 0
 
     todo_tasks = client.get(f"/api/tasks?columnId={todo_id}").get_json()
     doing_tasks = client.get(f"/api/tasks?columnId={doing_id}").get_json()
     assert [item["id"] for item in todo_tasks] == []
     assert [item["id"] for item in doing_tasks] == [task_id]
+
+
+def test_task_order_assigned_and_sorted(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    first = client.post("/api/tasks", json={"title": "First", "columnId": todo_id}).get_json()
+    second = client.post("/api/tasks", json={"title": "Second", "columnId": todo_id}).get_json()
+    third = client.post("/api/tasks", json={"title": "Third", "columnId": todo_id}).get_json()
+    assert [first["order"], second["order"], third["order"]] == [0, 1, 2]
+
+    listed = client.get(f"/api/tasks?columnId={todo_id}").get_json()
+    assert [item["title"] for item in listed] == ["First", "Second", "Third"]
+
+
+def test_reorder_task_within_column(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    first = client.post("/api/tasks", json={"title": "First", "columnId": todo_id}).get_json()
+    client.post("/api/tasks", json={"title": "Second", "columnId": todo_id})
+    third = client.post("/api/tasks", json={"title": "Third", "columnId": todo_id}).get_json()
+
+    moved = client.put(f"/api/tasks/{third['id']}", json={"order": 0})
+    assert moved.status_code == 200
+    assert moved.get_json()["order"] == 0
+
+    listed = client.get(f"/api/tasks?columnId={todo_id}").get_json()
+    assert [item["title"] for item in listed] == ["Third", "First", "Second"]
+    assert [item["order"] for item in listed] == [0, 1, 2]
+    assert listed[1]["id"] == first["id"]
+
+
+def test_move_task_to_column_at_index(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    doing_id = columns[1]["id"]
+
+    client.post("/api/tasks", json={"title": "Keep", "columnId": doing_id})
+    client.post("/api/tasks", json={"title": "Tail", "columnId": doing_id})
+    incoming = client.post(
+        "/api/tasks", json={"title": "Incoming", "columnId": todo_id}
+    ).get_json()
+
+    moved = client.put(
+        f"/api/tasks/{incoming['id']}",
+        json={"columnId": doing_id, "order": 1},
+    )
+    assert moved.status_code == 200
+    assert moved.get_json()["columnId"] == doing_id
+    assert moved.get_json()["order"] == 1
+
+    doing_tasks = client.get(f"/api/tasks?columnId={doing_id}").get_json()
+    assert [item["title"] for item in doing_tasks] == ["Keep", "Incoming", "Tail"]
+    assert [item["order"] for item in doing_tasks] == [0, 1, 2]
+    todo_tasks = client.get(f"/api/tasks?columnId={todo_id}").get_json()
+    assert todo_tasks == []
 
 
 def test_unknown_column_is_rejected(client):

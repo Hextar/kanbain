@@ -58,6 +58,9 @@ def _replace_dependencies(task: Task, depends_on_ids: list[str]) -> None:
 
 
 def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
+    source_column_id = None if creating else task.column_id
+    column_in_payload = "columnId" in payload
+
     if "title" in payload or creating:
         task.title = require_title(payload)
 
@@ -159,6 +162,78 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         depends_on = parse_string_list(payload.get("dependsOn"), "dependsOn")
         _replace_dependencies(task, depends_on or [])
 
+    _apply_task_order(
+        task,
+        payload,
+        creating=creating,
+        source_column_id=source_column_id,
+        column_in_payload=column_in_payload,
+    )
+
+
+def _next_column_order(column_id: str) -> int:
+    max_order = db.session.scalar(
+        db.select(db.func.max(Task.order)).where(Task.column_id == column_id)
+    )
+    return (max_order if max_order is not None else -1) + 1
+
+
+def _renumber_column(column_id: str) -> None:
+    siblings = db.session.execute(
+        db.select(Task)
+        .where(Task.column_id == column_id)
+        .order_by(Task.order.asc(), Task.id.asc())
+    ).scalars().all()
+    for index, sibling in enumerate(siblings):
+        sibling.order = index
+
+
+def _place_task(
+    task: Task,
+    column_id: str,
+    order: int | None,
+    *,
+    source_column_id: str | None,
+) -> None:
+    siblings = (
+        db.session.execute(
+            db.select(Task)
+            .where(Task.column_id == column_id, Task.id != task.id)
+            .order_by(Task.order.asc(), Task.id.asc())
+        )
+        .scalars()
+        .all()
+    )
+    insert_at = len(siblings) if order is None else max(0, min(order, len(siblings)))
+    siblings.insert(insert_at, task)
+    task.column_id = column_id
+    for index, sibling in enumerate(siblings):
+        sibling.order = index
+    if source_column_id and source_column_id != column_id:
+        _renumber_column(source_column_id)
+
+
+def _apply_task_order(
+    task: Task,
+    payload: dict,
+    *,
+    creating: bool,
+    source_column_id: str | None,
+    column_in_payload: bool,
+) -> None:
+    order_in_payload = "order" in payload
+    if creating and not order_in_payload:
+        task.order = _next_column_order(task.column_id)
+        return
+    if creating or order_in_payload or column_in_payload:
+        order = parse_int(payload.get("order"), "order") if order_in_payload else None
+        _place_task(
+            task,
+            task.column_id,
+            order,
+            source_column_id=source_column_id,
+        )
+
 
 def _task_filters():
     column_id = request.args.get("columnId")
@@ -188,7 +263,7 @@ def _task_filters():
     if work_kind:
         parsed_kind = parse_enum(work_kind, WORK_KINDS, "workKind", required=True)
         statement = statement.where(Task.work_kind == parsed_kind)
-    return statement
+    return statement.order_by(Task.column_id.asc(), Task.order.asc(), Task.id.asc())
 
 
 @tasks_bp.get("/api/tasks")

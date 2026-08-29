@@ -23,6 +23,7 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
             project_id=project.id,
             column_id=column.id,
             title=item.title,
+            order=len(created),
             work_kind=item.work_kind,
             parent_id=parent.id if parent is not None else None,
             description=item.description,

@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -208,6 +208,7 @@ class Task(db.Model):
             "estimate_tshirt IS NULL OR estimate_tshirt IN ('xs', 's', 'm', 'l', 'xl')",
             name="ck_tasks_estimate_tshirt",
         ),
+        Index("ix_tasks_column_id_order", "column_id", "order"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -218,6 +219,7 @@ class Task(db.Model):
     column_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("columns.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    order: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     parent_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("tasks.id", ondelete="SET NULL"), index=True
     )
@@ -268,6 +270,7 @@ class Task(db.Model):
             "projectId": self.project_id,
             "title": self.title,
             "columnId": self.column_id,
+            "order": self.order,
             "workKind": self.work_kind,
         }
         optional = {
