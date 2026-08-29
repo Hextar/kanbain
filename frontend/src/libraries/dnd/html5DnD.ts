@@ -1,3 +1,21 @@
+export const DND_ITEM_SELECTOR = "[data-dnd-item]";
+export const DND_DRAGGING_ATTR = "data-dnd-dragging";
+
+export type DragPreviewSize = {
+  width: number;
+  height: number;
+};
+
+let activeDragPreviewSize: DragPreviewSize | null = null;
+
+export function setActiveDragPreviewSize(size: DragPreviewSize | null) {
+  activeDragPreviewSize = size;
+}
+
+export function getActiveDragPreviewSize() {
+  return activeDragPreviewSize;
+}
+
 export function hasDragMime(dataTransfer: DataTransfer, mimeType: string) {
   const types = Array.from(dataTransfer.types);
   return types.includes(mimeType) || types.includes("text/plain");
@@ -65,4 +83,63 @@ export function getDragData<T>(
   } catch {
     return null;
   }
+}
+
+function isPlaceholderItem(element: HTMLElement) {
+  return element.hasAttribute("data-dnd-placeholder");
+}
+
+function isDraggingItem(element: HTMLElement) {
+  return element.hasAttribute(DND_DRAGGING_ATTR);
+}
+
+export function markDragSource(source: HTMLElement) {
+  clearDragSources();
+  source.setAttribute(DND_DRAGGING_ATTR, "");
+}
+
+export function clearDragSources() {
+  document.querySelectorAll(`[${DND_DRAGGING_ATTR}]`).forEach((element) => {
+    element.removeAttribute(DND_DRAGGING_ATTR);
+  });
+}
+
+export type VerticalInsert = {
+  destIndex: number;
+  visualIndex: number | null;
+};
+
+export function getVerticalInsert(
+  container: HTMLElement,
+  clientY: number,
+  itemSelector = DND_ITEM_SELECTOR,
+): VerticalInsert {
+  const items = Array.from(
+    container.querySelectorAll<HTMLElement>(itemSelector),
+  ).filter((element) => !isPlaceholderItem(element));
+  const draggingIndex = items.findIndex(isDraggingItem);
+  const sortable =
+    draggingIndex < 0
+      ? items
+      : items.filter((_, index) => index !== draggingIndex);
+
+  let destIndex = sortable.length;
+  for (let index = 0; index < sortable.length; index++) {
+    const rect = sortable[index].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      destIndex = index;
+      break;
+    }
+  }
+
+  if (draggingIndex < 0) {
+    return { destIndex, visualIndex: destIndex };
+  }
+  if (destIndex === draggingIndex) {
+    return { destIndex, visualIndex: null };
+  }
+  return {
+    destIndex,
+    visualIndex: destIndex > draggingIndex ? destIndex + 1 : destIndex,
+  };
 }

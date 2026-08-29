@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { DragEvent } from "react";
-import { setDragData, setDragImageAtCursor } from "./html5DnD";
+import {
+  DND_ITEM_SELECTOR,
+  clearDragSources,
+  markDragSource,
+  setActiveDragPreviewSize,
+  setDragData,
+  setDragImageAtCursor,
+} from "./html5DnD";
 
 type UseHtml5DragOptions<T> = {
   data: T;
@@ -20,6 +27,7 @@ export function useHtml5Drag<T>({
   onDragEnd,
 }: UseHtml5DragOptions<T>) {
   const [isDragging, setIsDragging] = useState(false);
+  const dragFrameRef = useRef(0);
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLElement>) => {
@@ -28,6 +36,12 @@ export function useHtml5Drag<T>({
         return;
       }
       event.dataTransfer.effectAllowed = "move";
+      const source =
+        event.currentTarget.closest<HTMLElement>(DND_ITEM_SELECTOR) ??
+        event.currentTarget;
+      markDragSource(source);
+      const rect = source.getBoundingClientRect();
+      setActiveDragPreviewSize({ width: rect.width, height: rect.height });
       setDragData(event.dataTransfer, mimeType, data);
       setDragImageAtCursor(
         event.dataTransfer,
@@ -35,14 +49,20 @@ export function useHtml5Drag<T>({
         event.clientX,
         event.clientY,
       );
-      setIsDragging(true);
       onDragStart?.(event);
+      cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = requestAnimationFrame(() => {
+        setIsDragging(true);
+      });
     },
     [data, disabled, mimeType, onDragStart],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEvent<HTMLElement>) => {
+      cancelAnimationFrame(dragFrameRef.current);
+      clearDragSources();
+      setActiveDragPreviewSize(null);
       setIsDragging(false);
       onDragEnd?.(event);
     },
