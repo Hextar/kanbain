@@ -1,4 +1,4 @@
-import { useOptimistic, useState, useTransition } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumn as createColumnApi,
@@ -9,12 +9,8 @@ import {
 import { columnKeys } from "../api/columnKeys";
 import type { Column, ColumnItem, CreateColumnInput } from "../types/Column";
 
-type ColumnOptimisticAction =
-  | { type: "add"; column: Column }
-  | { type: "update"; column: Column }
-  | { type: "delete"; id: Column["id"] };
-
 export function useColumns(projectId: string, initialColumns?: Column[]) {
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: columnKeys.list(projectId),
     queryFn: () => getColumns(projectId),
@@ -23,43 +19,29 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
   const { mutateAsync: createColumnMutation } = useCreateColumn();
   const { mutateAsync: updateColumnMutation } = useUpdateColumn();
   const { mutateAsync: deleteColumnMutation } = useDeleteColumn();
-  const [, startTransition] = useTransition();
   const [savingColumnIds, setSavingColumnIds] = useState<
     ReadonlySet<Column["id"]>
   >(new Set());
 
-  const columns = query.data ?? [];
-  const [optimisticColumns, applyOptimistic] = useOptimistic(
-    columns,
-    (currentColumns: Column[], action: ColumnOptimisticAction) => {
-      switch (action.type) {
-        case "add":
-          if (currentColumns.some((column) => column.id === action.column.id))
-            return currentColumns;
-          return [...currentColumns, action.column];
-        case "update":
-          return currentColumns.map((column) =>
-            column.id === action.column.id ? action.column : column,
-          );
-        case "delete":
-          return currentColumns.filter((column) => column.id !== action.id);
-      }
-    },
-  );
+  const listKey = columnKeys.list(projectId);
 
-  function withSaving(id: Column["id"], action: () => Promise<unknown>) {
-    startTransition(async () => {
-      setSavingColumnIds((current) => new Set(current).add(id));
-      try {
-        await action();
-      } finally {
-        setSavingColumnIds((current) => {
-          const next = new Set(current);
-          next.delete(id);
-          return next;
-        });
-      }
-    });
+  function setListData(updater: (current: Column[]) => Column[]) {
+    queryClient.setQueryData<Column[]>(listKey, (current) =>
+      updater(current ?? []),
+    );
+  }
+
+  async function withSaving(id: Column["id"], action: () => Promise<unknown>) {
+    setSavingColumnIds((current) => new Set(current).add(id));
+    try {
+      await action();
+    } finally {
+      setSavingColumnIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
   }
 
   function create(
@@ -70,34 +52,68 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
       id: input.id ?? crypto.randomUUID(),
       projectId: nextProjectId,
       title: input.title,
-      order: optimisticColumns.length,
+      order: queryClient.getQueryData<Column[]>(listKey)?.length ?? 0,
     };
 
-    withSaving(column.id, async () => {
-      applyOptimistic({ type: "add", column });
-      await createColumnMutation({
-        ...input,
-        id: column.id,
-        projectId: nextProjectId,
-      });
+    void withSaving(column.id, async () => {
+      setListData((current) =>
+        current.some((item) => item.id === column.id)
+          ? current
+          : [...current, column],
+      );
+      try {
+        await createColumnMutation({
+          ...input,
+          id: column.id,
+          projectId: nextProjectId,
+        });
+      } catch (error) {
+        setListData((current) =>
+          current.filter((item) => item.id !== column.id),
+        );
+        throw error;
+      }
     });
   }
 
   function update(column: Column) {
-    withSaving(column.id, async () => {
-      applyOptimistic({ type: "update", column });
-      await updateColumnMutation(column);
+    const previous =
+      queryClient
+        .getQueryData<Column[]>(listKey)
+        ?.find((item) => item.id === column.id) ?? null;
+
+    void withSaving(column.id, async () => {
+      setListData((current) =>
+        current.map((item) => (item.id === column.id ? column : item)),
+      );
+      try {
+        await updateColumnMutation(column);
+      } catch (error) {
+        if (previous) {
+          setListData((current) =>
+            current.map((item) => (item.id === previous.id ? previous : item)),
+          );
+        }
+        throw error;
+      }
     });
   }
 
   function remove(id: Column["id"]) {
-    withSaving(id, async () => {
-      applyOptimistic({ type: "delete", id });
-      await deleteColumnMutation(id);
+    const previous = queryClient.getQueryData<Column[]>(listKey) ?? [];
+
+    void withSaving(id, async () => {
+      setListData((current) => current.filter((item) => item.id !== id));
+      try {
+        await deleteColumnMutation(id);
+      } catch (error) {
+        queryClient.setQueryData<Column[]>(listKey, previous);
+        throw error;
+      }
     });
   }
 
-  const columnItems: ColumnItem[] = optimisticColumns.map((column) => ({
+  const columnItems: ColumnItem[] = (query.data ?? []).map((column) => ({
     ...column,
     isSaving: savingColumnIds.has(column.id),
   }));
@@ -122,12 +138,14 @@ function useCreateColumn() {
         columnKeys.list(created.projectId),
         (current) => {
           if (!current) return [created];
-          if (current.some((column) => column.id === created.id))
-            return current;
+          if (current.some((column) => column.id === created.id)) {
+            return current.map((column) =>
+              column.id === created.id ? created : column,
+            );
+          }
           return [...current, created];
         },
       );
-      void queryClient.invalidateQueries({ queryKey: columnKeys.lists() });
     },
   });
 }
@@ -145,10 +163,6 @@ function useUpdateColumn() {
             column.id === updated.id ? updated : column,
           ),
       );
-      void queryClient.invalidateQueries({ queryKey: columnKeys.lists() });
-      void queryClient.invalidateQueries({
-        queryKey: columnKeys.detail(updated.id),
-      });
     },
   });
 }
@@ -158,16 +172,12 @@ function useDeleteColumn() {
 
   return useMutation({
     mutationFn: deleteColumnApi,
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: columnKeys.lists() });
-    },
     onSuccess: (_result, id) => {
       queryClient.setQueriesData<Column[]>(
         { queryKey: columnKeys.lists() },
         (current) => current?.filter((column) => column.id !== id),
       );
       queryClient.removeQueries({ queryKey: columnKeys.detail(id) });
-      void queryClient.invalidateQueries({ queryKey: columnKeys.lists() });
     },
   });
 }
