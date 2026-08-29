@@ -57,7 +57,13 @@ export default function SettingsDialog({
       className="max-w-md"
       descriptionId={descriptionId}
       footer={
-        <div className="flex items-center justify-end gap-2">
+        <div
+          className={
+            configured
+              ? "flex items-center justify-between gap-3"
+              : "flex items-center justify-end gap-3"
+          }
+        >
           {configured ? (
             <Button
               disabled={isPending}
@@ -84,23 +90,23 @@ export default function SettingsDialog({
       title="Settings"
       onClose={onClose}
     >
-      <form className="flex flex-col gap-3" id={formId} onSubmit={handleSubmit}>
-        <p className="text-sm text-zinc-300" id={descriptionId}>
+      <form className="flex flex-col gap-5" id={formId} onSubmit={handleSubmit}>
+        <p className="text-sm leading-relaxed text-zinc-400" id={descriptionId}>
           The OpenAI API key is encrypted on the server so the planner worker can
           generate boards. It is never shown in full after you save it.
         </p>
         {loadFailed ? (
-          <p className="rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-300" role="alert">
+          <p className="rounded-md bg-red-500/15 px-3 py-2.5 text-sm text-red-300" role="alert">
             Could not load settings from the server.
           </p>
         ) : (
           <div
             className={
               status.tone === "ok"
-                ? "flex items-start gap-2 rounded-md bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300"
+                ? "flex items-start gap-2.5 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300"
                 : status.tone === "warn"
-                  ? "flex items-start gap-2 rounded-md bg-amber-500/15 px-3 py-2 text-sm text-amber-200"
-                  : "flex items-start gap-2 rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-400"
+                  ? "flex items-start gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200"
+                  : "flex items-start gap-2.5 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-400"
             }
             role={status.tone === "ok" ? "status" : "alert"}
           >
@@ -109,45 +115,51 @@ export default function SettingsDialog({
             ) : (
               <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={16} />
             )}
-            <div>
-              <p className={status.tone === "ok" ? "font-medium text-emerald-200" : "font-medium"}>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <p className={status.tone === "ok" ? "font-medium text-emerald-100" : "font-medium text-zinc-200"}>
                 {status.title}
               </p>
-              <p className={status.tone === "ok" ? "text-emerald-300/90" : undefined}>
+              <p className={status.tone === "ok" ? "text-emerald-300/80" : "text-zinc-400"}>
                 {status.body}
               </p>
             </div>
           </div>
         )}
-        <p className="text-sm text-zinc-400">
-          Need a key?{" "}
-          <a
-            className="text-purple-400 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-300 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-            href={OPENAI_API_KEY_DOCS_URL}
-            rel="noreferrer"
-            target="_blank"
-          >
-            How to create an OpenAI API key
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        </p>
-        <label className="flex flex-col gap-1 text-sm text-zinc-300" htmlFor={inputId}>
-          {configured ? "Replace OpenAI API key" : "OpenAI API key"}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-zinc-200" htmlFor={inputId}>
+            {configured ? "Replace OpenAI API key" : "OpenAI API key"}
+          </label>
           <Input
             autoComplete="off"
             autoFocus={open}
+            className="w-full border border-zinc-700 bg-zinc-900 font-mono text-sm"
             id={inputId}
             placeholder={configured ? "Paste a new key to replace" : "sk-..."}
+            spellCheck={false}
             type="password"
             value={apiKey}
             onChange={(event) => onApiKeyChange(event.target.value)}
           />
-        </label>
-        <div aria-live="polite" className="min-h-5 text-sm">
+          <p className="text-sm text-zinc-500">
+            Need a key?{" "}
+            <a
+              className="text-purple-400 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-300 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+              href={OPENAI_API_KEY_DOCS_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              How to create an OpenAI API key
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </p>
           {error ? (
-            <p className="text-red-400">{error}</p>
+            <p aria-live="polite" className="text-sm text-red-400">
+              {error}
+            </p>
           ) : notice ? (
-            <p className="text-emerald-300">{notice}</p>
+            <p aria-live="polite" className="text-sm text-emerald-300">
+              {notice}
+            </p>
           ) : null}
         </div>
       </form>
