@@ -56,6 +56,7 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/health` | Checks the database connection |
+| GET / PUT | `/api/settings` | OpenAI API key for the planner; GET never returns the secret |
 | GET / POST | `/api/projects` | Wizard fields; creates default columns; enqueues the planner (`planStatus: planning`) |
 | GET / PUT / DELETE | `/api/projects/<id>` | DELETE cascades board data |
 | POST | `/api/projects/<id>/plan` | Re-enqueue the planner (`failed` or `ready`) |
@@ -73,6 +74,6 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | PUT | `/api/tasks/<id>` | Full update; 404 if missing |
 | DELETE | `/api/tasks/<id>` | 204 even if the task is already gone |
 
-Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`. Projects expose `planStatus` (`planning` \| `ready` \| `failed`). `PLANNER=stub` is the default; a future LLM planner is a new class behind that env var.
+Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`. Projects expose `planStatus` (`planning` \| `ready` \| `failed`). `PLANNER=openai` is the default; set `PLANNER=stub` to skip the model. Save an API key in Settings or `OPENAI_API_KEY`.
 
 On first boot the database is seeded with an **Untitled project** and columns **To Do**, **In Progress**, and **Done**.

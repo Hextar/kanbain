@@ -26,7 +26,7 @@ The interesting part is not generating the first board. It is treating the AI as
 
 ## Current status
 
-The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. New projects go through a wizard; a background stub planner fills the board. Swap `PLANNER=stub` for a real LLM later.
+The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backend/` is **project-centric**: each project owns wizard constraints (goal, team, deadline, how you work), a board of columns, and tasks that can be epics/stories/cards. New projects go through a wizard; a background OpenAI planner fills the board. Set `PLANNER=stub` to plan without a model.
 
 - Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
