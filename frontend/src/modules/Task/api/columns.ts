@@ -1,8 +1,5 @@
 import { apiFetch, expectOk, readJson } from "@api/env";
-import {
-  columnFromJson,
-  type ColumnJson,
-} from "../helpers/columnJson";
+import { columnFromJson, type ColumnJson } from "../helpers/columnJson";
 import type { Column, CreateColumnInput } from "../types/Column";
 
 const COLUMNS_URL = "/api/columns";
@@ -37,7 +34,11 @@ export async function updateColumn(column: Column): Promise<Column> {
     await apiFetch(`${COLUMNS_URL}/${column.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: column.title }),
+      body: JSON.stringify({
+        title: column.title,
+        order: column.order,
+        color: column.color,
+      }),
     }),
     "Failed to update column",
   );

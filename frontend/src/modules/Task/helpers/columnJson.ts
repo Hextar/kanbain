@@ -1,3 +1,4 @@
+import { defaultColumnColor, isColumnColorId } from "./columnAccent";
 import type { Column } from "../types/Column";
 
 export type ColumnJson = {
@@ -5,6 +6,7 @@ export type ColumnJson = {
   projectId: string;
   title: string;
   order: number;
+  color?: string;
 };
 
 export function columnFromJson(json: ColumnJson): Column {
@@ -13,6 +15,9 @@ export function columnFromJson(json: ColumnJson): Column {
     projectId: json.projectId,
     title: json.title,
     order: json.order,
+    color: isColumnColorId(json.color)
+      ? json.color
+      : defaultColumnColor(json.order),
   };
 }
 
@@ -22,5 +27,6 @@ export function columnToJson(column: Column): ColumnJson {
     projectId: column.projectId,
     title: column.title,
     order: column.order,
+    color: column.color,
   };
 }
