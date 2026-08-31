@@ -37,17 +37,17 @@ type NewColumnButtonProps = {
 function NewColumnButton({ className, onSubmit }: NewColumnButtonProps) {
   return (
     <div
-      className={`flex h-[60px] min-w-[240px] flex-col rounded-lg border border-zinc-700 ${className ?? ""}`}
+      className={`flex h-[52px] w-[280px] flex-col overflow-hidden rounded-xl border border-dashed border-white/12 ${className ?? ""}`}
     >
       <Button
-        className="flex h-full items-center justify-center gap-2"
-        kind="outline"
-        size="lg"
+        className="flex h-full items-center justify-center gap-2 text-sm"
+        kind="ghost"
+        size="sm"
         variant="secondary"
         onClick={() => onSubmit()}
       >
-        <Plus size={20} />
-        Add new column
+        <Plus size={16} />
+        Add column
       </Button>
     </div>
   );
@@ -75,7 +75,7 @@ function NewColumnCard({ className, onSubmit, onCancel }: NewColumnCardProps) {
 
   return (
     <form
-      className={`flex min-w-[240px] flex-col gap-2 rounded-lg bg-zinc-800 p-4 ${className ?? ""}`}
+      className={`flex w-[280px] flex-col gap-2 rounded-xl border border-white/6 bg-[#181b24] p-3 ${className ?? ""}`}
       onSubmit={(event) => handleSubmit(event)}
     >
       <Input

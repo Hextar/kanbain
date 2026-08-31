@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 export const taskCardClassName =
-  "rounded-xl border border-zinc-700/90 bg-zinc-950 p-2 shadow-md shadow-black/40";
+  "min-w-0 rounded-lg border border-white/8 bg-[#14161e] p-3 shadow-sm shadow-black/25";
 
 type TaskCardFrameProps = {
   children: ReactNode;

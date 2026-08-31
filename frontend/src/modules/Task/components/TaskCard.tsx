@@ -1,37 +1,101 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
+import { format } from "date-fns";
+import { ChevronRight, MessageSquare, Paperclip } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
+import Tooltip from "@uiKit/Tooltip";
+import type { DropPlaceholder } from "@libraries/dnd/html5DnD";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useAssignees, useMilestones } from "../hooks/useCatalog";
+import { compactTaskKey } from "../helpers/taskKey";
+import { milestoneLabel } from "../helpers/milestoneLabel";
+import {
+  ESTIMATE_STYLE,
+  labeledPriority,
+  PILL_CLASS_NAME,
+  PRIORITY_STYLES,
+  WORK_KIND_STYLES,
+} from "../helpers/taskBadges";
+import { useListPresence } from "../helpers/useListPresence";
 import type { Task, TaskItem } from "../types/Task";
+import CollapsibleSlot from "./CollapsibleSlot";
+import FlipItem from "./FlipItem";
+import DropLine from "./DropLine";
+import NestedTaskRow from "./NestedTaskRow";
 import TaskCardFrame from "./TaskCardFrame";
-import TaskDetailDialog from "./TaskDetailDialog";
 
 type TaskCardProps = {
   task: TaskItem;
+  nested: TaskItem[];
   projectId: string;
-  onUpdate: (task: Task) => void;
-  onDelete: (id: Task["id"]) => void;
+  accentBar?: string;
+  doneCount?: number;
+  childCount?: number;
+  nestActive?: boolean;
+  nestedPlaceholder?: DropPlaceholder | null;
+  selectedTaskId?: string;
+  onOpen: (task: Task) => void;
 };
 
-const priorityStyles = {
-  low: "bg-zinc-700 text-zinc-300",
-  medium: "bg-amber-500/15 text-amber-300",
-  high: "bg-rose-500/15 text-rose-300",
-} as const;
+function compactAgo(date: Date): string {
+  const delta = Date.now() - date.getTime();
+  if (!Number.isFinite(delta) || delta < 45_000) return "just now";
+  const minutes = Math.floor(delta / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 14) return `${days}d ago`;
+  return format(date, "yyyy-MM-dd");
+}
+
+function Badge({
+  tooltip,
+  className,
+  children,
+}: {
+  tooltip: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip content={tooltip}>
+      <span className={twMerge(PILL_CLASS_NAME, className)}>{children}</span>
+    </Tooltip>
+  );
+}
+
+function nestedTaskId(task: TaskItem) {
+  return task.id;
+}
 
 export default function TaskCard({
   task,
+  nested,
   projectId,
-  onUpdate,
-  onDelete,
+  accentBar,
+  doneCount = 0,
+  childCount = 0,
+  nestActive = false,
+  nestedPlaceholder = null,
+  selectedTaskId,
+  onOpen,
 }: TaskCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const skipClickRef = useRef(false);
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
+  const nestedPresence = useListPresence(nested, nestedTaskId);
+  const showNested = nestedPresence.length > 0;
+  const keyLabel = compactTaskKey(task);
+  const summary = task.description?.trim();
+  const stamp = task.updatedAt ?? task.createdAt;
+  const commentCount = task.comments?.length ?? 0;
+  const attachmentCount = task.attachments?.length ?? 0;
 
   const handleDragStart = useCallback(() => {
     skipClickRef.current = true;
@@ -54,96 +118,266 @@ export default function TaskCard({
   const assigneeName = assignees.find(
     (assignee) => assignee.id === task.assigneeId,
   )?.name;
-  const milestoneTitle = milestones.find(
-    (milestone) => milestone.id === task.milestoneId,
-  )?.title;
+  const milestone = milestones.find((item) => item.id === task.milestoneId);
+  const milestoneName = milestone
+    ? milestoneLabel(milestone, milestones)
+    : null;
 
   return (
-    <>
-      <article
-        {...dragProps}
-        data-dnd-item=""
-        className={twMerge(isDragging && "opacity-50")}
+    <article
+      {...dragProps}
+      data-dnd-column-card=""
+      data-dnd-item=""
+      data-task-id={task.id}
+      className={twMerge("relative w-full min-w-0", isDragging && "opacity-50")}
+    >
+      <TaskCardFrame
+        className={twMerge(
+          "relative flex min-h-2 flex-col transition-colors hover:border-zinc-500/70",
+          task.isSaving && "opacity-70",
+          nestActive && "border-purple-400",
+          selectedTaskId === task.id && "border-purple-500",
+        )}
       >
-        <button
-          className={twMerge(
-            "w-full text-left select-none",
-            isDragging ? "cursor-grabbing" : "cursor-grab",
-          )}
-          disabled={task.isSaving}
-          draggable={dragProps.draggable}
-          type="button"
-          onClick={() => {
-            if (skipClickRef.current) return;
-            setIsOpen(true);
-          }}
-          onDragStart={dragProps.onDragStart}
-          onDragEnd={dragProps.onDragEnd}
-        >
-          <TaskCardFrame
+        {accentBar ? (
+          <div
+            aria-hidden
             className={twMerge(
-              "flex min-h-2 flex-col gap-2 transition-colors hover:border-zinc-500",
-              task.isSaving && "opacity-70",
+              "absolute top-0 bottom-0 left-0 w-[3px] rounded-l-lg",
+              accentBar,
             )}
+          />
+        ) : null}
+        <div
+          className="flex flex-col gap-1.5"
+          data-dnd-nest-zone=""
+          data-task-id={task.id}
+        >
+          <button
+            className={twMerge(
+              "w-full min-w-0 text-left select-none",
+              isDragging ? "cursor-grabbing" : "cursor-grab",
+            )}
+            disabled={task.isSaving}
+            draggable={dragProps.draggable}
+            type="button"
+            onClick={() => {
+              if (skipClickRef.current) return;
+              onOpen(task);
+            }}
+            onDragStart={dragProps.onDragStart}
+            onDragEnd={dragProps.onDragEnd}
           >
-            <h3 className="text-sm leading-snug font-medium break-words text-zinc-100">
-              {task.title}
-            </h3>
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1">
+              {keyLabel ? (
+                <span className="shrink-0 text-[11px] font-medium tracking-wide text-zinc-500">
+                  {keyLabel}
+                </span>
+              ) : null}
               {task.priority ? (
-                <span
+                <Badge
                   className={twMerge(
-                    "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                    priorityStyles[task.priority],
+                    "uppercase",
+                    PRIORITY_STYLES[task.priority],
                   )}
+                  tooltip={labeledPriority(task.priority)}
                 >
                   {task.priority}
-                </span>
+                </Badge>
               ) : null}
               {task.estimateTshirt ? (
-                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] font-medium tracking-wide text-sky-300 uppercase">
+                <Badge
+                  className={ESTIMATE_STYLE}
+                  tooltip={`Complexity: ${task.estimateTshirt.toUpperCase()}`}
+                >
                   {task.estimateTshirt}
-                </span>
+                </Badge>
               ) : null}
-              {assigneeName ? (
-                <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200">
-                  {assigneeName}
-                </span>
-              ) : null}
-              {milestoneTitle ? (
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
-                  {milestoneTitle}
-                </span>
+              {task.workKind && task.workKind !== "task" ? (
+                <Badge
+                  className={twMerge(
+                    "capitalize",
+                    WORK_KIND_STYLES[task.workKind],
+                  )}
+                  tooltip={`Type: ${task.workKind}`}
+                >
+                  {task.workKind}
+                </Badge>
               ) : null}
               {task.isSaving ? (
                 <span className="text-[11px] text-zinc-500">Saving…</span>
               ) : null}
             </div>
-            {task.tags?.length ? (
-              <div className="flex flex-wrap gap-1">
-                {task.tags.map((tag) => (
+            <h3 className="mt-1.5">
+              <Tooltip
+                align="start"
+                className="max-w-xs"
+                content={task.title}
+                wrapperClassName="min-w-0 w-full"
+              >
+                <span className="line-clamp-2 text-sm leading-snug font-semibold text-zinc-50">
+                  {task.title}
+                </span>
+              </Tooltip>
+            </h3>
+            {summary ? (
+              <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-zinc-500">
+                {summary}
+              </p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {assigneeName ? (
+                <Badge
+                  className="bg-zinc-800 text-zinc-200"
+                  tooltip={`Assignee: ${assigneeName}`}
+                >
+                  {assigneeName}
+                </Badge>
+              ) : null}
+              {milestoneName ? (
+                <Badge
+                  className="bg-zinc-800 text-zinc-400"
+                  tooltip={`Milestone: ${milestoneName}`}
+                >
+                  {milestoneName}
+                </Badge>
+              ) : null}
+              {task.dueDate ? (
+                <Badge
+                  className="bg-amber-500/10 text-amber-200"
+                  tooltip={`Due ${format(task.dueDate, "d MMM yyyy")}`}
+                >
+                  {format(task.dueDate, "MMM d")}
+                </Badge>
+              ) : null}
+              {stamp ? (
+                <Tooltip
+                  content={`Last updated ${format(stamp, "d MMM yyyy 'at' HH:mm")}`}
+                >
                   <span
+                    className="text-[11px] text-zinc-500"
+                    suppressHydrationWarning
+                  >
+                    {compactAgo(stamp)}
+                  </span>
+                </Tooltip>
+              ) : null}
+              {childCount > 0 ? (
+                <Badge
+                  className="bg-zinc-800 text-zinc-400"
+                  tooltip={`Progress: ${doneCount}/${childCount} done`}
+                >
+                  {doneCount}/{childCount}
+                </Badge>
+              ) : null}
+              {commentCount > 0 ? (
+                <Badge
+                  className="inline-flex items-center gap-0.5 text-zinc-400"
+                  tooltip={
+                    commentCount === 1
+                      ? "1 comment"
+                      : `${commentCount} comments`
+                  }
+                >
+                  <MessageSquare aria-hidden size={10} />
+                  {commentCount}
+                </Badge>
+              ) : null}
+              {attachmentCount > 0 ? (
+                <Badge
+                  className="inline-flex items-center gap-0.5 text-zinc-400"
+                  tooltip={
+                    attachmentCount === 1
+                      ? "1 attachment"
+                      : `${attachmentCount} attachments`
+                  }
+                >
+                  <Paperclip aria-hidden size={10} />
+                  {attachmentCount}
+                </Badge>
+              ) : null}
+            </div>
+            {task.tags?.length ? (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {task.tags.map((tag) => (
+                  <Badge
                     key={tag}
-                    className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-200"
+                    className="rounded px-1.5 text-zinc-400 ring-1 ring-zinc-600/80"
+                    tooltip={`Tag: ${tag}`}
                   >
                     {tag}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             ) : null}
-          </TaskCardFrame>
-        </button>
-      </article>
-      {isOpen ? (
-        <TaskDetailDialog
-          open
-          projectId={projectId}
-          task={task}
-          onClose={() => setIsOpen(false)}
-          onDelete={onDelete}
-          onSave={onUpdate}
-        />
-      ) : null}
-    </>
+          </button>
+          {showNested ? (
+            <button
+              className="inline-flex cursor-pointer items-center gap-1 self-start text-[11px] text-zinc-500 hover:text-zinc-200"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setExpanded((current) => !current);
+              }}
+            >
+              <ChevronRight
+                size={12}
+                className={twMerge(
+                  "size-3 shrink-0 transition-transform",
+                  expanded && "rotate-90",
+                )}
+              />
+              {childCount} {childCount === 1 ? "subtask" : "subtasks"}
+            </button>
+          ) : null}
+        </div>
+        <CollapsibleSlot present={showNested && expanded}>
+          <div className="flex pt-2">
+            <div className="flex w-3 shrink-0 justify-center">
+              <div className="w-px self-stretch bg-zinc-700" />
+            </div>
+            <div
+              className="relative flex min-w-0 flex-1 flex-col gap-1.5 pl-2"
+              data-dnd-nested-list={showNested && expanded ? "" : undefined}
+              data-parent-id={showNested && expanded ? task.id : undefined}
+            >
+              {nestedPlaceholder?.index === nested.length ? (
+                <DropLine atEnd />
+              ) : null}
+              {nestedPresence.map(({ item: child, present, animateEnter }) => {
+                const liveIndex = nested.findIndex(
+                  (item) => item.id === child.id,
+                );
+                return (
+                  <FlipItem
+                    key={child.id}
+                    enabled={present}
+                    index={liveIndex < 0 ? 0 : liveIndex}
+                  >
+                    <CollapsibleSlot
+                      animateEnter={animateEnter}
+                      present={present}
+                    >
+                      <div
+                        className={twMerge("relative", !present && "invisible")}
+                      >
+                        {present && nestedPlaceholder?.index === liveIndex ? (
+                          <DropLine />
+                        ) : null}
+                        <NestedTaskRow
+                          selected={selectedTaskId === child.id}
+                          task={child}
+                          onOpen={onOpen}
+                        />
+                      </div>
+                    </CollapsibleSlot>
+                  </FlipItem>
+                );
+              })}
+            </div>
+          </div>
+        </CollapsibleSlot>
+      </TaskCardFrame>
+    </article>
   );
 }

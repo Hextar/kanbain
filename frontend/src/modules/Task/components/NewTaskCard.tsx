@@ -3,11 +3,16 @@ import Button from "@uiKit/Button";
 import TaskCardFrame from "./TaskCardFrame";
 
 type NewTaskCardProps = {
+  accentBar?: string;
   onSubmit: (title: string) => void;
   onCancel: () => void;
 };
 
-export default function NewTaskCard({ onCancel, onSubmit }: NewTaskCardProps) {
+export default function NewTaskCard({
+  accentBar,
+  onCancel,
+  onSubmit,
+}: NewTaskCardProps) {
   const [title, setTitle] = useState("");
   const trimmedTitle = title.trim();
 
@@ -21,7 +26,13 @@ export default function NewTaskCard({ onCancel, onSubmit }: NewTaskCardProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <TaskCardFrame className="flex min-h-[88px] flex-col justify-between gap-3 ring-1 ring-purple-500/40">
+      <TaskCardFrame className="relative flex min-h-[88px] flex-col justify-between gap-3 ring-1 ring-purple-500/50">
+        {accentBar ? (
+          <div
+            aria-hidden
+            className={`absolute top-0 bottom-0 left-0 w-[3px] rounded-l-lg ${accentBar}`}
+          />
+        ) : null}
         <textarea
           autoFocus
           className="min-h-[40px] w-full resize-none bg-transparent text-sm leading-snug font-medium text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none"

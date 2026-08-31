@@ -1,120 +1,110 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ChevronRight, Flag, Plus } from "lucide-react";
-import Button from "@uiKit/Button";
-import Input from "@uiKit/Input";
+import { ChevronRight } from "lucide-react";
 import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
-import { useCreateMilestone, useMilestones } from "../hooks/useCatalog";
+import { useAssignees, useMilestones, useTags } from "../hooks/useCatalog";
+import type { FilterClause } from "../helpers/boardFilter";
+import type { Column } from "../types/Column";
+import BoardFilter from "./BoardFilter";
+import MilestoneMenu from "./MilestoneMenu";
 
 type HeaderProps = {
   className?: string;
   projectId: string;
   projectName: string;
+  columns: Column[];
+  clauses: FilterClause[];
+  completedCount: number;
+  totalCount: number;
+  onClausesChange: (clauses: FilterClause[]) => void;
 };
 
 export default function Header({
   className,
   projectId,
   projectName,
+  columns,
+  clauses,
+  completedCount,
+  totalCount,
+  onClausesChange,
 }: HeaderProps) {
+  const { data: assignees = [] } = useAssignees();
+  const { data: tags = [] } = useTags();
   const { data: milestones = [] } = useMilestones(projectId);
-  const createMilestone = useCreateMilestone(projectId);
-  const [isAdding, setIsAdding] = useState(false);
-  const [title, setTitle] = useState("");
-  const trimmedTitle = title.trim();
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!trimmedTitle) return;
-    await createMilestone.mutateAsync(trimmedTitle);
-    setTitle("");
-    setIsAdding(false);
-  }
 
   return (
     <div
-      className={`relative z-10 flex items-center justify-between gap-3 bg-zinc-900 p-4 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.75)] ${className}`}
+      className={`relative z-10 flex h-12 shrink-0 items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <Link
-            className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
-            href="/"
-          >
-            Projects
-          </Link>
-          <ChevronRight size={16} className="text-zinc-400" />
-          <h1 className="text-3xl font-bold text-white">{projectName}</h1>
-        </div>
+      <div className="flex max-w-[45%] min-w-0 shrink-0 items-center gap-2">
+        <Link
+          className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-white"
+          href="/"
+        >
+          Projects
+        </Link>
+        <ChevronRight size={14} className="shrink-0 text-zinc-600" />
+        <h1 className="truncate rounded-full bg-zinc-800/80 px-3 py-1 text-sm font-semibold text-white ring-1 ring-white/8">
+          {projectName}
+        </h1>
       </div>
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="inline-flex items-center gap-1 text-xs font-medium tracking-wide text-zinc-400 uppercase">
-            <Flag size={12} />
-            Milestones
-          </span>
-          {milestones.map((milestone) => (
-            <span
-              key={milestone.id}
-              className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300"
-            >
-              {milestone.title}
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <BoardFilter
+          catalog={{ assignees, milestones, tags, columns }}
+          clauses={clauses}
+          onChange={onClausesChange}
+        />
+        {totalCount > 0 ? (
+          <span
+            aria-label={`${completedCount} of ${totalCount} completed`}
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs text-zinc-400"
+          >
+            <ProgressRing completed={completedCount} total={totalCount} />
+            <span className="hidden tabular-nums sm:inline">
+              {completedCount}/{totalCount} completed
             </span>
-          ))}
-          {isAdding ? (
-            <form className="flex items-center gap-2" onSubmit={handleSubmit}>
-              <Input
-                autoFocus
-                className="h-8 min-w-[160px] bg-zinc-900 py-1 text-sm"
-                placeholder="Milestone title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setTitle("");
-                    setIsAdding(false);
-                  }
-                }}
-              />
-              <Button
-                disabled={!trimmedTitle || createMilestone.isPending}
-                size="xs"
-                type="submit"
-              >
-                Add
-              </Button>
-              <Button
-                kind="ghost"
-                size="xs"
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setTitle("");
-                  setIsAdding(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </form>
-          ) : (
-            <Button
-              kind="ghost"
-              size="xs"
-              type="button"
-              variant="secondary"
-              onClick={() => setIsAdding(true)}
-            >
-              <span className="inline-flex items-center gap-1">
-                <Plus size={14} />
-                Add milestone
-              </span>
-            </Button>
-          )}
-        </div>
-        <SettingsButton />
+          </span>
+        ) : null}
+        <MilestoneMenu projectId={projectId} />
+        <SettingsButton size="xs" />
       </div>
     </div>
+  );
+}
+
+function ProgressRing({
+  completed,
+  total,
+}: {
+  completed: number;
+  total: number;
+}) {
+  const radius = 6.5;
+  const circumference = 2 * Math.PI * radius;
+  const ratio = total === 0 ? 0 : Math.min(completed / total, 1);
+
+  return (
+    <svg aria-hidden className="size-4 shrink-0 -rotate-90" viewBox="0 0 16 16">
+      <circle
+        cx="8"
+        cy="8"
+        fill="none"
+        r={radius}
+        className="stroke-zinc-700"
+        strokeWidth="2.25"
+      />
+      <circle
+        cx="8"
+        cy="8"
+        fill="none"
+        r={radius}
+        className="stroke-emerald-400"
+        strokeDasharray={`${circumference * ratio} ${circumference}`}
+        strokeLinecap="round"
+        strokeWidth="2.25"
+      />
+    </svg>
   );
 }
