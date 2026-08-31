@@ -8,11 +8,27 @@ import {
   columnToJson,
   type ColumnJson,
 } from "@modules/Task/helpers/columnJson";
-import type { CreateProjectInput, Project } from "@modules/Project/types/Project";
+import type {
+  CreateProjectInput,
+  Project,
+} from "@modules/Project/types/Project";
 import type { Column, CreateColumnInput } from "@modules/Task/types/Column";
+import {
+  defaultColumnColor,
+  isColumnColorId,
+} from "@modules/Task/helpers/columnAccent";
 import type { Assignee, Milestone, Tag } from "@modules/Task/types/Catalog";
-import type { CreateTaskInput, Task, TaskListFilters } from "@modules/Task/types/Task";
+import type {
+  CreateTaskInput,
+  Task,
+  TaskListFilters,
+} from "@modules/Task/types/Task";
 import { compareTasksByOrder } from "@modules/Task/helpers/taskOrder";
+import {
+  nestWorkKind,
+  shouldDemoteParent,
+  unnestWorkKind,
+} from "@modules/Task/helpers/nesting";
 import {
   milestoneFromJson,
   milestoneToJson,
@@ -47,10 +63,11 @@ function jsonError(message: string, status: number) {
 
 function mockSettings() {
   if (!openaiApiKeyHint) {
-    return { openaiApiKeyConfigured: false };
+    return { openaiApiKeyConfigured: false, openaiApiKeyRevoked: false };
   }
   return {
     openaiApiKeyConfigured: true,
+    openaiApiKeyRevoked: false,
     openaiApiKeyHint,
   };
 }
@@ -103,8 +120,12 @@ export function insertProject(input: CreateProjectInput): Project {
     members,
   } satisfies ProjectJson);
   projects.push(project);
-  for (const title of ["To Do", "In Progress", "Done"] as const) {
-    insertColumn({ title, projectId: project.id });
+  for (const [title, color] of [
+    ["To Do", "sky"],
+    ["In Progress", "amber"],
+    ["Done", "emerald"],
+  ] as const) {
+    insertColumn({ title, color, projectId: project.id });
   }
   if (!skipPlan) {
     scheduleMockPlan(project.id);
@@ -187,16 +208,28 @@ function applyMockPlan(projectId: string) {
   } satisfies MilestoneJson);
   milestones.push(milestone);
 
-  insertTask({
+  const epic = insertTask({
     title: project.name,
     columnId: todo.id,
+    workKind: "epic",
     priority: "high",
     assigneeId: ownerId,
     milestoneId: milestone.id,
   });
+  const story = insertTask({
+    title: "Foundation",
+    columnId: todo.id,
+    workKind: "story",
+    parentId: epic.id,
+    priority: "high",
+    assigneeId: ownerId,
+    milestoneId: milestone.id,
+    estimateTshirt: "m",
+  });
   insertTask({
     title: "Capture constraints",
     columnId: todo.id,
+    parentId: story.id,
     priority: "high",
     assigneeId: ownerId,
     milestoneId: milestone.id,
@@ -205,6 +238,7 @@ function applyMockPlan(projectId: string) {
   insertTask({
     title: "Seed the backlog",
     columnId: todo.id,
+    parentId: story.id,
     priority: "medium",
     assigneeId: helperId,
     milestoneId: milestone.id,
@@ -213,6 +247,7 @@ function applyMockPlan(projectId: string) {
   insertTask({
     title: "Review the plan against the deadline",
     columnId: todo.id,
+    parentId: story.id,
     priority: "high",
     assigneeId: helperId,
     milestoneId: milestone.id,
@@ -266,6 +301,7 @@ export function insertColumn(input: CreateColumnInput): Column {
     projectId,
     title: input.title,
     order: nextOrder,
+    color: input.color ?? defaultColumnColor(nextOrder),
   } satisfies ColumnJson);
   columns.push(column);
   return column;
@@ -273,14 +309,29 @@ export function insertColumn(input: CreateColumnInput): Column {
 
 export function updateColumn(
   id: string,
-  payload: Pick<ColumnJson, "title">,
+  payload: Partial<Pick<ColumnJson, "title" | "order" | "color">>,
 ): Column {
   const index = columns.findIndex((column) => column.id === id);
   if (index === -1) throw new MockApiError(`Column ${id} not found`, 404);
-  const title = payload.title.trim();
-  if (!title) throw new MockApiError("title is required", 400);
-  const nextColumn = { ...columns[index], title };
-  columns[index] = nextColumn;
+  const current = columns[index];
+  let nextColumn = current;
+  if (payload.title !== undefined) {
+    const title = payload.title.trim();
+    if (!title) throw new MockApiError("title is required", 400);
+    nextColumn = { ...nextColumn, title };
+    columns[index] = nextColumn;
+  }
+  if (payload.color !== undefined) {
+    if (!isColumnColorId(payload.color)) {
+      throw new MockApiError("color is invalid", 400);
+    }
+    nextColumn = { ...nextColumn, color: payload.color };
+    columns[index] = nextColumn;
+  }
+  if (payload.order !== undefined) {
+    placeColumn(nextColumn, payload.order);
+    return columns.find((column) => column.id === id) ?? nextColumn;
+  }
   return nextColumn;
 }
 
@@ -291,6 +342,19 @@ export function deleteColumn(id: string) {
     if (tasks[i].columnId === id) tasks.splice(i, 1);
   }
   columns.splice(index, 1);
+}
+
+function placeColumn(column: Column, order: number) {
+  const siblings = columns
+    .filter(
+      (item) => item.projectId === column.projectId && item.id !== column.id,
+    )
+    .toSorted((left, right) => left.order - right.order);
+  const insertAt = Math.max(0, Math.min(order, siblings.length));
+  siblings.splice(insertAt, 0, column);
+  siblings.forEach((item, index) => {
+    item.order = index;
+  });
 }
 
 function matchesFilters(task: Task, filters: TaskListFilters) {
@@ -347,10 +411,41 @@ function placeTask(
   }
 }
 
+function applyParentSideEffects(
+  task: Task,
+  previousParentId: string | undefined,
+) {
+  if (task.parentId === previousParentId) return;
+  const parent = task.parentId
+    ? tasks.find((item) => item.id === task.parentId)
+    : undefined;
+  if (parent) {
+    const kinds = nestWorkKind(task, parent, tasks);
+    task.workKind = kinds.movedWorkKind;
+    if (kinds.parentWorkKind) {
+      parent.workKind = kinds.parentWorkKind;
+    }
+  } else {
+    task.workKind = unnestWorkKind(task, tasks);
+  }
+  if (previousParentId) {
+    const oldParent = tasks.find((item) => item.id === previousParentId);
+    const remaining = tasks.filter(
+      (item) => item.parentId === previousParentId && item.id !== task.id,
+    ).length;
+    if (oldParent && shouldDemoteParent(oldParent, remaining)) {
+      oldParent.workKind = "task";
+    }
+  }
+}
+
 export function insertTask(input: CreateTaskInput): Task {
   const column = columns.find((item) => item.id === input.columnId);
   if (!column) throw new MockApiError("Unknown column", 400);
-  if (input.assigneeId && !assignees.some((item) => item.id === input.assigneeId)) {
+  if (
+    input.assigneeId &&
+    !assignees.some((item) => item.id === input.assigneeId)
+  ) {
     throw new MockApiError("Unknown assignee", 400);
   }
   if (
@@ -369,15 +464,22 @@ export function insertTask(input: CreateTaskInput): Task {
       throw new MockApiError(`Unknown tag(s): ${missing.join(", ")}`, 400);
     }
   }
+  const nextNumber =
+    tasks
+      .filter((item) => item.projectId === column.projectId)
+      .reduce((max, item) => Math.max(max, item.taskNumber ?? 0), 0) + 1;
   const task: Task = {
     ...input,
     id: input.id ?? crypto.randomUUID(),
     projectId: column.projectId,
+    workKind: input.workKind ?? "task",
+    taskNumber: nextNumber,
     createdAt: new Date(),
     order: 0,
   };
   tasks.push(task);
   placeTask(task, column.id, input.order, column.id);
+  applyParentSideEffects(task, undefined);
   return task;
 }
 
@@ -409,7 +511,13 @@ export function replaceTask(id: string, payload: TaskJson): Task {
     }
   }
   const previous = tasks[index];
-  const nextTask = taskFromJson({ ...payload, id, projectId: column.projectId });
+  const previousParentId = previous.parentId;
+  const nextTask = taskFromJson({
+    ...payload,
+    id,
+    projectId: column.projectId,
+    number: payload.number ?? previous.taskNumber ?? null,
+  });
   tasks[index] = nextTask;
   const orderChanged = payload.order !== undefined;
   const columnChanged = previous.columnId !== nextTask.columnId;
@@ -421,7 +529,49 @@ export function replaceTask(id: string, payload: TaskJson): Task {
       previous.columnId,
     );
   }
+  applyParentSideEffects(nextTask, previousParentId);
+  if (columnChanged) {
+    bringSameColumnChildren(nextTask, previous.columnId);
+    maybeCompleteAncestors(nextTask);
+  }
   return nextTask;
+}
+
+function bringSameColumnChildren(task: Task, sourceColumnId: string) {
+  if (sourceColumnId === task.columnId) return;
+  const children = tasks.filter(
+    (item) => item.parentId === task.id && item.columnId === sourceColumnId,
+  );
+  for (const child of children) {
+    placeTask(child, task.columnId, undefined, sourceColumnId);
+    bringSameColumnChildren(child, sourceColumnId);
+  }
+}
+
+function lastColumnId(projectId: string): string | undefined {
+  const projectColumns = columns
+    .filter((column) => column.projectId === projectId)
+    .toSorted((left, right) => left.order - right.order);
+  return projectColumns.at(-1)?.id;
+}
+
+function maybeCompleteAncestors(task: Task) {
+  if (!task.parentId) return;
+  const parent = tasks.find((item) => item.id === task.parentId);
+  if (!parent) return;
+  const lastId = lastColumnId(parent.projectId ?? "");
+  if (!lastId) return;
+  const children = tasks.filter((item) => item.parentId === parent.id);
+  if (
+    children.length === 0 ||
+    children.some((child) => child.columnId !== lastId)
+  ) {
+    return;
+  }
+  if (parent.columnId !== lastId) {
+    placeTask(parent, lastId, undefined, parent.columnId);
+  }
+  maybeCompleteAncestors(parent);
 }
 
 export function deleteTask(id: string) {
@@ -450,7 +600,9 @@ export async function handleMock(request: Request, apiPath: string) {
       return respond(() => mockSettings());
     }
     if (request.method === "PUT") {
-      const payload = (await request.json()) as { openaiApiKey?: string | null };
+      const payload = (await request.json()) as {
+        openaiApiKey?: string | null;
+      };
       return respond(() => {
         if (!("openaiApiKey" in payload)) {
           throw new MockApiError("openaiApiKey is required", 400);
@@ -526,7 +678,9 @@ export async function handleMock(request: Request, apiPath: string) {
   ) {
     const id = segments[2];
     if (request.method === "PUT") {
-      const payload = (await request.json()) as Pick<ColumnJson, "title">;
+      const payload = (await request.json()) as Partial<
+        Pick<ColumnJson, "title" | "order" | "color">
+      >;
       return respond(() => columnToJson(updateColumn(id, payload)));
     }
     if (request.method === "DELETE") {
@@ -670,6 +824,34 @@ export async function handleMock(request: Request, apiPath: string) {
         milestones.push(milestone);
         return milestoneToJson(milestone);
       }, 201);
+    }
+  }
+
+  if (
+    segments[0] === "api" &&
+    segments[1] === "projects" &&
+    segments[3] === "milestones" &&
+    segments.length === 5
+  ) {
+    const projectId = segments[2];
+    const milestoneId = segments[4];
+    if (request.method === "PUT") {
+      const payload = (await request.json()) as { title?: string };
+      return respond(() => {
+        if (!findProject(projectId)) {
+          throw new MockApiError("Unknown project", 404);
+        }
+        const milestone = milestones.find(
+          (item) => item.id === milestoneId && item.projectId === projectId,
+        );
+        if (!milestone) throw new MockApiError("Unknown milestone", 404);
+        if ("title" in payload) {
+          const title = payload.title?.trim();
+          if (!title) throw new MockApiError("title is required", 400);
+          milestone.title = title;
+        }
+        return milestoneToJson(milestone);
+      });
     }
   }
 
