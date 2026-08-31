@@ -21,6 +21,7 @@ def test_lists_seeded_project_and_columns(client):
     columns = response.get_json()
     assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
     assert [column["order"] for column in columns] == [0, 1, 2]
+    assert [column["color"] for column in columns] == ["sky", "amber", "emerald"]
     assert {column["projectId"] for column in columns} == {project["id"]}
 
 
@@ -30,6 +31,7 @@ def test_create_column(client):
     column = response.get_json()
     assert column["title"] == "Review"
     assert column["order"] == 3
+    assert column["color"] == "fuchsia"
     assert column["id"]
     assert column["projectId"] == default_project(client)["id"]
 
@@ -54,6 +56,7 @@ def test_create_and_filter_tasks(client):
     assert task["columnId"] == todo_id
     assert task["projectId"] == default_project(client)["id"]
     assert task["workKind"] == "task"
+    assert task["number"] == 1
     assert task["createdAt"]
     assert task["order"] == 0
 
@@ -84,6 +87,34 @@ def test_list_tasks_by_column_when_multiple_projects_exist(client):
     assert other.get_json() == []
 
 
+def test_reorder_column(client):
+    columns = client.get("/api/columns").get_json()
+    first_id = columns[0]["id"]
+    last = columns[2]
+
+    moved = client.put(f"/api/columns/{last['id']}", json={"order": 0})
+    assert moved.status_code == 200
+    assert moved.get_json()["order"] == 0
+    assert moved.get_json()["title"] == last["title"]
+
+    listed = client.get("/api/columns").get_json()
+    assert [column["title"] for column in listed] == ["Done", "To Do", "In Progress"]
+    assert [column["order"] for column in listed] == [0, 1, 2]
+    assert listed[1]["id"] == first_id
+
+
+def test_reorder_column_clamps_order(client):
+    first_id = client.get("/api/columns").get_json()[0]["id"]
+    moved = client.put(f"/api/columns/{first_id}", json={"order": 99})
+    assert moved.status_code == 200
+    assert moved.get_json()["order"] == 2
+
+    listed = client.get("/api/columns").get_json()
+    assert [column["title"] for column in listed] == ["In Progress", "Done", "To Do"]
+    assert [column["order"] for column in listed] == [0, 1, 2]
+    assert listed[2]["id"] == first_id
+
+
 def test_column_title_update_and_delete(client):
     columns = client.get("/api/columns").get_json()
     todo_id = columns[0]["id"]
@@ -94,6 +125,13 @@ def test_column_title_update_and_delete(client):
     assert renamed.status_code == 200
     assert renamed.get_json()["title"] == "Backlog"
     assert renamed.get_json()["order"] == 0
+    assert renamed.get_json()["color"] == "sky"
+
+    recolored = client.put(f"/api/columns/{todo_id}", json={"color": "violet"})
+    assert recolored.status_code == 200
+    assert recolored.get_json()["color"] == "violet"
+    assert recolored.get_json()["title"] == "Backlog"
+    assert client.put(f"/api/columns/{todo_id}", json={"color": "chartreuse"}).status_code == 400
 
     deleted = client.delete(f"/api/columns/{todo_id}")
     assert deleted.status_code == 204
@@ -205,6 +243,35 @@ def test_reorder_task_within_column(client):
     assert [item["title"] for item in listed] == ["Third", "First", "Second"]
     assert [item["order"] for item in listed] == [0, 1, 2]
     assert listed[1]["id"] == first["id"]
+
+
+def test_noop_task_put_preserves_updated_at(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    created = client.post(
+        "/api/tasks", json={"title": "Stay", "columnId": todo_id}
+    ).get_json()
+    renamed = client.put(
+        f"/api/tasks/{created['id']}",
+        json={"title": "Stay put", "columnId": todo_id},
+    ).get_json()
+    stamped = renamed["updatedAt"]
+    assert stamped
+
+    same = client.put(
+        f"/api/tasks/{created['id']}",
+        json={
+            "title": "Stay put",
+            "columnId": todo_id,
+            "order": renamed["order"],
+        },
+    ).get_json()
+    assert same["updatedAt"] == stamped
+    assert same["order"] == renamed["order"]
+
+    client.post("/api/tasks", json={"title": "Other", "columnId": todo_id})
+    moved = client.put(f"/api/tasks/{created['id']}", json={"order": 1}).get_json()
+    assert moved["order"] == 1
+    assert moved["updatedAt"] != stamped
 
 
 def test_update_task_keeps_order_when_column_unchanged(client):
@@ -426,3 +493,199 @@ def test_global_assignees_and_tags(client):
         json={"title": "Needs tag", "columnId": todo_id, "tags": ["missing"]},
     )
     assert missing.status_code == 400
+
+
+def test_moving_a_leaf_does_not_move_its_parent(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    doing_id = columns[1]["id"]
+    done_id = columns[2]["id"]
+    story = client.post(
+        "/api/tasks",
+        json={"title": "Story", "columnId": todo_id, "workKind": "story"},
+    ).get_json()
+    first = client.post(
+        "/api/tasks",
+        json={
+            "title": "First leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+    client.post(
+        "/api/tasks",
+        json={
+            "title": "Second leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    )
+
+    moved = client.put(
+        f"/api/tasks/{first['id']}",
+        json={**first, "columnId": doing_id},
+    ).get_json()
+    parent = client.get(f"/api/tasks/{story['id']}").get_json()
+    assert moved["columnId"] == doing_id
+    assert moved["parentId"] == story["id"]
+    assert parent["columnId"] == todo_id
+
+    client.put(f"/api/tasks/{first['id']}", json={**moved, "columnId": done_id})
+    still_open = client.get(f"/api/tasks/{story['id']}").get_json()
+    assert still_open["columnId"] == todo_id
+
+
+def test_moving_a_story_moves_same_column_children(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    doing_id = columns[1]["id"]
+    done_id = columns[2]["id"]
+    story = client.post(
+        "/api/tasks",
+        json={"title": "Story", "columnId": todo_id, "workKind": "story"},
+    ).get_json()
+    first = client.post(
+        "/api/tasks",
+        json={
+            "title": "First leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+    second = client.post(
+        "/api/tasks",
+        json={
+            "title": "Second leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+    elsewhere = client.post(
+        "/api/tasks",
+        json={
+            "title": "Already in progress",
+            "columnId": doing_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+
+    moved = client.put(
+        f"/api/tasks/{story['id']}",
+        json={**story, "columnId": done_id},
+    ).get_json()
+    assert moved["columnId"] == done_id
+    assert client.get(f"/api/tasks/{first['id']}").get_json()["columnId"] == done_id
+    assert client.get(f"/api/tasks/{second['id']}").get_json()["columnId"] == done_id
+    assert client.get(f"/api/tasks/{first['id']}").get_json()["parentId"] == story["id"]
+    assert client.get(f"/api/tasks/{second['id']}").get_json()["parentId"] == story["id"]
+    stayed = client.get(f"/api/tasks/{elsewhere['id']}").get_json()
+    assert stayed["columnId"] == doing_id
+    assert stayed["parentId"] == story["id"]
+
+
+def test_parent_completes_when_all_leaves_are_done(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    done_id = columns[2]["id"]
+    epic = client.post(
+        "/api/tasks",
+        json={"title": "Epic", "columnId": todo_id, "workKind": "epic"},
+    ).get_json()
+    story = client.post(
+        "/api/tasks",
+        json={
+            "title": "Story",
+            "columnId": todo_id,
+            "workKind": "story",
+            "parentId": epic["id"],
+        },
+    ).get_json()
+    first = client.post(
+        "/api/tasks",
+        json={
+            "title": "First leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+    second = client.post(
+        "/api/tasks",
+        json={
+            "title": "Second leaf",
+            "columnId": todo_id,
+            "parentId": story["id"],
+        },
+    ).get_json()
+
+    client.put(f"/api/tasks/{first['id']}", json={**first, "columnId": done_id})
+    assert client.get(f"/api/tasks/{story['id']}").get_json()["columnId"] == todo_id
+    assert client.get(f"/api/tasks/{epic['id']}").get_json()["columnId"] == todo_id
+
+    client.put(f"/api/tasks/{second['id']}", json={**second, "columnId": done_id})
+    assert client.get(f"/api/tasks/{story['id']}").get_json()["columnId"] == done_id
+    assert client.get(f"/api/tasks/{epic['id']}").get_json()["columnId"] == done_id
+
+
+def test_task_numbers_are_sequential_per_project(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    first = client.post("/api/tasks", json={"title": "One", "columnId": todo_id}).get_json()
+    second = client.post("/api/tasks", json={"title": "Two", "columnId": todo_id}).get_json()
+    assert [first["number"], second["number"]] == [1, 2]
+
+    other = client.post("/api/projects", json={"name": "Other", "skipPlan": True}).get_json()
+    other_todo = client.get(f"/api/columns?projectId={other['id']}").get_json()[0]["id"]
+    other_task = client.post(
+        "/api/tasks",
+        json={"title": "Other one", "columnId": other_todo},
+    ).get_json()
+    assert other_task["number"] == 1
+
+
+def test_nesting_promotes_a_root_leaf_and_rejects_a_third_level(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    parent = client.post(
+        "/api/tasks",
+        json={"title": "Soon a story", "columnId": todo_id},
+    ).get_json()
+    child = client.post(
+        "/api/tasks",
+        json={"title": "Leaf", "columnId": todo_id, "parentId": parent["id"]},
+    ).get_json()
+    assert child["parentId"] == parent["id"]
+    assert child["workKind"] == "task"
+    assert client.get(f"/api/tasks/{parent['id']}").get_json()["workKind"] == "story"
+
+    grandchild = client.post(
+        "/api/tasks",
+        json={"title": "Too deep", "columnId": todo_id, "parentId": child["id"]},
+    )
+    assert grandchild.status_code == 400
+
+    unnested = client.put(
+        f"/api/tasks/{child['id']}",
+        json={**child, "parentId": None},
+    ).get_json()
+    assert unnested["parentId"] is None
+    assert unnested["workKind"] == "task"
+    assert client.get(f"/api/tasks/{parent['id']}").get_json()["workKind"] == "task"
+
+
+def test_cannot_nest_a_story_with_children_under_another_story(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    story = client.post(
+        "/api/tasks",
+        json={"title": "Story", "columnId": todo_id, "workKind": "story"},
+    ).get_json()
+    other = client.post(
+        "/api/tasks",
+        json={"title": "Other story", "columnId": todo_id, "workKind": "story"},
+    ).get_json()
+    client.post(
+        "/api/tasks",
+        json={"title": "Child", "columnId": todo_id, "parentId": story["id"]},
+    )
+    nested = client.put(
+        f"/api/tasks/{story['id']}",
+        json={**story, "parentId": other["id"]},
+    )
+    assert nested.status_code == 400

@@ -25,5 +25,6 @@ def test_prompt_includes_goal_deadline_and_members(client, app):
     assert "2026-12-01" in prompt
     assert "hard" in prompt
     assert "expert project manager" in rendered
+    assert "Never leave milestone null" in rendered
     assert "SYSTEM:" in rendered
     assert "USER:" in rendered

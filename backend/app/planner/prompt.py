@@ -13,6 +13,10 @@ Always answer with JSON that matches the provided schema. No markdown, no commen
 no extra keys.
 
 Rules:
+- Produce 2–4 milestones that cover the deadline. Every epic, story, and leaf \
+task must set milestone to one of those titles. Never leave milestone null when \
+milestones exist. A story and its leaf tasks share a milestone unless there is \
+a clear reason to split.
 - Produce 2–4 epics. Each epic has 2–4 stories. Each story has 2–5 leaf tasks.
 - Nest stories under epics and tasks under stories.
 - Assign work only to people named on the team. If the team is empty, set assignee to null.

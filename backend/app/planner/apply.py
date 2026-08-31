@@ -17,13 +17,20 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
     now = utcnow()
     created: list[Task] = []
 
+    first_milestone_id = next(iter(milestone_ids.values()), None)
     for item in plan.tasks:
         parent = created[item.parent_index] if item.parent_index is not None else None
+        milestone_id = milestone_ids.get(_norm(item.milestone)) if item.milestone else None
+        if milestone_id is None and parent is not None:
+            milestone_id = parent.milestone_id
+        if milestone_id is None:
+            milestone_id = first_milestone_id
         task = Task(
             project_id=project.id,
             column_id=column.id,
             title=item.title,
             order=len(created),
+            number=len(created) + 1,
             work_kind=item.work_kind,
             parent_id=parent.id if parent is not None else None,
             description=item.description,
@@ -34,7 +41,7 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
             priority=item.priority,
             due_date=item.due_at,
             assignee_id=assignee_ids.get(_norm(item.assignee)) if item.assignee else None,
-            milestone_id=milestone_ids.get(_norm(item.milestone)) if item.milestone else None,
+            milestone_id=milestone_id,
             created_at=now,
         )
         db.session.add(task)

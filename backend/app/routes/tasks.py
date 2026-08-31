@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy import func
 
 from ..extensions import db
 from ..http import error_response
@@ -11,7 +12,7 @@ from ..lookups import (
     get_task,
     resolve_project_id,
 )
-from ..models import Task, TaskDependency, new_id
+from ..models import BoardColumn, Task, TaskDependency, new_id
 from ..serialize import parse_datetime, utcnow
 from ..validation import (
     TSHIRTS,
@@ -81,21 +82,19 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         if project_id and project_id != task.project_id:
             raise ValueError("projectId does not match the column's project")
 
-    if "parentId" in payload:
-        parent_id = parse_optional_id(payload.get("parentId"), "parentId")
-        if parent_id is None:
-            task.parent_id = None
-        elif parent_id == task.id:
-            raise ValueError("a task cannot be its own parent")
-        else:
-            parent = get_task(parent_id)
-            if parent.project_id != task.project_id:
-                raise ValueError("parentId must belong to the same project")
-            task.parent_id = parent_id
-
     if creating or "workKind" in payload:
         work_kind = parse_enum(payload.get("workKind"), WORK_KINDS, "workKind")
-        task.work_kind = work_kind or "task"
+        if work_kind:
+            task.work_kind = work_kind
+        elif creating:
+            task.work_kind = "task"
+
+    if "parentId" in payload:
+        parent_id = parse_optional_id(payload.get("parentId"), "parentId")
+        _set_parent(task, parent_id)
+
+    if creating:
+        task.number = _next_task_number(task.project_id)
 
     if "description" in payload:
         task.description = parse_optional_text(payload.get("description"), "description")
@@ -170,6 +169,15 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
             order,
             source_column_id=source_column_id,
         )
+        if column_changed:
+            _bring_same_column_children(task, source_column_id)
+            _maybe_complete_ancestors(task)
+
+
+def _task_fingerprint(task: Task) -> dict:
+    payload = task.to_dict()
+    payload.pop("updatedAt", None)
+    return payload
 
 
 def _column_tasks(column_id: str, *, exclude_id: str | None = None) -> list[Task]:
@@ -203,6 +211,111 @@ def _place_task(
         sibling.order = index
     if source_column_id and source_column_id != column_id:
         _renumber_column(source_column_id)
+
+
+def _bring_same_column_children(task: Task, source_column_id: str | None) -> None:
+    if not source_column_id or source_column_id == task.column_id:
+        return
+    for child in list(_child_tasks(task.id)):
+        if child.column_id != source_column_id:
+            continue
+        _place_task(child, task.column_id, None, source_column_id=source_column_id)
+        _bring_same_column_children(child, source_column_id)
+
+
+def _last_column_id(project_id: str) -> str | None:
+    column = db.session.execute(
+        db.select(BoardColumn)
+        .where(BoardColumn.project_id == project_id)
+        .order_by(BoardColumn.order.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    return column.id if column is not None else None
+
+
+def _child_tasks(parent_id: str, *, exclude_id: str | None = None) -> list[Task]:
+    statement = db.select(Task).where(Task.parent_id == parent_id)
+    if exclude_id is not None:
+        statement = statement.where(Task.id != exclude_id)
+    return list(db.session.scalars(statement))
+
+
+def _next_task_number(project_id: str) -> int:
+    current = db.session.scalar(
+        db.select(func.max(Task.number)).where(Task.project_id == project_id)
+    )
+    return (current or 0) + 1
+
+
+def _set_parent(task: Task, parent_id: str | None) -> None:
+    previous_parent_id = task.parent_id
+    if parent_id is None:
+        task.parent_id = None
+        if task.work_kind != "epic" and not _child_tasks(task.id):
+            task.work_kind = "task"
+        _maybe_demote_parent(previous_parent_id, exclude_id=task.id)
+        return
+
+    if parent_id == task.id:
+        raise ValueError("a task cannot be its own parent")
+
+    parent = get_task(parent_id)
+    if parent.project_id != task.project_id:
+        raise ValueError("parentId must belong to the same project")
+    _assert_can_nest(task, parent)
+    task.parent_id = parent.id
+    if parent.work_kind == "epic":
+        task.work_kind = "story"
+    else:
+        if parent.work_kind == "task" and parent.parent_id is None:
+            parent.work_kind = "story"
+        task.work_kind = "task"
+    if previous_parent_id and previous_parent_id != parent.id:
+        _maybe_demote_parent(previous_parent_id, exclude_id=task.id)
+
+
+def _assert_can_nest(task: Task, parent: Task) -> None:
+    cursor = parent
+    seen: set[str] = set()
+    while cursor is not None:
+        if cursor.id == task.id:
+            raise ValueError("a task cannot be nested under its descendant")
+        if cursor.id in seen:
+            break
+        seen.add(cursor.id)
+        cursor = cursor.parent
+
+    if task.work_kind == "epic":
+        raise ValueError("an epic cannot be nested")
+    if parent.work_kind == "task" and parent.parent_id:
+        raise ValueError("cannot nest under a subtask")
+    if parent.work_kind != "epic" and _child_tasks(task.id):
+        raise ValueError("a card with subtasks can only nest under an epic")
+
+
+def _maybe_demote_parent(parent_id: str | None, *, exclude_id: str) -> None:
+    if not parent_id:
+        return
+    parent = db.session.get(Task, parent_id)
+    if parent is None or parent.work_kind != "story":
+        return
+    if not _child_tasks(parent.id, exclude_id=exclude_id):
+        parent.work_kind = "task"
+
+
+def _maybe_complete_ancestors(task: Task) -> None:
+    parent = task.parent
+    if parent is None:
+        return
+    last_id = _last_column_id(task.project_id)
+    if last_id is None:
+        return
+    children = _child_tasks(parent.id)
+    if not children or any(child.column_id != last_id for child in children):
+        return
+    if parent.column_id != last_id:
+        _place_task(parent, last_id, None, source_column_id=parent.column_id)
+    _maybe_complete_ancestors(parent)
 
 
 def _task_filters():
@@ -300,6 +413,8 @@ def update_task(task_id: str):
     if not isinstance(payload, dict):
         return error_response("JSON body required", 400)
 
+    previous_updated_at = task.updated_at
+    before = _task_fingerprint(task)
     try:
         _apply_task_fields(task, payload, creating=False)
     except UnknownEntityError as exc:
@@ -311,7 +426,10 @@ def update_task(task_id: str):
     except ValueError as exc:
         return json_error(exc)
 
-    task.updated_at = utcnow()
+    if _task_fingerprint(task) != before:
+        task.updated_at = utcnow()
+    else:
+        task.updated_at = previous_updated_at
     db.session.commit()
     return jsonify(task.to_dict())
 
