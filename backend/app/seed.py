@@ -3,13 +3,15 @@ from .models import BoardColumn, Project
 from .serialize import utcnow
 
 
-DEFAULT_COLUMNS = ("To Do", "In Progress", "Done")
+DEFAULT_COLUMNS = (("To Do", "sky"), ("In Progress", "amber"), ("Done", "emerald"))
 DEFAULT_PROJECT_NAME = "Untitled project"
 
 
 def add_default_columns(project_id: str) -> None:
-    for order, title in enumerate(DEFAULT_COLUMNS):
-        db.session.add(BoardColumn(project_id=project_id, title=title, order=order))
+    for order, (title, color) in enumerate(DEFAULT_COLUMNS):
+        db.session.add(
+            BoardColumn(project_id=project_id, title=title, order=order, color=color)
+        )
 
 
 def seed_defaults() -> None:

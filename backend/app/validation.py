@@ -10,6 +10,19 @@ RISK_LEVELS = {"low", "medium", "high"}
 SENIORITIES = {"junior", "mid", "senior", "staff", "principal"}
 WORK_KINDS = {"epic", "story", "task"}
 TSHIRTS = {"xs", "s", "m", "l", "xl"}
+COLUMN_COLOR_SEQUENCE = (
+    "sky",
+    "amber",
+    "orange",
+    "fuchsia",
+    "violet",
+    "teal",
+    "emerald",
+    "rose",
+    "cyan",
+    "indigo",
+)
+COLUMN_COLORS = set(COLUMN_COLOR_SEQUENCE)
 
 
 def parse_optional_id(value: object, field: str = "id") -> str | None:
@@ -83,6 +96,14 @@ def parse_number(value: object, field: str) -> float | None:
     if value < 0:
         raise ValueError(f"{field} must be >= 0")
     return float(value)
+
+
+def parse_column_color(value: object) -> str | None:
+    return parse_enum(value, COLUMN_COLORS, "color")
+
+
+def default_column_color(order: int) -> str:
+    return COLUMN_COLOR_SEQUENCE[order % len(COLUMN_COLOR_SEQUENCE)]
 
 
 def parse_int(value: object, field: str) -> int | None:

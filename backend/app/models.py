@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -178,6 +178,12 @@ class Milestone(db.Model):
 
 class BoardColumn(db.Model):
     __tablename__ = "columns"
+    __table_args__ = (
+        CheckConstraint(
+            "color IN ('sky', 'amber', 'orange', 'fuchsia', 'violet', 'teal', 'emerald', 'rose', 'cyan', 'indigo')",
+            name="ck_columns_color",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     project_id: Mapped[str] = mapped_column(
@@ -185,6 +191,7 @@ class BoardColumn(db.Model):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     order: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    color: Mapped[str] = mapped_column(String(16), nullable=False)
     tasks: Mapped[list["Task"]] = relationship(back_populates="column", cascade="all, delete-orphan")
     project: Mapped[Project] = relationship(back_populates="columns")
 
@@ -194,6 +201,7 @@ class BoardColumn(db.Model):
             "projectId": self.project_id,
             "title": self.title,
             "order": self.order,
+            "color": self.color,
         }
 
 
@@ -208,6 +216,7 @@ class Task(db.Model):
             "estimate_tshirt IS NULL OR estimate_tshirt IN ('xs', 's', 'm', 'l', 'xl')",
             name="ck_tasks_estimate_tshirt",
         ),
+        UniqueConstraint("project_id", "number", name="uq_tasks_project_id_number"),
         Index("ix_tasks_column_id_order", "column_id", "order"),
     )
 
@@ -220,6 +229,7 @@ class Task(db.Model):
         String(36), ForeignKey("columns.id", ondelete="CASCADE"), nullable=False, index=True
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False)
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
     parent_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("tasks.id", ondelete="SET NULL"), index=True
     )
@@ -271,10 +281,11 @@ class Task(db.Model):
             "title": self.title,
             "columnId": self.column_id,
             "order": self.order,
+            "number": self.number,
             "workKind": self.work_kind,
+            "parentId": self.parent_id,
         }
         optional = {
-            "parentId": self.parent_id,
             "description": self.description,
             "acceptanceCriteria": self.acceptance_criteria,
             "createdAt": dump_datetime(self.created_at),
