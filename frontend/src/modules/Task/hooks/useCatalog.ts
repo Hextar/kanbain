@@ -5,8 +5,13 @@ import {
   getAssignees,
   getTags,
 } from "../api/catalog";
-import { createMilestone, getMilestones } from "../api/milestones";
+import {
+  createMilestone,
+  getMilestones,
+  updateMilestone,
+} from "../api/milestones";
 import { catalogKeys } from "../api/catalogKeys";
+import type { Milestone } from "../types/Catalog";
 
 export function useAssignees() {
   return useQuery({
@@ -57,6 +62,21 @@ export function useCreateMilestone(projectId: string) {
       void queryClient.invalidateQueries({
         queryKey: catalogKeys.milestones(projectId),
       });
+    },
+  });
+}
+
+export function useUpdateMilestone(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (milestone: Pick<Milestone, "id" | "title">) =>
+      updateMilestone(projectId, milestone),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<Milestone[]>(
+        catalogKeys.milestones(projectId),
+        (current) =>
+          current?.map((item) => (item.id === updated.id ? updated : item)),
+      );
     },
   });
 }
