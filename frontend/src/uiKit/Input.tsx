@@ -5,9 +5,10 @@ import { twMerge } from "tailwind-merge";
 
 type InputProps = ComponentProps<"input">;
 
-export default function Input({ className, type, ...props }: InputProps) {
+export default function Input({ className, type, ref, ...props }: InputProps) {
   return (
     <input
+      ref={ref}
       type={type}
       className={twMerge(
         "flex flex-1 rounded-md bg-zinc-800 px-4 py-2 text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
