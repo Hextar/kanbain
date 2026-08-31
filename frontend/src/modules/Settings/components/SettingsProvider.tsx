@@ -32,21 +32,27 @@ export function useSettingsDialog() {
   return context;
 }
 
-export function SettingsButton() {
+export function SettingsButton({
+  size = "md",
+}: {
+  size?: "xs" | "sm" | "md" | "lg";
+}) {
   const { data } = useSettings();
   const { openSettings } = useSettingsDialog();
   const configured = data?.openaiApiKeyConfigured === true;
+  const iconSize = size === "xs" || size === "sm" ? 16 : 20;
 
   return (
     <IconButton
-      aria-label={configured ? "Settings, API key saved" : "Settings"}
+      aria-label="Settings"
       className={`shrink-0 ${configured ? "text-purple-400" : "text-zinc-400"}`}
-      size="md"
+      size={size}
+      suppressHydrationWarning
       type="button"
       variant="secondary"
       onClick={() => openSettings()}
     >
-      <Settings size={20} />
+      <Settings size={iconSize} />
     </IconButton>
   );
 }

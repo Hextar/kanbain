@@ -22,12 +22,12 @@ export default function NewProjectForm({
     <>
       <Button
         className={isHero ? "px-8 py-4 text-lg" : undefined}
-        size={isHero ? "lg" : "md"}
+        size={isHero ? "lg" : "sm"}
         type="button"
         onClick={() => setOpen(true)}
       >
         <span className="inline-flex items-center gap-2">
-          <Plus size={isHero ? 22 : 18} />
+          <Plus size={isHero ? 22 : 16} />
           Create new project
         </span>
       </Button>

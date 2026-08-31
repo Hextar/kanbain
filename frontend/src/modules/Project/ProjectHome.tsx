@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Columns3 } from "lucide-react";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import NewProjectForm from "./components/NewProjectForm";
 import ProjectCard from "./components/ProjectCard";
@@ -28,6 +29,8 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const hasProjects = projects.length > 0;
+  const projectCountLabel =
+    projects.length === 1 ? "1 project" : `${projects.length} projects`;
 
   function remember(project: Project) {
     const next = reviveProject(project);
@@ -70,15 +73,23 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
 
   return (
     <div className="flex min-h-dvh w-full flex-col">
-      <header className="flex items-center justify-between gap-4 p-6">
-        <h1 className="text-3xl font-bold text-white">KanbAIn</h1>
-        <div className="flex items-center gap-3">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15 text-purple-300">
+            <Columns3 aria-hidden size={16} />
+          </div>
+          <h1 className="text-sm font-semibold text-white">KanbAIn</h1>
+          <p className="truncate text-xs text-zinc-500">
+            {hasProjects ? projectCountLabel : "Your projects"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           {hasProjects ? <NewProjectForm onCreated={remember} /> : null}
-          <SettingsButton />
+          <SettingsButton size="xs" />
         </div>
       </header>
       {hasProjects ? (
-        <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 pb-8 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
             <li key={project.id} className="min-w-0">
               <ProjectCard
