@@ -1,12 +1,15 @@
 import type { Column } from "./Column";
-import type { TaskPriority, TshirtSize } from "./Catalog";
+import type { TaskPriority, TshirtSize, WorkKind } from "./Catalog";
 
 export type Task = {
   id: string;
   title: string;
   columnId: Column["id"];
   order: number;
+  taskNumber?: number;
   projectId?: string;
+  parentId?: string;
+  workKind?: WorkKind;
   description?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -27,6 +30,8 @@ export type CreateTaskInput = {
   columnId: Column["id"];
   order?: number;
   projectId?: Task["projectId"];
+  parentId?: Task["parentId"];
+  workKind?: Task["workKind"];
   description?: string;
   priority?: Task["priority"];
   category?: Task["category"];

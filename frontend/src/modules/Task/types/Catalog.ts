@@ -1,5 +1,6 @@
 export type TshirtSize = "xs" | "s" | "m" | "l" | "xl";
 export type TaskPriority = "low" | "medium" | "high";
+export type WorkKind = "epic" | "story" | "task";
 
 export type Assignee = {
   id: string;

@@ -31,9 +31,10 @@ export function seedProjectBoard(
 ) {
   queryClient.setQueryData(projectKeys.board(projectId), board);
   queryClient.setQueryData(columnKeys.list(projectId), board.columns);
+  queryClient.setQueryData(taskKeys.list({ projectId }), board.tasks);
   const grouped = tasksByColumnId(board);
   for (const [columnId, tasks] of grouped) {
-    queryClient.setQueryData(taskKeys.list({ projectId, columnId }), tasks);
+    queryClient.setQueryData(taskKeys.list({ columnId, projectId }), tasks);
   }
 }
 
