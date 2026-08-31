@@ -4,7 +4,14 @@ from ..extensions import db
 from ..http import error_response
 from ..lookups import UnknownEntityError, get_column, resolve_project_id
 from ..models import BoardColumn
-from ..validation import json_error, parse_optional_id, require_title
+from ..validation import (
+    default_column_color,
+    json_error,
+    parse_column_color,
+    parse_int,
+    parse_optional_id,
+    require_title,
+)
 
 columns_bp = Blueprint("columns", __name__)
 
@@ -36,6 +43,7 @@ def create_column():
         title = require_title(payload)
         column_id = parse_optional_id(payload.get("id"))
         project_id = resolve_project_id(payload.get("projectId") or request.args.get("projectId"))
+        color = parse_column_color(payload.get("color")) if "color" in payload else None
     except UnknownEntityError as exc:
         return error_response(str(exc), 400)
     except ValueError as exc:
@@ -47,10 +55,12 @@ def create_column():
     max_order = db.session.scalar(
         db.select(db.func.max(BoardColumn.order)).where(BoardColumn.project_id == project_id)
     )
+    order = (max_order if max_order is not None else -1) + 1
     column = BoardColumn(
         project_id=project_id,
         title=title,
-        order=(max_order if max_order is not None else -1) + 1,
+        order=order,
+        color=color or default_column_color(order),
     )
     if column_id:
         column.id = column_id
@@ -71,7 +81,18 @@ def update_column(column_id: str):
         return error_response("JSON body required", 400)
 
     try:
-        column.title = require_title(payload)
+        if "title" in payload:
+            column.title = require_title(payload)
+        if "color" in payload:
+            color = parse_column_color(payload.get("color"))
+            if color is None:
+                raise ValueError("color is required")
+            column.color = color
+        if "order" in payload:
+            order = parse_int(payload.get("order"), "order")
+            if order is None:
+                raise ValueError("order must be an integer")
+            _place_column(column, order)
     except ValueError as exc:
         return json_error(exc)
 
@@ -86,3 +107,22 @@ def delete_column(column_id: str):
         db.session.delete(column)
         db.session.commit()
     return ("", 204)
+
+
+def _project_columns(project_id: str, *, exclude_id: str | None = None) -> list[BoardColumn]:
+    statement = (
+        db.select(BoardColumn)
+        .where(BoardColumn.project_id == project_id)
+        .order_by(BoardColumn.order.asc())
+    )
+    if exclude_id is not None:
+        statement = statement.where(BoardColumn.id != exclude_id)
+    return db.session.execute(statement).scalars().all()
+
+
+def _place_column(column: BoardColumn, order: int | None) -> None:
+    siblings = _project_columns(column.project_id, exclude_id=column.id)
+    insert_at = len(siblings) if order is None else max(0, min(order, len(siblings)))
+    siblings.insert(insert_at, column)
+    for index, sibling in enumerate(siblings):
+        sibling.order = index
