@@ -3,7 +3,8 @@ import type { DropPlaceholder } from "@libraries/dnd/html5DnD";
 import TaskCardFrame from "./TaskCardFrame";
 
 const SHADOW_MS = 200;
-const COLUMN_GAP = "0.75rem";
+const COLUMN_GAP = "0.5rem";
+const NESTED_GAP = "0.375rem";
 
 export function useDropShadow(placeholder: DropPlaceholder | null) {
   const skipExitRef = useRef(false);
@@ -12,6 +13,8 @@ export function useDropShadow(placeholder: DropPlaceholder | null) {
   const index = placeholder?.index ?? null;
   const height = placeholder?.height ?? 0;
 
+  const width = placeholder?.width ?? 0;
+
   const skipExitAnimation = useCallback(() => {
     skipExitRef.current = true;
   }, []);
@@ -19,7 +22,7 @@ export function useDropShadow(placeholder: DropPlaceholder | null) {
   useLayoutEffect(() => {
     if (index != null) {
       skipExitRef.current = false;
-      setSlot({ index, height });
+      setSlot({ index, height, ...(width ? { width } : {}) });
       const frame = requestAnimationFrame(() => setOpen(true));
       return () => cancelAnimationFrame(frame);
     }
@@ -32,7 +35,7 @@ export function useDropShadow(placeholder: DropPlaceholder | null) {
     setOpen(false);
     const timeout = window.setTimeout(() => setSlot(null), SHADOW_MS);
     return () => window.clearTimeout(timeout);
-  }, [height, index]);
+  }, [height, index, width]);
 
   return {
     slot,
@@ -44,9 +47,11 @@ export function useDropShadow(placeholder: DropPlaceholder | null) {
 export default function TaskDropShadow({
   height,
   open,
+  compact = false,
 }: {
   height: number;
   open: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
@@ -55,13 +60,19 @@ export default function TaskDropShadow({
       data-dnd-placeholder=""
       style={{
         height: open ? height : 0,
-        marginBottom: open ? 0 : `-${COLUMN_GAP}`,
+        marginBottom: open ? 0 : compact ? `-${NESTED_GAP}` : `-${COLUMN_GAP}`,
       }}
     >
       <div className="box-border" style={{ height }}>
-        <TaskCardFrame className="h-full border-dashed border-zinc-500 bg-zinc-900/50 shadow-none">
-          {"\u00a0"}
-        </TaskCardFrame>
+        {compact ? (
+          <div className="h-full rounded-md border border-dashed border-zinc-500 bg-[#14161e]/50">
+            {"\u00a0"}
+          </div>
+        ) : (
+          <TaskCardFrame className="h-full border-dashed border-zinc-500 bg-[#14161e]/50 shadow-none">
+            {"\u00a0"}
+          </TaskCardFrame>
+        )}
       </div>
     </div>
   );

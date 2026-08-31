@@ -39,11 +39,15 @@ export function useHtml5Drag<T>({
         event.currentTarget.closest<HTMLElement>(DND_ITEM_SELECTOR) ??
         event.currentTarget;
       const rect = source.getBoundingClientRect();
-      markDragSource(source, { width: rect.width, height: rect.height });
+      markDragSource(
+        source,
+        { width: rect.width, height: rect.height },
+        mimeType,
+      );
       setDragData(event.dataTransfer, mimeType, data);
       setDragImageAtCursor(
         event.dataTransfer,
-        event.currentTarget,
+        source,
         event.clientX,
         event.clientY,
       );
