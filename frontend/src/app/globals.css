@@ -4,18 +4,17 @@ html,
 body {
   min-height: 100dvh;
   width: 100%;
-  background-color: var(--color-zinc-900);
+  background-color: #12141c;
 }
 
 .confirm-dialog,
 .app-dialog {
   margin: auto;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-zinc-700);
-  background-color: var(--color-zinc-800);
-  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background-color: #181b24;
   color: white;
-  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
   opacity: 0;
   transform: scale(0.98);
   transition:
@@ -27,15 +26,18 @@ body {
 
 .confirm-dialog {
   width: min(100%, 24rem);
+  padding: 1rem;
 }
 
 .app-dialog {
+  position: relative;
   width: min(100% - 2rem, 40rem);
   max-height: min(90dvh, 44rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   overscroll-behavior: contain;
+  padding: 0;
 }
 
 .app-dialog[data-height-ready] {
@@ -52,10 +54,6 @@ body {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 1rem;
-  padding-inline: 0.25rem;
-  margin-inline: -0.25rem;
-  scrollbar-gutter: stable;
 }
 
 .app-dialog:not([open]) {

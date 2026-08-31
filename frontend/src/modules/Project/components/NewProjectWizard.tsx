@@ -4,6 +4,7 @@ import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import Button from "@uiKit/Button";
 import Input from "@uiKit/Input";
+import Select from "@uiKit/Select";
 import Textarea from "@uiKit/Textarea";
 import Dialog from "@uiKit/Dialog";
 import IconButton from "@uiKit/IconButton";
@@ -248,9 +249,9 @@ function TeamStep({
               )
             }
           />
-          <select
+          <Select
             aria-label="Seniority"
-            className="rounded-md bg-zinc-900 px-3 py-2 text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+            className="bg-zinc-900"
             value={member.seniority}
             onChange={(event) =>
               onChange(
@@ -271,7 +272,7 @@ function TeamStep({
             <option value="senior">Senior</option>
             <option value="staff">Staff</option>
             <option value="principal">Principal</option>
-          </select>
+          </Select>
           <Input
             aria-label="Capacity"
             className="bg-zinc-900"
@@ -334,7 +335,10 @@ function DeadlineStep({
   onChange,
 }: {
   draft: WizardDraft;
-  onChange: <K extends keyof WizardDraft>(key: K, value: WizardDraft[K]) => void;
+  onChange: <K extends keyof WizardDraft>(
+    key: K,
+    value: WizardDraft[K],
+  ) => void;
 }) {
   const needsDate = draft.deadlineKind !== "ongoing";
   return (
@@ -370,7 +374,10 @@ function WorkStep({
   onChange,
 }: {
   draft: WizardDraft;
-  onChange: <K extends keyof WizardDraft>(key: K, value: WizardDraft[K]) => void;
+  onChange: <K extends keyof WizardDraft>(
+    key: K,
+    value: WizardDraft[K],
+  ) => void;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -416,7 +423,10 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm text-zinc-300" htmlFor={htmlFor}>
+    <label
+      className="flex flex-col gap-1.5 text-sm text-zinc-300"
+      htmlFor={htmlFor}
+    >
       {label}
       {children}
     </label>
@@ -465,7 +475,10 @@ function deadlineIsValid(draft: WizardDraft) {
   return draft.deadlineKind === "ongoing" || draft.deadlineDate.length > 0;
 }
 
-function toCreateInput(draft: WizardDraft, skipPlan: boolean): CreateProjectInput {
+function toCreateInput(
+  draft: WizardDraft,
+  skipPlan: boolean,
+): CreateProjectInput {
   const members = draft.members.flatMap((member) => {
     const name = member.name.trim();
     if (!name) return [];
