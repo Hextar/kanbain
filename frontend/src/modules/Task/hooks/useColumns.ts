@@ -7,7 +7,18 @@ import {
   updateColumn as updateColumnApi,
 } from "../api/columns";
 import { columnKeys } from "../api/columnKeys";
+import { defaultColumnColor } from "../helpers/columnAccent";
 import type { Column, ColumnItem, CreateColumnInput } from "../types/Column";
+
+function compareColumnsByOrder(left: Column, right: Column) {
+  return left.order - right.order || left.id.localeCompare(right.id);
+}
+
+function withRenumberedOrders(list: Column[]): Column[] {
+  return list.map((column, index) =>
+    column.order === index ? column : { ...column, order: index },
+  );
+}
 
 export function useColumns(projectId: string, initialColumns?: Column[]) {
   const queryClient = useQueryClient();
@@ -48,11 +59,13 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
     input: Omit<CreateColumnInput, "projectId"> & { projectId?: string },
   ) {
     const nextProjectId = input.projectId ?? projectId;
+    const order = queryClient.getQueryData<Column[]>(listKey)?.length ?? 0;
     const column: Column = {
       id: input.id ?? crypto.randomUUID(),
       projectId: nextProjectId,
       title: input.title,
-      order: queryClient.getQueryData<Column[]>(listKey)?.length ?? 0,
+      order,
+      color: input.color ?? defaultColumnColor(order),
     };
 
     void withSaving(column.id, async () => {
@@ -66,6 +79,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
           ...input,
           id: column.id,
           projectId: nextProjectId,
+          color: column.color,
         });
       } catch (error) {
         setListData((current) =>
@@ -99,6 +113,37 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
     });
   }
 
+  function move(columnId: Column["id"], targetIndex: number) {
+    const previous = (
+      queryClient.getQueryData<Column[]>(listKey) ?? []
+    ).toSorted(compareColumnsByOrder);
+    const sourceIndex = previous.findIndex((item) => item.id === columnId);
+    if (sourceIndex < 0) return;
+
+    const without = previous.filter((item) => item.id !== columnId);
+    const clamped = Math.max(0, Math.min(targetIndex, without.length));
+    if (clamped === sourceIndex) return;
+
+    const moved = previous[sourceIndex];
+    const next = withRenumberedOrders([
+      ...without.slice(0, clamped),
+      moved,
+      ...without.slice(clamped),
+    ]);
+    const nextMoved = next.find((item) => item.id === columnId);
+    if (!nextMoved) return;
+
+    void withSaving(columnId, async () => {
+      queryClient.setQueryData<Column[]>(listKey, next);
+      try {
+        await updateColumnMutation(nextMoved);
+      } catch (error) {
+        queryClient.setQueryData<Column[]>(listKey, previous);
+        throw error;
+      }
+    });
+  }
+
   function remove(id: Column["id"]) {
     const previous = queryClient.getQueryData<Column[]>(listKey) ?? [];
 
@@ -113,10 +158,12 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
     });
   }
 
-  const columnItems: ColumnItem[] = (query.data ?? []).map((column) => ({
-    ...column,
-    isSaving: savingColumnIds.has(column.id),
-  }));
+  const columnItems: ColumnItem[] = (query.data ?? [])
+    .toSorted(compareColumnsByOrder)
+    .map((column) => ({
+      ...column,
+      isSaving: savingColumnIds.has(column.id),
+    }));
 
   return {
     columns: columnItems,
@@ -124,6 +171,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
     error: query.error,
     createColumn: create,
     updateColumn: update,
+    moveColumn: move,
     deleteColumn: remove,
   };
 }

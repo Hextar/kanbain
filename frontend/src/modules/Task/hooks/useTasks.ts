@@ -14,6 +14,12 @@ import {
 } from "../api/tasks";
 import { taskKeys } from "../api/taskKeys";
 import { compareTasksByOrder } from "../helpers/taskOrder";
+import { ancestorsToComplete } from "../helpers/visibleColumnCards";
+import {
+  nestWorkKind,
+  shouldDemoteParent,
+  unnestWorkKind,
+} from "../helpers/nesting";
 import type {
   CreateTaskInput,
   Task,
@@ -45,6 +51,33 @@ function insertTaskAt(list: Task[], task: Task, index: number): Task[] {
 
 function removeTaskById(list: Task[], taskId: Task["id"]): Task[] {
   return withRenumberedOrders(list.filter((item) => item.id !== taskId));
+}
+
+function sameTaskIds(left: Task[], right: Task[]) {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index++) {
+    if (left[index].id !== right[index].id) return false;
+  }
+  return true;
+}
+
+function sameColumnFollowers(
+  parentId: Task["id"],
+  columnTasks: Task[],
+  targetColumnId: Task["columnId"],
+): Task[] {
+  const direct = columnTasks
+    .filter((item) => item.parentId === parentId)
+    .toSorted(compareTasksByOrder);
+  const followers: Task[] = [];
+  for (const child of direct) {
+    const moved = { ...withoutSaving(child), columnId: targetColumnId };
+    followers.push(
+      moved,
+      ...sameColumnFollowers(child.id, columnTasks, targetColumnId),
+    );
+  }
+  return followers;
 }
 
 function filtersFromListKey(queryKey: readonly unknown[]): TaskListFilters {
@@ -93,15 +126,49 @@ function syncTaskInListCaches(queryClient: QueryClient, task: Task) {
   queryClient.setQueryData(taskKeys.detail(task.id), task);
 }
 
-export function useTasks(
-  filters: TaskListFilters = {},
-  initialTasks?: Task[],
+function nextTaskNumber(
+  queryClient: QueryClient,
+  projectId: Task["projectId"],
+  listKey: readonly unknown[],
+): number {
+  const projectTasks = projectId
+    ? queryClient.getQueryData<Task[]>(taskKeys.list({ projectId }))
+    : undefined;
+  const source =
+    projectTasks ?? queryClient.getQueryData<Task[]>(listKey) ?? [];
+  let max = 0;
+  for (const task of source) {
+    if ((task.taskNumber ?? 0) > max) max = task.taskNumber ?? 0;
+  }
+  return max + 1;
+}
+
+function patchTaskInCaches(
+  queryClient: QueryClient,
+  taskId: Task["id"],
+  patch: Partial<Task>,
 ) {
+  for (const [queryKey] of queryClient.getQueriesData<Task[]>({
+    queryKey: taskKeys.lists(),
+  })) {
+    queryClient.setQueryData<Task[]>(queryKey, (current) =>
+      current?.map((item) =>
+        item.id === taskId ? { ...item, ...patch } : item,
+      ),
+    );
+  }
+  queryClient.setQueryData<Task>(taskKeys.detail(taskId), (current) =>
+    current ? { ...current, ...patch } : current,
+  );
+}
+
+export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () => getTasks(filters),
     initialData: initialTasks,
+    staleTime: 0,
   });
   const { mutateAsync: createTaskMutation } = useCreateTask();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
@@ -143,7 +210,13 @@ export function useTasks(
       id: input.id ?? crypto.randomUUID(),
       title: input.title,
       columnId,
-      order: input.order ?? queryClient.getQueryData<Task[]>(listKey)?.length ?? 0,
+      order:
+        input.order ?? queryClient.getQueryData<Task[]>(listKey)?.length ?? 0,
+      taskNumber: nextTaskNumber(
+        queryClient,
+        input.projectId ?? filters.projectId,
+        listKey,
+      ),
       projectId: input.projectId ?? filters.projectId,
       description: input.description,
       priority: input.priority,
@@ -151,6 +224,8 @@ export function useTasks(
       estimateTshirt: input.estimateTshirt,
       assigneeId: input.assigneeId,
       milestoneId: input.milestoneId,
+      parentId: input.parentId,
+      workKind: input.workKind ?? "task",
       tags: input.tags,
     };
 
@@ -160,10 +235,26 @@ export function useTasks(
           ? current
           : [...current, task],
       );
+      if (task.projectId) {
+        queryClient.setQueryData<Task[]>(
+          taskKeys.list({ projectId: task.projectId }),
+          (current) => {
+            if (!current) return current;
+            if (current.some((item) => item.id === task.id)) return current;
+            return [...current, task];
+          },
+        );
+      }
       try {
         await createTaskMutation({ ...input, id: task.id, columnId });
       } catch (error) {
         setListData((current) => current.filter((item) => item.id !== task.id));
+        if (task.projectId) {
+          queryClient.setQueryData<Task[]>(
+            taskKeys.list({ projectId: task.projectId }),
+            (current) => current?.filter((item) => item.id !== task.id),
+          );
+        }
         throw error;
       }
     });
@@ -239,21 +330,7 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: createTask,
     onSuccess: (created) => {
-      queryClient.setQueryData<Task[]>(
-        taskKeys.list({
-          columnId: created.columnId,
-          projectId: created.projectId,
-        }),
-        (current) => {
-          if (!current) return [created];
-          if (current.some((task) => task.id === created.id)) {
-            return current.map((task) =>
-              task.id === created.id ? created : task,
-            );
-          }
-          return insertTaskAt(current, created, created.order);
-        },
-      );
+      syncTaskInListCaches(queryClient, created);
     },
   });
 }
@@ -269,6 +346,10 @@ export function useUpdateTask() {
   });
 }
 
+export type MoveTaskOptions = {
+  parentId?: string | null;
+};
+
 export function useMoveTask() {
   const queryClient = useQueryClient();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
@@ -280,6 +361,8 @@ export function useMoveTask() {
       targetColumnId: Task["columnId"],
       targetIndex: number,
       projectId?: Task["projectId"],
+      doneColumnId?: Task["columnId"],
+      options?: MoveTaskOptions,
     ) => {
       const sourceKey = taskKeys.list({
         columnId: sourceColumnId,
@@ -289,49 +372,221 @@ export function useMoveTask() {
         columnId: targetColumnId,
         projectId,
       });
-      const sourceList = queryClient.getQueryData<Task[]>(sourceKey) ?? [];
+      const projectKey = projectId ? taskKeys.list({ projectId }) : undefined;
+      const sourceList = (
+        queryClient.getQueryData<Task[]>(sourceKey) ?? []
+      ).toSorted(compareTasksByOrder);
       const sourceIndex = sourceList.findIndex((item) => item.id === taskId);
       if (sourceIndex < 0) return;
 
+      const sourceTask = withoutSaving(sourceList[sourceIndex]);
+      const parentSpecified = Boolean(options && "parentId" in options);
+      const nextParentId = parentSpecified
+        ? (options?.parentId ?? undefined)
+        : sourceTask.parentId;
+
       const sameColumn = sourceColumnId === targetColumnId;
-      if (sameColumn && targetIndex === sourceIndex) return;
+      if (
+        sameColumn &&
+        targetIndex === sourceIndex &&
+        nextParentId === sourceTask.parentId
+      ) {
+        return;
+      }
 
       const destinationList = (
         sameColumn
           ? sourceList
-          : (queryClient.getQueryData<Task[]>(targetKey) ?? [])
+          : (queryClient.getQueryData<Task[]>(targetKey) ?? []).toSorted(
+              compareTasksByOrder,
+            )
       ).filter((item) => item.id !== taskId);
+      const followers = sameColumn
+        ? []
+        : sameColumnFollowers(taskId, sourceList, targetColumnId);
+      const followerIds = new Set(followers.map((item) => item.id));
       const clampedIndex = Math.max(
         0,
-        Math.min(targetIndex, destinationList.length),
+        Math.min(
+          targetIndex,
+          destinationList.filter((item) => !followerIds.has(item.id)).length,
+        ),
       );
-      const moved: Task = {
-        ...withoutSaving(sourceList[sourceIndex]),
+
+      const projectTasks = (projectKey
+        ? queryClient.getQueryData<Task[]>(projectKey)
+        : undefined) ?? [...sourceList, ...destinationList];
+
+      let moved: Task = {
+        ...sourceTask,
         columnId: targetColumnId,
         order: clampedIndex,
       };
-      const nextDestination = insertTaskAt(
-        destinationList,
+      if (parentSpecified) {
+        if (nextParentId) {
+          const parent = projectTasks.find((item) => item.id === nextParentId);
+          if (parent) {
+            const kinds = nestWorkKind(sourceTask, parent, projectTasks);
+            moved = {
+              ...moved,
+              parentId: nextParentId,
+              workKind: kinds.movedWorkKind,
+            };
+          } else {
+            moved = { ...moved, parentId: nextParentId };
+          }
+        } else {
+          moved = {
+            ...moved,
+            workKind: unnestWorkKind(sourceTask, projectTasks),
+          };
+          delete moved.parentId;
+        }
+      }
+
+      let nextDestination = insertTaskAt(
+        destinationList.filter((item) => !followerIds.has(item.id)),
         moved,
         clampedIndex,
       );
-      const previousSource = queryClient.getQueryData<Task[]>(sourceKey);
-      const previousTarget = queryClient.getQueryData<Task[]>(targetKey);
+      let followerIndex =
+        nextDestination.findIndex((item) => item.id === moved.id) + 1;
+      for (const follower of followers) {
+        nextDestination = insertTaskAt(
+          nextDestination.filter((item) => item.id !== follower.id),
+          follower,
+          followerIndex,
+        );
+        followerIndex += 1;
+      }
+      if (
+        sameColumn &&
+        (moved.parentId ?? undefined) === (sourceTask.parentId ?? undefined) &&
+        moved.workKind === sourceTask.workKind &&
+        sameTaskIds(sourceList, nextDestination)
+      ) {
+        return;
+      }
+      const previous = new Map<string, Task[] | undefined>();
+      const remember = (key: readonly unknown[]) => {
+        const cacheKey = JSON.stringify(key);
+        if (!previous.has(cacheKey)) {
+          previous.set(cacheKey, queryClient.getQueryData<Task[]>(key));
+        }
+      };
+      remember(sourceKey);
+      remember(targetKey);
+      if (projectKey) remember(projectKey);
 
       if (sameColumn) {
         queryClient.setQueryData<Task[]>(sourceKey, nextDestination);
       } else {
         queryClient.setQueryData<Task[]>(
           sourceKey,
-          removeTaskById(sourceList, taskId),
+          withRenumberedOrders(
+            sourceList.filter(
+              (item) => item.id !== taskId && !followerIds.has(item.id),
+            ),
+          ),
         );
         queryClient.setQueryData<Task[]>(targetKey, nextDestination);
       }
+      if (projectKey) {
+        queryClient.setQueryData<Task[]>(projectKey, (current) =>
+          current?.map((item) => {
+            if (item.id === moved.id) return moved;
+            const follower = followers.find((child) => child.id === item.id);
+            return follower ?? item;
+          }),
+        );
+      }
 
-      void updateTaskMutation(moved).catch(() => {
-        queryClient.setQueryData(sourceKey, previousSource);
-        queryClient.setQueryData(targetKey, previousTarget);
-      });
+      if (parentSpecified) {
+        if (nextParentId) {
+          const parent = projectTasks.find((item) => item.id === nextParentId);
+          if (parent) {
+            const kinds = nestWorkKind(sourceTask, parent, projectTasks);
+            if (kinds.parentWorkKind) {
+              patchTaskInCaches(queryClient, parent.id, {
+                workKind: kinds.parentWorkKind,
+              });
+            }
+          }
+        }
+        const previousParentId = sourceTask.parentId;
+        if (previousParentId && previousParentId !== nextParentId) {
+          const remaining = projectTasks.filter(
+            (item) =>
+              item.parentId === previousParentId && item.id !== moved.id,
+          ).length;
+          const oldParent = projectTasks.find(
+            (item) => item.id === previousParentId,
+          );
+          if (oldParent && shouldDemoteParent(oldParent, remaining)) {
+            patchTaskInCaches(queryClient, oldParent.id, { workKind: "task" });
+          }
+        }
+      }
+
+      const latestProjectTasks =
+        (projectKey
+          ? queryClient.getQueryData<Task[]>(projectKey)
+          : undefined) ?? [];
+      const ancestors =
+        doneColumnId && projectId
+          ? ancestorsToComplete(moved, latestProjectTasks, doneColumnId)
+          : [];
+
+      for (const ancestor of ancestors) {
+        const fromKey = taskKeys.list({
+          columnId: ancestor.fromColumnId,
+          projectId,
+        });
+        const toKey = taskKeys.list({
+          columnId: ancestor.task.columnId,
+          projectId,
+        });
+        remember(fromKey);
+        remember(toKey);
+        const fromList = queryClient.getQueryData<Task[]>(fromKey) ?? [];
+        const toList = (
+          ancestor.fromColumnId === ancestor.task.columnId
+            ? fromList
+            : (queryClient.getQueryData<Task[]>(toKey) ?? [])
+        ).filter((item) => item.id !== ancestor.task.id);
+        const placed = insertTaskAt(toList, ancestor.task, toList.length);
+        if (ancestor.fromColumnId === ancestor.task.columnId) {
+          queryClient.setQueryData<Task[]>(fromKey, placed);
+        } else {
+          queryClient.setQueryData<Task[]>(
+            fromKey,
+            removeTaskById(fromList, ancestor.task.id),
+          );
+          queryClient.setQueryData<Task[]>(toKey, placed);
+        }
+        if (projectKey) {
+          queryClient.setQueryData<Task[]>(projectKey, (current) =>
+            current?.map((item) =>
+              item.id === ancestor.task.id ? ancestor.task : item,
+            ),
+          );
+        }
+      }
+
+      void updateTaskMutation(moved)
+        .then(() => {
+          for (const follower of followers) {
+            syncTaskInListCaches(queryClient, follower);
+          }
+        })
+        .catch(() => {
+          for (const [cacheKey, value] of previous) {
+            queryClient.setQueryData(
+              JSON.parse(cacheKey) as readonly unknown[],
+              value,
+            );
+          }
+        });
     },
     [queryClient, updateTaskMutation],
   );
