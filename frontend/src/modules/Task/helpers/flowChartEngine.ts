@@ -35,8 +35,11 @@ type FlowChartHandle = {
 const PAD_TOP = 40;
 const PAD_RIGHT = 20;
 const PAD_BOTTOM = 16;
-const PAD_LEFT_LANES = 92;
+const PAD_LEFT_LANES = 128;
 const PAD_LEFT_STAGE = 16;
+const LANE_LABEL_FAMILY = "ui-sans-serif, system-ui, sans-serif";
+const LANE_LABEL_FONT = `500 11px ${LANE_LABEL_FAMILY}`;
+const LANE_LINE_HEIGHT = 14;
 
 export function createFlowChart(
   host: HTMLElement,
@@ -84,7 +87,7 @@ export function createFlowChart(
       width,
       height,
       next.columns.map((column) => column.id).join(),
-      next.lanes.map((lane) => lane.key).join(),
+      next.lanes.map((lane) => `${lane.key}:${lane.label}`).join(),
       next.nodes
         .map((node) => `${node.id}:${node.columnIndex}:${node.clusterKey}`)
         .join(),
@@ -194,6 +197,11 @@ export function createFlowChart(
         return `${column.title}  ${count}`;
       });
 
+    const laneMaxLines = Math.min(
+      4,
+      Math.max(1, Math.floor((laneH - 12) / LANE_LINE_HEIGHT)),
+    );
+    const laneLabelWidth = Math.max(48, padLeft - 20);
     const laneLabel = labels
       .selectAll<SVGTextElement, FlowLane>("text.lane")
       .data(laneMode ? next.lanes : [], (lane) => lane.key);
@@ -206,12 +214,22 @@ export function createFlowChart(
       .attr("font-size", 11)
       .attr("font-weight", 500)
       .attr("text-anchor", "end")
-      .attr("dominant-baseline", "middle")
+      .attr("dominant-baseline", "central")
+      .attr("font-family", LANE_LABEL_FAMILY)
+      .style("pointer-events", "none")
       .merge(laneLabel)
-      .attr("x", padLeft - 12)
-      .attr("y", (_, index) => PAD_TOP + (index + 0.5) * laneH)
+      .attr("dominant-baseline", "central")
       .attr("fill", (lane) => lane.fill)
-      .text((lane) => lane.label);
+      .each(function (lane, index) {
+        paintLaneLabel(
+          this,
+          lane.label,
+          padLeft - 12,
+          PAD_TOP + (index + 0.5) * laneH,
+          laneLabelWidth,
+          laneMaxLines,
+        );
+      });
 
     const nodeSel = layer
       .selectAll<SVGGElement, SimNode>("g.node")
@@ -396,4 +414,80 @@ function nodeRadius(densest: number, colW: number, laneH: number): number {
   const area = Math.max(colW * laneH, 1);
   const packed = Math.sqrt(area / (densest * Math.PI * 3.2));
   return Math.max(6, Math.min(16, packed));
+}
+
+function paintLaneLabel(
+  node: SVGTextElement,
+  label: string,
+  x: number,
+  centerY: number,
+  maxWidth: number,
+  maxLines: number,
+) {
+  const text = select(node);
+  text.selectAll("tspan").remove();
+  text.text(null);
+  const lines = wrapLabelLines(label, maxWidth, maxLines);
+  const start = centerY - ((lines.length - 1) * LANE_LINE_HEIGHT) / 2;
+  for (let index = 0; index < lines.length; index++) {
+    text
+      .append("tspan")
+      .attr("x", x)
+      .attr("y", start + index * LANE_LINE_HEIGHT)
+      .text(lines[index]);
+  }
+}
+
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+function measureLabel(value: string): number {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement("canvas").getContext("2d");
+  }
+  if (!measureCtx) return value.length * 6.5;
+  measureCtx.font = LANE_LABEL_FONT;
+  return measureCtx.measureText(value).width;
+}
+
+function fitLabelWidth(value: string, maxWidth: number): string {
+  if (measureLabel(value) <= maxWidth) return value;
+  let low = 0;
+  let high = value.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (measureLabel(`${value.slice(0, mid)}…`) <= maxWidth) low = mid;
+    else high = mid - 1;
+  }
+  return low <= 0 ? "…" : `${value.slice(0, low)}…`;
+}
+
+function wrapLabelLines(
+  label: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const words = label.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const limit = Math.max(1, maxLines);
+  const lines: string[] = [];
+  let current = "";
+
+  for (let index = 0; index < words.length; index++) {
+    const word = words[index];
+    const tentative = current ? `${current} ${word}` : word;
+    if (measureLabel(tentative) <= maxWidth || current === "") {
+      current = tentative;
+      continue;
+    }
+    if (lines.length + 1 >= limit) {
+      lines.push(
+        fitLabelWidth([current, ...words.slice(index)].join(" "), maxWidth),
+      );
+      return lines;
+    }
+    lines.push(current);
+    current = word;
+  }
+  if (current) lines.push(fitLabelWidth(current, maxWidth));
+  return lines;
 }
