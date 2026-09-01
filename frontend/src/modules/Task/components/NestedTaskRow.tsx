@@ -6,6 +6,7 @@ import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useAssignees } from "../hooks/useCatalog";
 import { compactTaskKey } from "../helpers/taskKey";
+import { labeledPriority, PRIORITY_ACCENT } from "../helpers/taskBadges";
 import TaskHeading from "./TaskHeading";
 import type { Task, TaskItem } from "../types/Task";
 
@@ -45,6 +46,9 @@ export default function NestedTaskRow({
     (assignee) => assignee.id === task.assigneeId,
   )?.name;
   const keyLabel = compactTaskKey(task);
+  const accentBar = task.priority
+    ? PRIORITY_ACCENT[task.priority].bar
+    : undefined;
 
   return (
     <article
@@ -56,7 +60,7 @@ export default function NestedTaskRow({
     >
       <button
         className={twMerge(
-          "w-full min-w-0 rounded-md border border-white/6 bg-[#12141c]/80 px-2 py-1.5 text-left select-none",
+          "relative w-full min-w-0 overflow-hidden rounded-md border border-white/6 bg-[#12141c]/80 px-2 py-1.5 text-left select-none",
           isDragging ? "cursor-grabbing" : "cursor-grab",
           task.isSaving && "opacity-70",
           selected && "border-purple-500",
@@ -75,6 +79,18 @@ export default function NestedTaskRow({
         }}
         onDragEnd={dragProps.onDragEnd}
       >
+        {accentBar ? (
+          <div
+            aria-hidden
+            className={twMerge(
+              "absolute top-0 bottom-0 left-0 w-[2px] rounded-l-md",
+              accentBar,
+            )}
+          />
+        ) : null}
+        {task.priority ? (
+          <span className="sr-only">{labeledPriority(task.priority)}</span>
+        ) : null}
         <TaskHeading
           className="text-xs"
           taskKey={keyLabel}
