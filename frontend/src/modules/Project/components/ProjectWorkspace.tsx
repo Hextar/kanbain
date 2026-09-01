@@ -15,6 +15,7 @@ import {
   type ProjectBoard,
 } from "@modules/Project/helpers/projectBoard";
 import { reviveProject } from "@modules/Project/helpers/projectJson";
+import { usePlanLive } from "@modules/Project/hooks/usePlanLive";
 import { useProject } from "@modules/Project/hooks/useProjects";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "@modules/Task/types/Column";
@@ -60,6 +61,7 @@ export default function ProjectWorkspace({
   const requirePlannerKey = useRequirePlannerKey();
   const [isRetrying, setIsRetrying] = useState(false);
   const current = data ?? initial;
+  const live = usePlanLive(current, current.planStatus === "planning");
   const ssrBoard =
     project.planStatus === "ready" && initialTasks
       ? { columns: initialColumns, tasks: initialTasks }
@@ -113,9 +115,10 @@ export default function ProjectWorkspace({
     const opening = current.planStatus === "ready";
     return (
       <KanbanBoardSkeleton
-        label={opening ? "Loading board…" : "Planning board…"}
+        label={opening ? "Loading board…" : live.message}
         projectName={current.name}
-        statusText={opening ? undefined : "Planning…"}
+        progress={opening ? undefined : live.progress}
+        statusText={opening ? undefined : live.message}
       />
     );
   }

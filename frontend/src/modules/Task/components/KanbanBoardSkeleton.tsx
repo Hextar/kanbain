@@ -3,6 +3,7 @@ import { ChevronRight, GripVertical } from "lucide-react";
 import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
 import { COLUMN_COLOR_OPTIONS } from "@modules/Task/helpers/columnAccent";
 import Skeleton from "@uiKit/Skeleton";
+import PlanningStatus from "@modules/Project/components/PlanningStatus";
 
 const COLUMNS = [
   { cards: 3, titleWidth: "w-12", widths: ["w-3/4", "w-1/2", "w-2/3"] },
@@ -19,13 +20,16 @@ type KanbanBoardSkeletonProps = {
   projectName?: string;
   label?: string;
   statusText?: string;
+  progress?: number;
 };
 
 export default function KanbanBoardSkeleton({
   projectName,
   label = "Loading board…",
   statusText,
+  progress,
 }: KanbanBoardSkeletonProps) {
+  const showProgress = statusText !== undefined && progress !== undefined;
   return (
     <div
       aria-busy
@@ -58,7 +62,7 @@ export default function KanbanBoardSkeleton({
         <div className="flex min-w-0 items-center justify-end gap-2">
           {statusText ? (
             <span className="hidden truncate text-xs text-zinc-500 sm:inline">
-              {statusText}
+              {showProgress ? "Planning" : statusText}
             </span>
           ) : (
             <>
@@ -71,7 +75,15 @@ export default function KanbanBoardSkeleton({
           <SettingsButton size="xs" />
         </div>
       </header>
-      <div className="board-x-scroll relative z-0 flex min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3">
+      <div className="relative min-h-0 min-w-0 flex-1">
+        {showProgress ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center px-4">
+            <div className="w-full max-w-md rounded-xl border border-white/8 bg-[#12141c]/92 p-4 shadow-lg shadow-black/40 backdrop-blur-sm">
+              <PlanningStatus message={statusText ?? ""} progress={progress} />
+            </div>
+          </div>
+        ) : null}
+        <div className="board-x-scroll relative z-0 flex h-full min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3">
         {COLUMNS.map((column, index) => {
           const accent = COLUMN_COLOR_OPTIONS[index];
           return (
@@ -86,6 +98,7 @@ export default function KanbanBoardSkeleton({
           );
         })}
         <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
+        </div>
       </div>
     </div>
   );

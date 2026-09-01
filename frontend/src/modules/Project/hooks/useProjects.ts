@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRealtimeConnected, useRealtimeRooms } from "@libraries/realtime/RealtimeProvider";
 import { projectKeys } from "../api/projectKeys";
 import { getProject, getProjects } from "../api/projects";
 import { warmupProjectBoard } from "../helpers/projectBoard";
@@ -20,6 +21,7 @@ export function useProjects(initialProjects: Project[]) {
     () => new Set(),
   );
 
+  const connected = useRealtimeConnected();
   const query = useQuery({
     queryKey: projectKeys.list(),
     queryFn: getProjects,
@@ -30,8 +32,9 @@ export function useProjects(initialProjects: Project[]) {
         incoming as Project[],
       ),
     refetchInterval: (queryState) =>
-      queryState.state.data?.some(isPlanning) ? 2000 : false,
+      !connected && queryState.state.data?.some(isPlanning) ? 2000 : false,
   });
+  useRealtimeRooms((query.data ?? initialProjects).map((project) => project.id));
 
   useEffect(() => {
     const projects = query.data ?? [];
@@ -68,11 +71,13 @@ export function useProjects(initialProjects: Project[]) {
 }
 
 export function useProject(initialProject: Project) {
+  const connected = useRealtimeConnected();
+  useRealtimeRooms([initialProject.id]);
   return useQuery({
     queryKey: projectKeys.detail(initialProject.id),
     queryFn: () => getProject(initialProject.id),
     initialData: initialProject,
     refetchInterval: (query) =>
-      isPlanning(query.state.data) ? 2000 : false,
+      !connected && isPlanning(query.state.data) ? 2000 : false,
   });
 }

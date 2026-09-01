@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 5173",
-    "dev:mock": "MOCK_API=1 next dev --port 5173",
+    "dev:mock": "MOCK_API=1 NEXT_PUBLIC_WS_URL=off next dev --port 5173",
     "build": "next build",
     "start": "next start --port 5173",
     "lint": "eslint .",

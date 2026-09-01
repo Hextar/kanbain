@@ -47,7 +47,7 @@ function ProjectCardSkeleton() {
           </div>
         </div>
       </div>
-      <div className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5">
+      <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1.5 pt-4">
         <Skeleton className="h-5 w-14 rounded-full" />
         <Skeleton className="h-5 w-[5.5rem] rounded-full" />
         <Skeleton className="h-5 w-16 rounded-full" />

@@ -8,6 +8,7 @@ import { twMerge } from "tailwind-merge";
 import IconButton from "@uiKit/IconButton";
 import Tooltip from "@uiKit/Tooltip";
 import type { Project } from "../types/Project";
+import { usePlanLive } from "../hooks/usePlanLive";
 import {
   memberAccent,
   projectIdentity,
@@ -76,6 +77,10 @@ export default function ProjectCard({
   const isPlanning = project.planStatus === "planning" || isOpening;
   const isFailed = project.planStatus === "failed";
   const canOpen = project.planStatus === "ready" && !isOpening;
+  const live = usePlanLive(project, project.planStatus === "planning");
+  const progressPercent = Math.round(
+    Math.min(1, Math.max(0, live.progress)) * 100,
+  );
   const summary = (project.goal ?? project.description ?? "").trim();
   const errorMessage = project.planError ?? "Planning failed.";
   const members = project.members ?? [];
@@ -90,7 +95,23 @@ export default function ProjectCard({
 
   const body = (
     <>
-      <div className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)} />
+      {isPlanning && !isOpening ? (
+        <div
+          aria-label="Planning progress"
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={progressPercent}
+          className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-purple-950"
+          role="progressbar"
+        >
+          <div
+            className="h-full bg-gradient-to-r from-violet-400 to-purple-600 motion-safe:transition-[width] motion-safe:duration-700"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      ) : (
+        <div className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)} />
+      )}
       <div
         aria-hidden
         className={twMerge(
@@ -118,25 +139,21 @@ export default function ProjectCard({
           <h2 className="min-w-0 truncate text-lg font-semibold text-white">
             {project.name}
           </h2>
-          {isPlanning ? (
-            <span className="sr-only">
-              {isOpening ? "Opening board" : "Planning board"}
-            </span>
-          ) : null}
           <p
-            className="mt-1 line-clamp-2 min-h-10 min-w-0 text-sm leading-5 break-words text-zinc-400"
-            title={summary || undefined}
+            aria-live={isPlanning && !isOpening ? "polite" : undefined}
+            className={twMerge(
+              "mt-1 line-clamp-2 min-h-10 min-w-0 text-sm leading-5 break-words",
+              isPlanning && !isOpening ? "text-purple-200/90" : "text-zinc-400",
+            )}
+            title={
+              isPlanning && !isOpening ? undefined : summary || undefined
+            }
           >
-            {summary || "\u00a0"}
+            {isPlanning && !isOpening ? live.message : summary || "\u00a0"}
           </p>
         </div>
       </div>
-      <div className="mt-4 flex min-w-0 flex-wrap items-center gap-1.5">
-        {isPlanning ? (
-          <span className="rounded-full bg-purple-500/15 px-2 py-0.5 text-[11px] text-purple-300">
-            Planning
-          </span>
-        ) : null}
+      <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1.5 pt-4">
         {isFailed ? (
           <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-300">
             Failed
@@ -183,7 +200,7 @@ export default function ProjectCard({
   );
 
   return (
-    <article className="relative h-full min-w-0 hover:z-10">
+    <article className="relative flex h-full min-w-0 flex-col hover:z-10">
       {canOpen ? (
         <Link className={cardClassName} href={`/project/${project.id}`}>
           {body}

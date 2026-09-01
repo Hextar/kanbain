@@ -1,3 +1,5 @@
+import { REALTIME_CLIENT_HEADER, realtimeClientId } from "@libraries/realtime/session";
+
 export function isMockApi() {
   return process.env.MOCK_API === "1" || process.env.MOCK_API === "true";
 }
@@ -21,7 +23,11 @@ export async function apiFetch(path: string, init?: RequestInit) {
     typeof window === "undefined"
       ? new URL(path, apiOrigin()).toString()
       : path;
-  return fetch(url, { cache: "no-store", ...init });
+  const headers = new Headers(init?.headers);
+  if (typeof window !== "undefined") {
+    headers.set(REALTIME_CLIENT_HEADER, realtimeClientId());
+  }
+  return fetch(url, { cache: "no-store", ...init, headers });
 }
 
 export async function readJson<T>(

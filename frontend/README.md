@@ -35,7 +35,7 @@ cp .env.example .env.local   # API_URL=http://localhost:3000
 npm run dev
 ```
 
-Open the URL Next prints. Flask already uses port 3000, so Next will typically choose **3001**. `/api` is proxied to Flask.
+Open the URL Next prints. Flask already uses port 3000, so Next will typically choose **3001**. `/api` is proxied to Flask. The browser also opens `ws://localhost:3000/ws` (override with `NEXT_PUBLIC_WS_URL`).
 
 ## Scripts
 
