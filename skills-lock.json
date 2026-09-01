@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "codebase-onboarding": {
+      "source": "affaan-m/ecc",
+      "sourceType": "github",
+      "skillPath": "skills/codebase-onboarding/SKILL.md",
+      "computedHash": "c14dccb7906a8543f0b34126978911f8efcbd717a5b9efd3ce2b4e68ebb8b227"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
