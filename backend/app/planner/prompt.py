@@ -29,14 +29,37 @@ production-grade plans include hardening, tests, and rollout.
 """
 
 
-def compose_messages(project: Project) -> list[dict[str, str]]:
+def compose_messages(
+    project: Project,
+    *,
+    research: str = "",
+    outline: str = "",
+    draft: str = "",
+    issues: list[str] | None = None,
+) -> list[dict[str, str]]:
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": compose_user_prompt(project)},
+        {
+            "role": "user",
+            "content": compose_user_prompt(
+                project,
+                research=research,
+                outline=outline,
+                draft=draft,
+                issues=issues,
+            ),
+        },
     ]
 
 
-def compose_user_prompt(project: Project) -> str:
+def compose_user_prompt(
+    project: Project,
+    *,
+    research: str = "",
+    outline: str = "",
+    draft: str = "",
+    issues: list[str] | None = None,
+) -> str:
     payload = {
         "name": project.name,
         "goal": project.goal,
@@ -59,10 +82,21 @@ def compose_user_prompt(project: Project) -> str:
             for member in project.members
         ],
     }
-    return (
-        "Create a kanban plan for this project. Use the team as the only assignees.\n\n"
-        f"{json.dumps(payload, indent=2)}"
-    )
+    parts = [
+        "Create a kanban plan for this project. Use the team as the only assignees.",
+        json.dumps(payload, indent=2),
+    ]
+    if research.strip():
+        parts.append(f"Research notes:\n{research.strip()}")
+    if outline.strip():
+        parts.append(f"Work breakdown outline:\n{outline.strip()}")
+    if draft.strip():
+        parts.append(f"Current draft plan JSON:\n{draft.strip()}")
+    if issues:
+        bullets = "\n".join(f"- {item}" for item in issues if item.strip())
+        if bullets:
+            parts.append(f"Fix these critique issues:\n{bullets}")
+    return "\n\n".join(parts)
 
 
 def format_prompt_for_log(messages: list[dict[str, str]]) -> str:

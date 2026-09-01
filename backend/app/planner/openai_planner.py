@@ -16,12 +16,26 @@ class OpenAIPlanner:
     def __init__(self, client: OpenAI | None = None) -> None:
         self._client = client
 
-    def generate(self, project: Project) -> PlannerResult:
+    def generate(
+        self,
+        project: Project,
+        *,
+        research: str = "",
+        outline: str = "",
+        draft: str = "",
+        issues: list[str] | None = None,
+    ) -> PlannerResult:
         api_key = get_openai_api_key()
         if not api_key:
             raise RuntimeError(MISSING_KEY_MESSAGE)
 
-        messages = compose_messages(project)
+        messages = compose_messages(
+            project,
+            research=research,
+            outline=outline,
+            draft=draft,
+            issues=issues,
+        )
         prompt = format_prompt_for_log(messages)
         client = self._client or OpenAI(api_key=api_key)
 

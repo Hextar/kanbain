@@ -7,6 +7,7 @@ DEADLINE_KINDS = {"hard", "nice_to_have", "ongoing"}
 METHODOLOGIES = {"kanban", "scrum"}
 QUALITY_BARS = {"mvp", "production_grade"}
 RISK_LEVELS = {"low", "medium", "high"}
+THOUGHT_EFFORTS = {"low", "medium", "high", "max"}
 SENIORITIES = {"junior", "mid", "senior", "staff", "principal"}
 WORK_KINDS = {"epic", "story", "task"}
 TSHIRTS = {"xs", "s", "m", "l", "xl"}

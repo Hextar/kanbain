@@ -11,7 +11,7 @@ from ..lookups import UnknownEntityError, get_project
 from ..models import Project
 from ..serialize import utcnow
 from .apply import apply_plan
-from .openai_planner import OpenAIPlanner
+from .effort import PLAN_TIMEOUT_MESSAGE
 from .schema import PlannerResult
 from .stub import StubPlanner
 
@@ -25,7 +25,9 @@ def get_planner() -> Planner:
     if kind == "stub":
         return StubPlanner()
     if kind == "openai":
-        return OpenAIPlanner()
+        from .graph import LangGraphPlanner
+
+        return LangGraphPlanner()
     raise RuntimeError(f"Unknown PLANNER '{kind}'")
 
 
@@ -57,15 +59,25 @@ def _run_plan(project_id: str) -> None:
             result = get_planner().generate(project)
             _log_block("composed prompt", result.prompt)
             _log_block("LLM output", result.raw)
+            project = get_project(project_id)
             actions = apply_plan(project, result.plan, raw=result.raw)
             _log_block("taken actions", "\n".join(f"  {line}" for line in actions))
         except Exception as exc:
+            project = get_project(project_id)
             project.plan_status = "failed"
-            project.plan_error = str(exc)
+            project.plan_error = _plan_error_message(exc)
+            project.plan_phase = None
             project.updated_at = utcnow()
             db.session.commit()
     finally:
         db.session.remove()
+
+
+def _plan_error_message(exc: Exception) -> str:
+    name = type(exc).__name__
+    if "Timeout" in name or "Recursion" in name:
+        return PLAN_TIMEOUT_MESSAGE
+    return str(exc)
 
 
 def _log_block(label: str, body: str) -> None:

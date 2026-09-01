@@ -2,9 +2,10 @@ import json
 
 from app.lookups import get_project
 from app.planner.apply import apply_plan
+from app.planner.graph import LangGraphPlanner
 from app.planner.job import plan_project
 from app.planner.keys import set_openai_api_key
-from app.planner.openai_planner import MISSING_KEY_MESSAGE, OpenAIPlanner
+from app.planner.openai_planner import MISSING_KEY_MESSAGE
 from app.planner.schema import ParsedMilestone, ParsedPlan, ParsedTask
 from tests.plan_fixtures import SAMPLE_LLM_PLAN, fake_openai_client
 
@@ -78,13 +79,14 @@ def test_openai_planner_populates_the_board(client, app, monkeypatch):
             "deadlineKind": "hard",
             "deadlineAt": "2026-12-01T00:00:00Z",
             "members": [{"name": "Ada", "role": "engineer", "seniority": "senior"}],
+            "thoughtEffort": "low",
         },
     ).get_json()
     project_id = created["id"]
     client_stub = fake_openai_client(json.dumps(SAMPLE_LLM_PLAN))
     monkeypatch.setattr(
         "app.planner.job.get_planner",
-        lambda: OpenAIPlanner(client=client_stub),
+        lambda: LangGraphPlanner(client=client_stub),
     )
 
     with app.app_context():

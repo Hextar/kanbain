@@ -15,6 +15,8 @@ def test_lists_seeded_project_and_columns(client):
     assert project["methodology"] == "kanban"
     assert project["members"] == []
     assert project["planStatus"] == "ready"
+    assert project["thoughtEffort"] == "medium"
+    assert "planPhase" not in project
 
     response = client.get("/api/columns")
     assert response.status_code == 200
@@ -364,6 +366,8 @@ def test_create_project_with_wizard_fields(client):
     assert [member["name"] for member in project["members"]] == ["Ada"]
     assert project["members"][0]["capacity"] == 1
     assert project["planStatus"] == "planning"
+    assert project["thoughtEffort"] == "medium"
+    assert "planPhase" not in project
     columns = client.get(f"/api/columns?projectId={project['id']}").get_json()
     assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
 
@@ -377,6 +381,7 @@ def test_create_empty_project_skips_planning(client):
     project = response.get_json()
     assert project["name"] == "Blank board"
     assert project["planStatus"] == "ready"
+    assert project["thoughtEffort"] == "medium"
     assert "planError" not in project
     columns = client.get(f"/api/columns?projectId={project['id']}").get_json()
     assert [column["title"] for column in columns] == ["To Do", "In Progress", "Done"]
@@ -391,6 +396,26 @@ def test_skip_plan_must_be_boolean(client):
     )
     assert response.status_code == 400
     assert response.get_json()["message"] == "skipPlan must be a boolean"
+
+
+def test_create_project_stores_thought_effort(client):
+    response = client.post(
+        "/api/projects",
+        json={"name": "Deep think", "thoughtEffort": "max"},
+    )
+    assert response.status_code == 201
+    project = response.get_json()
+    assert project["thoughtEffort"] == "max"
+    assert project["planStatus"] == "planning"
+
+
+def test_create_rejects_unknown_thought_effort(client):
+    response = client.post(
+        "/api/projects",
+        json={"name": "Bad effort", "thoughtEffort": "extreme"},
+    )
+    assert response.status_code == 400
+    assert "thoughtEffort must be one of" in response.get_json()["message"]
 
 
 def test_columns_are_scoped_to_a_project(client):

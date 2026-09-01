@@ -4,6 +4,7 @@ from rq import Queue
 
 from .extensions import db
 from .lookups import get_project
+from .planner.effort import job_timeout_seconds
 from .planner.job import plan_project
 from .serialize import utcnow
 
@@ -18,10 +19,16 @@ def enqueue_plan(project_id: str) -> None:
     if current_app.config.get("TESTING"):
         return
     try:
-        get_queue().enqueue(plan_project, project_id, job_timeout=300)
+        project = get_project(project_id)
+        get_queue().enqueue(
+            plan_project,
+            project_id,
+            job_timeout=job_timeout_seconds(project.thought_effort),
+        )
     except Exception as exc:
         project = get_project(project_id)
         project.plan_status = "failed"
         project.plan_error = f"Could not enqueue planner: {exc}"
+        project.plan_phase = None
         project.updated_at = utcnow()
         db.session.commit()

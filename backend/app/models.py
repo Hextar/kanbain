@@ -37,6 +37,15 @@ class Project(db.Model):
             "plan_status IN ('planning', 'ready', 'failed')",
             name="ck_projects_plan_status",
         ),
+        CheckConstraint(
+            "thought_effort IN ('low', 'medium', 'high', 'max')",
+            name="ck_projects_thought_effort",
+        ),
+        CheckConstraint(
+            "plan_phase IS NULL OR plan_phase IN "
+            "('exploring', 'decomposing', 'generating', 'reviewing', 'revising')",
+            name="ck_projects_plan_phase",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -54,6 +63,8 @@ class Project(db.Model):
     plan_status: Mapped[str] = mapped_column(String(16), nullable=False, default="ready")
     plan_error: Mapped[str | None] = mapped_column(Text)
     plan_markdown: Mapped[str | None] = mapped_column(Text)
+    thought_effort: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
+    plan_phase: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -79,6 +90,7 @@ class Project(db.Model):
             "qualityBar": self.quality_bar,
             "riskTolerance": self.risk_tolerance,
             "planStatus": self.plan_status,
+            "thoughtEffort": self.thought_effort,
         }
         optional = {
             "goal": self.goal,
@@ -88,6 +100,7 @@ class Project(db.Model):
             "repoUrl": self.repo_url,
             "deadlineAt": dump_datetime(self.deadline_at),
             "planError": self.plan_error,
+            "planPhase": self.plan_phase,
             "createdAt": dump_datetime(self.created_at),
             "updatedAt": dump_datetime(self.updated_at),
         }

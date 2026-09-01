@@ -5,6 +5,7 @@ from ..extensions import db
 from ..http import error_response
 from ..lookups import UnknownEntityError, get_member, get_project
 from ..models import Project, ProjectMember, new_id
+from ..planner.effort import DEFAULT_THOUGHT_EFFORT
 from ..queue import enqueue_plan
 from ..seed import add_default_columns
 from ..serialize import parse_datetime, utcnow
@@ -14,6 +15,7 @@ from ..validation import (
     QUALITY_BARS,
     RISK_LEVELS,
     SENIORITIES,
+    THOUGHT_EFFORTS,
     json_error,
     parse_enum,
     parse_number,
@@ -57,6 +59,9 @@ def _apply_project_fields(project: Project, payload: dict, *, creating: bool) ->
         risk = parse_enum(payload.get("riskTolerance"), RISK_LEVELS, "riskTolerance")
         if risk:
             project.risk_tolerance = risk
+    if creating or "thoughtEffort" in payload:
+        effort = parse_enum(payload.get("thoughtEffort"), THOUGHT_EFFORTS, "thoughtEffort")
+        project.thought_effort = effort or DEFAULT_THOUGHT_EFFORT
 
 
 def _apply_member_fields(member: ProjectMember, payload: dict, *, creating: bool) -> None:
@@ -109,6 +114,7 @@ def create_project():
         methodology="kanban",
         quality_bar="mvp",
         risk_tolerance="medium",
+        thought_effort=DEFAULT_THOUGHT_EFFORT,
     )
     project.id = project_id or new_id()
 
@@ -137,9 +143,11 @@ def create_project():
     project.plan_error = None
     if skip_plan:
         project.plan_status = "ready"
+        project.plan_phase = None
         db.session.commit()
     else:
         project.plan_status = "planning"
+        project.plan_phase = None
         db.session.commit()
         enqueue_plan(project.id)
     db.session.refresh(project)
@@ -271,6 +279,7 @@ def enqueue_project_plan(project_id: str):
 
     project.plan_status = "planning"
     project.plan_error = None
+    project.plan_phase = None
     project.updated_at = utcnow()
     db.session.commit()
     enqueue_plan(project.id)

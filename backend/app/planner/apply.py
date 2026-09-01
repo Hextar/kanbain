@@ -62,6 +62,7 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
     project.plan_markdown = raw
     project.plan_status = "ready"
     project.plan_error = None
+    project.plan_phase = None
     project.updated_at = now
     db.session.commit()
     return actions

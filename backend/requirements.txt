@@ -8,4 +8,9 @@ python-dotenv==1.1.0
 cryptography==44.0.3
 redis==5.2.1
 rq==2.3.3
+flask-sock==0.7.0
 openai==1.82.0
+langchain==0.3.27
+langchain-core==0.3.75
+langchain-openai==0.3.16
+langgraph==0.6.7
