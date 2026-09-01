@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnchoredHoverPreview } from "@uiKit/HoverPreview";
-import { columnAccent } from "../helpers/columnAccent";
-import { PRIORITY_ACCENT } from "../helpers/taskBadges";
 import type { FlowLane, FlowNode } from "../helpers/flowCluster";
 import type { Column } from "../types/Column";
 import type { Task } from "../types/Task";
@@ -141,9 +139,10 @@ export default function FlowChart({
   const liveMenuTask = menu
     ? (nodes.find((node) => node.id === menu.task.id)?.task ?? menu.task)
     : null;
-  const livePreviewTask = preview
-    ? (nodes.find((node) => node.id === preview.task.id)?.task ?? preview.task)
+  const livePreviewNode = preview
+    ? (nodes.find((node) => node.id === preview.task.id) ?? null)
     : null;
+  const livePreviewTask = livePreviewNode?.task ?? preview?.task ?? null;
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-xl ring-1 ring-white/6">
@@ -155,11 +154,7 @@ export default function FlowChart({
         content={
           livePreviewTask ? (
             <TaskCardPreview
-              accentBar={previewAccentBar(
-                livePreviewTask,
-                columns,
-                doneColumnId,
-              )}
+              accentColor={livePreviewNode?.fill}
               projectId={projectId}
               task={livePreviewTask}
             />
@@ -180,20 +175,4 @@ export default function FlowChart({
       ) : null}
     </div>
   );
-}
-
-function previewAccentBar(
-  task: Task,
-  columns: Column[],
-  doneColumnId?: string,
-) {
-  const index = columns.findIndex((column) => column.id === task.columnId);
-  if (index >= 0) {
-    return columnAccent(
-      columns[index].color,
-      index,
-      columns[index].id === doneColumnId,
-    ).bar;
-  }
-  return task.priority ? PRIORITY_ACCENT[task.priority].bar : undefined;
 }

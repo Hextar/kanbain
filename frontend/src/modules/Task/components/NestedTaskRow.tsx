@@ -90,7 +90,7 @@ export default function NestedTaskRow({
           disabled={isDragging || Boolean(task.isSaving)}
           content={
             <TaskCardPreview
-              accentBar={cardAccentBar ?? accentBar}
+              accentBar={accentBar ?? cardAccentBar}
               projectId={projectId}
               task={task}
             />
