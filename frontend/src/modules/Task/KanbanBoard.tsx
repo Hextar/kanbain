@@ -324,6 +324,7 @@ function BoardCanvas({
           open
           projectId={project.id}
           task={composing}
+          {...columnDialogProps(columns, composing.columnId, doneColumnId)}
           onClose={() => setDraft(null)}
           onDelete={() => setDraft(null)}
           onSave={(task) => {
@@ -355,6 +356,7 @@ function BoardCanvas({
           open
           projectId={project.id}
           task={selected}
+          {...columnDialogProps(columns, selected.columnId, doneColumnId)}
           onClose={() => setTaskQuery(null)}
           onDelete={(id) => {
             deleteTask(id);
@@ -365,6 +367,19 @@ function BoardCanvas({
       ) : null}
     </div>
   );
+}
+
+function columnDialogProps(
+  columns: Column[],
+  columnId: string,
+  doneColumnId: string | undefined,
+) {
+  const column = columns.find((item) => item.id === columnId);
+  return {
+    columnColor: column?.color,
+    columnOrder: column?.order ?? 0,
+    isDoneColumn: columnId === doneColumnId,
+  };
 }
 
 function ColumnDropShadow({

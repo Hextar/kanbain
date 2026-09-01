@@ -19,6 +19,7 @@ export type ColumnAccent = {
   bar: string;
   badge: string;
   dot: string;
+  glow: string;
 };
 
 export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
@@ -28,6 +29,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-sky-400",
     badge: "bg-sky-500/15 text-sky-200",
     dot: "bg-sky-400",
+    glow: "from-sky-400/30",
   },
   {
     id: "amber",
@@ -35,6 +37,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-amber-400",
     badge: "bg-amber-500/15 text-amber-200",
     dot: "bg-amber-400",
+    glow: "from-amber-400/30",
   },
   {
     id: "orange",
@@ -42,6 +45,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-orange-500",
     badge: "bg-orange-500/15 text-orange-200",
     dot: "bg-orange-400",
+    glow: "from-orange-500/30",
   },
   {
     id: "fuchsia",
@@ -49,6 +53,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-fuchsia-400",
     badge: "bg-fuchsia-500/15 text-fuchsia-200",
     dot: "bg-fuchsia-400",
+    glow: "from-fuchsia-400/30",
   },
   {
     id: "violet",
@@ -56,6 +61,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-violet-400",
     badge: "bg-violet-500/15 text-violet-200",
     dot: "bg-violet-400",
+    glow: "from-violet-400/30",
   },
   {
     id: "teal",
@@ -63,6 +69,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-teal-400",
     badge: "bg-teal-500/15 text-teal-200",
     dot: "bg-teal-400",
+    glow: "from-teal-400/30",
   },
   {
     id: "emerald",
@@ -70,6 +77,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-emerald-400",
     badge: "bg-emerald-500/15 text-emerald-200",
     dot: "bg-emerald-400",
+    glow: "from-emerald-400/30",
   },
   {
     id: "rose",
@@ -77,6 +85,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-rose-400",
     badge: "bg-rose-500/15 text-rose-200",
     dot: "bg-rose-400",
+    glow: "from-rose-400/30",
   },
   {
     id: "cyan",
@@ -84,6 +93,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-cyan-400",
     badge: "bg-cyan-500/15 text-cyan-200",
     dot: "bg-cyan-400",
+    glow: "from-cyan-400/30",
   },
   {
     id: "indigo",
@@ -91,6 +101,7 @@ export const COLUMN_COLOR_OPTIONS: ColumnAccent[] = [
     bar: "bg-indigo-400",
     badge: "bg-indigo-500/15 text-indigo-200",
     dot: "bg-indigo-400",
+    glow: "from-indigo-400/30",
   },
 ];
 
@@ -136,4 +147,13 @@ export function columnAccentFill(
   isDone = false,
 ): string {
   return COLUMN_COLOR_FILL[columnAccent(color, fallbackIndex, isDone).id];
+}
+
+export function columnDialogAccent(
+  color: string | undefined,
+  fallbackIndex = 0,
+  isDone = false,
+): { bar: string; glow: string } {
+  const accent = columnAccent(color, fallbackIndex, isDone);
+  return { bar: accent.bar, glow: accent.glow };
 }

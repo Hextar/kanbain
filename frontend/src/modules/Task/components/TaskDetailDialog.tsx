@@ -28,6 +28,10 @@ import {
 } from "../helpers/nesting";
 import { milestoneLabel } from "../helpers/milestoneLabel";
 import {
+  columnDialogAccent,
+  type ColumnColorId,
+} from "../helpers/columnAccent";
+import {
   ESTIMATE_STYLE,
   PILL_CLASS_NAME,
   PRIORITY_ACCENT,
@@ -44,6 +48,9 @@ type TaskDetailDialogProps = {
   projectId: string;
   allTasks: Task[];
   isNew?: boolean;
+  columnColor?: ColumnColorId;
+  columnOrder?: number;
+  isDoneColumn?: boolean;
   onClose: () => void;
   onSave: (task: Task) => void;
   onDelete: (id: Task["id"]) => void;
@@ -200,6 +207,9 @@ export default function TaskDetailDialog({
   projectId,
   allTasks,
   isNew = false,
+  columnColor,
+  columnOrder = 0,
+  isDoneColumn = false,
   onClose,
   onSave,
   onDelete,
@@ -239,7 +249,9 @@ export default function TaskDetailDialog({
     isNew || typeof window === "undefined"
       ? ""
       : `${window.location.origin}/project/${projectId}?task=${taskQueryValue(task)}`;
-  const accent = PRIORITY_ACCENT[priority || "none"];
+  const accent = priority
+    ? PRIORITY_ACCENT[priority]
+    : columnDialogAccent(columnColor, columnOrder, isDoneColumn);
 
   function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
