@@ -1,8 +1,9 @@
 import { filterColumnCards } from "./boardFilter";
 import { columnAccentFill } from "./columnAccent";
 import { groupTasksByColumn } from "./groupTasksByColumn";
+import { milestoneLabel } from "./milestoneLabel";
 import { lastColumnId, visibleColumnCards } from "./visibleColumnCards";
-import type { Assignee } from "../types/Catalog";
+import type { Assignee, Milestone } from "../types/Catalog";
 import type { Column } from "../types/Column";
 import type { Task } from "../types/Task";
 
@@ -13,6 +14,7 @@ export const FLOW_CLUSTERS = [
   "assignee",
   "kind",
   "estimate",
+  "milestone",
   "stage",
 ] as const;
 
@@ -28,6 +30,7 @@ export const FLOW_CLUSTER_OPTIONS: {
   { id: "assignee", label: "Person" },
   { id: "kind", label: "Type" },
   { id: "estimate", label: "Size" },
+  { id: "milestone", label: "Milestone" },
   { id: "stage", label: "Stage" },
 ];
 
@@ -100,6 +103,8 @@ export function clusterKey(task: Task, cluster: FlowCluster): string {
       return task.workKind ?? "task";
     case "estimate":
       return task.estimateTshirt ?? "none";
+    case "milestone":
+      return task.milestoneId ?? "none";
     case "stage":
       return "all";
   }
@@ -110,6 +115,7 @@ export function clusterLabel(
   cluster: FlowCluster,
   columns: Column[],
   assignees: Assignee[],
+  milestones: Milestone[],
 ): string {
   switch (cluster) {
     case "priority":
@@ -121,6 +127,13 @@ export function clusterLabel(
       return capitalize(key);
     case "estimate":
       return key === "none" ? "None" : key.toUpperCase();
+    case "milestone": {
+      if (key === "none") return "No milestone";
+      const milestone = milestones.find((item) => item.id === key);
+      return milestone
+        ? milestoneLabel(milestone, milestones)
+        : "Unknown";
+    }
     case "stage":
       return columns.find((column) => column.id === key)?.title ?? "Stage";
   }
@@ -140,6 +153,7 @@ export function clusterFill(
     case "estimate":
       return ESTIMATE_FILL[key] ?? MUTED;
     case "assignee":
+    case "milestone":
       if (key === "none") return MUTED;
       return PERSON_PALETTE[hashKey(key) % PERSON_PALETTE.length];
     case "stage": {
@@ -161,6 +175,7 @@ export function flowLanes(
   nodes: FlowNode[],
   columns: Column[],
   assignees: Assignee[],
+  milestones: Milestone[],
 ): FlowLane[] {
   if (cluster === "stage") {
     return [{ key: "all", label: "", fill: MUTED }];
@@ -168,8 +183,8 @@ export function flowLanes(
   const seen = new Set<string>();
   for (const node of nodes) seen.add(node.clusterKey);
 
-  const ordered = laneOrder(cluster, columns, assignees).filter((key) =>
-    seen.has(key),
+  const ordered = laneOrder(cluster, columns, assignees, milestones).filter(
+    (key) => seen.has(key),
   );
   for (const key of seen) {
     if (!ordered.includes(key)) ordered.push(key);
@@ -177,7 +192,7 @@ export function flowLanes(
 
   return ordered.map((key) => ({
     key,
-    label: clusterLabel(key, cluster, columns, assignees),
+    label: clusterLabel(key, cluster, columns, assignees, milestones),
     fill: clusterFill(key, cluster, columns, 0),
   }));
 }
@@ -242,6 +257,7 @@ function laneOrder(
   cluster: FlowCluster,
   columns: Column[],
   assignees: Assignee[],
+  milestones: Milestone[],
 ): string[] {
   switch (cluster) {
     case "priority":
@@ -255,6 +271,16 @@ function laneOrder(
         ...assignees
           .toSorted((left, right) => left.name.localeCompare(right.name))
           .map((person) => person.id),
+        "none",
+      ];
+    case "milestone":
+      return [
+        ...milestones
+          .toSorted(
+            (left, right) =>
+              left.order - right.order || left.id.localeCompare(right.id),
+          )
+          .map((item) => item.id),
         "none",
       ];
     case "stage":
@@ -287,7 +313,7 @@ export function clusterInsight(
   if (cluster === "priority" && top.key === "high") {
     return `High priority is ${pct}% of visible work.`;
   }
-  if (cluster === "assignee") {
+  if (cluster === "assignee" || cluster === "milestone") {
     return `${top.label} holds ${pct}% of visible work.`;
   }
   return `${top.label} is ${pct}% of visible work.`;

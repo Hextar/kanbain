@@ -410,7 +410,9 @@ export default function TaskColumn({
         </Tooltip>
       </div>
       <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
-        {visible.length === 0 && gapPlaceholder ? <DropLine atStart /> : null}
+        {visible.length === 0 && gapPlaceholder ? (
+          <DropLine className="inset-x-3" atStart />
+        ) : null}
         {visible.map((card, liveIndex) => (
           <FlipItem
             key={card.task.id}
