@@ -115,7 +115,9 @@ export function insertProject(input: CreateProjectInput): Project {
     methodology: input.methodology ?? "kanban",
     qualityBar: input.qualityBar ?? "mvp",
     riskTolerance: input.riskTolerance ?? "medium",
+    thoughtEffort: input.thoughtEffort ?? "medium",
     planStatus: skipPlan ? "ready" : "planning",
+    planPhase: skipPlan ? undefined : "generating",
     createdAt: new Date().toISOString(),
     members,
   } satisfies ProjectJson);
@@ -255,6 +257,7 @@ function applyMockPlan(projectId: string) {
   });
   project.planStatus = "ready";
   project.planError = undefined;
+  project.planPhase = undefined;
 }
 
 function scheduleMockPlan(projectId: string) {
@@ -266,6 +269,7 @@ function scheduleMockPlan(projectId: string) {
       if (!project) return;
       project.planStatus = "failed";
       project.planError = "Could not plan this project.";
+      project.planPhase = undefined;
     }
   }, MOCK_PLAN_DELAY_MS);
 }
@@ -276,6 +280,7 @@ export function enqueuePlan(id: string): Project {
   if (project.planStatus === "planning") return project;
   project.planStatus = "planning";
   project.planError = undefined;
+  project.planPhase = "generating";
   scheduleMockPlan(id);
   return project;
 }

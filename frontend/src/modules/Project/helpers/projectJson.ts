@@ -13,7 +13,9 @@ export type ProjectJson = {
   methodology: Project["methodology"];
   qualityBar: Project["qualityBar"];
   riskTolerance: Project["riskTolerance"];
+  thoughtEffort?: Project["thoughtEffort"];
   planStatus?: Project["planStatus"];
+  planPhase?: Project["planPhase"];
   planError?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -43,7 +45,9 @@ export function projectFromJson(json: ProjectJson): Project {
     methodology: json.methodology,
     qualityBar: json.qualityBar,
     riskTolerance: json.riskTolerance,
+    thoughtEffort: json.thoughtEffort ?? "medium",
     planStatus: json.planStatus ?? "ready",
+    planPhase: json.planPhase,
     planError: json.planError,
     createdAt: json.createdAt ? new Date(json.createdAt) : undefined,
     updatedAt: json.updatedAt ? new Date(json.updatedAt) : undefined,
@@ -65,7 +69,9 @@ export function projectToJson(project: Project): ProjectJson {
     methodology: project.methodology,
     qualityBar: project.qualityBar,
     riskTolerance: project.riskTolerance,
+    thoughtEffort: project.thoughtEffort,
     planStatus: project.planStatus,
+    planPhase: project.planPhase,
     planError: project.planError,
     createdAt: project.createdAt?.toISOString(),
     updatedAt: project.updatedAt?.toISOString(),

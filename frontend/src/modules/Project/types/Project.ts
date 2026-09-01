@@ -2,6 +2,13 @@ export type DeadlineKind = "hard" | "nice_to_have" | "ongoing";
 export type Methodology = "kanban" | "scrum";
 export type QualityBar = "mvp" | "production_grade";
 export type RiskTolerance = "low" | "medium" | "high";
+export type ThoughtEffort = "low" | "medium" | "high" | "max";
+export type PlanPhase =
+  | "exploring"
+  | "decomposing"
+  | "generating"
+  | "reviewing"
+  | "revising";
 export type PlanStatus = "planning" | "ready" | "failed";
 export type Seniority = "junior" | "mid" | "senior" | "staff" | "principal";
 
@@ -34,7 +41,9 @@ export type Project = {
   methodology: Methodology;
   qualityBar: QualityBar;
   riskTolerance: RiskTolerance;
+  thoughtEffort: ThoughtEffort;
   planStatus: PlanStatus;
+  planPhase?: PlanPhase;
   planError?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -53,6 +62,7 @@ export type CreateProjectInput = {
   methodology?: Methodology;
   qualityBar?: QualityBar;
   riskTolerance?: RiskTolerance;
+  thoughtEffort?: ThoughtEffort;
   members?: ProjectMemberInput[];
   skipPlan?: boolean;
 };

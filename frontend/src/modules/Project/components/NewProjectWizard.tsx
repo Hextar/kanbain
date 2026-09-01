@@ -20,6 +20,7 @@ import type {
   QualityBar,
   RiskTolerance,
   Seniority,
+  ThoughtEffort,
 } from "../types/Project";
 
 type MemberDraft = {
@@ -39,6 +40,7 @@ type WizardDraft = {
   methodology: Methodology;
   qualityBar: QualityBar;
   riskTolerance: RiskTolerance;
+  thoughtEffort: ThoughtEffort;
 };
 
 const EMPTY_DRAFT: WizardDraft = {
@@ -50,6 +52,7 @@ const EMPTY_DRAFT: WizardDraft = {
   methodology: "kanban",
   qualityBar: "mvp",
   riskTolerance: "medium",
+  thoughtEffort: "medium",
 };
 
 const CONTROL =
@@ -183,6 +186,23 @@ export default function NewProjectWizard({
                 onChange={(event) => update("goal", event.target.value)}
               />
             </FieldRow>
+            <FieldRow label="Effort">
+              <Segmented
+                options={[
+                  { value: "low", label: "Low" },
+                  { value: "medium", label: "Med" },
+                  { value: "high", label: "High" },
+                  { value: "max", label: "Max" },
+                ]}
+                value={draft.thoughtEffort}
+                onChange={(value) =>
+                  update("thoughtEffort", value as ThoughtEffort)
+                }
+              />
+            </FieldRow>
+            <p className="pl-[6.5rem] text-[11px] leading-4 text-zinc-500">
+              Higher effort thinks longer and uses more tokens.
+            </p>
           </div>
         </DialogPanel>
         <div>
@@ -540,6 +560,6 @@ function toCreateInput(
     qualityBar: draft.qualityBar,
     riskTolerance: draft.riskTolerance,
     ...(members.length ? { members } : {}),
-    ...(skipPlan ? { skipPlan: true } : {}),
+    ...(skipPlan ? { skipPlan: true } : { thoughtEffort: draft.thoughtEffort }),
   };
 }
