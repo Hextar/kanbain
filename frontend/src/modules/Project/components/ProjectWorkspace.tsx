@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import Button from "@uiKit/Button";
 import KanbanBoard from "@modules/Task/KanbanBoard";
+import KanbanBoardSkeleton from "@modules/Task/components/KanbanBoardSkeleton";
 import { retryProjectPlanAction } from "@modules/Project/actions/retryPlan";
 import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import { projectKeys } from "@modules/Project/api/projectKeys";
@@ -110,10 +110,12 @@ export default function ProjectWorkspace({
 
   const board: ProjectBoard | undefined = boardQuery.data;
   if (current.planStatus !== "ready" || !board) {
+    const opening = current.planStatus === "ready";
     return (
-      <PlanningState
-        name={current.name}
-        opening={current.planStatus === "ready"}
+      <KanbanBoardSkeleton
+        label={opening ? "Loading board…" : "Planning board…"}
+        projectName={current.name}
+        statusText={opening ? undefined : "Planning…"}
       />
     );
   }
@@ -124,24 +126,5 @@ export default function ProjectWorkspace({
       initialTasks={board.tasks}
       project={current}
     />
-  );
-}
-
-function PlanningState({ name, opening }: { name: string; opening: boolean }) {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
-      <div className="plan-shimmer flex size-16 items-center justify-center rounded-2xl border border-purple-500/40 bg-zinc-800 text-purple-300">
-        <Sparkles aria-hidden size={28} />
-      </div>
-      <h1 className="text-2xl font-semibold text-white">{name}</h1>
-      <p className="max-w-md text-zinc-400">
-        {opening
-          ? "The plan is ready. Loading the board…"
-          : "The planner is filling the board. You can go back to the project list and keep working."}
-      </p>
-      <Link className="text-purple-400 hover:text-purple-300" href="/">
-        Back to projects
-      </Link>
-    </div>
   );
 }
