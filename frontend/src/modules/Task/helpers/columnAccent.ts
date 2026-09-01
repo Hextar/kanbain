@@ -116,3 +116,24 @@ export function columnAccent(
   if (isDone) return ACCENT_BY_ID.get("emerald")!;
   return ACCENT_BY_ID.get(defaultColumnColor(fallbackIndex))!;
 }
+
+export const COLUMN_COLOR_FILL: Record<ColumnColorId, string> = {
+  sky: "#38bdf8",
+  amber: "#fbbf24",
+  orange: "#f97316",
+  fuchsia: "#e879f9",
+  violet: "#a78bfa",
+  teal: "#2dd4bf",
+  emerald: "#34d399",
+  rose: "#fb7185",
+  cyan: "#22d3ee",
+  indigo: "#818cf8",
+};
+
+export function columnAccentFill(
+  color: string | undefined,
+  fallbackIndex: number,
+  isDone = false,
+): string {
+  return COLUMN_COLOR_FILL[columnAccent(color, fallbackIndex, isDone).id];
+}

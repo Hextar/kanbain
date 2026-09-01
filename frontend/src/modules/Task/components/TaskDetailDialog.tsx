@@ -43,6 +43,7 @@ type TaskDetailDialogProps = {
   task: TaskItem;
   projectId: string;
   allTasks: Task[];
+  isNew?: boolean;
   onClose: () => void;
   onSave: (task: Task) => void;
   onDelete: (id: Task["id"]) => void;
@@ -198,6 +199,7 @@ export default function TaskDetailDialog({
   task,
   projectId,
   allTasks,
+  isNew = false,
   onClose,
   onSave,
   onDelete,
@@ -234,7 +236,7 @@ export default function TaskDetailDialog({
     ? [currentParent, ...parents.filter((item) => item.id !== currentParent.id)]
     : parents;
   const shareUrl =
-    typeof window === "undefined"
+    isNew || typeof window === "undefined"
       ? ""
       : `${window.location.origin}/project/${projectId}?task=${taskQueryValue(task)}`;
   const accent = PRIORITY_ACCENT[priority || "none"];
@@ -347,22 +349,29 @@ export default function TaskDetailDialog({
           ) : null}
         </>
       }
-      title={keyLabel ?? "Untitled"}
+      title={isNew ? "New card" : (keyLabel ?? "Untitled")}
       onClose={onClose}
       footer={
-        <div className="flex flex-row items-center justify-between gap-2">
-          <Button
-            kind="ghost"
-            size="sm"
-            type="button"
-            variant="danger"
-            onClick={() => {
-              onDelete(task.id);
-              onClose();
-            }}
-          >
-            Delete card
-          </Button>
+        <div
+          className={twMerge(
+            "flex flex-row items-center gap-2",
+            isNew ? "justify-end" : "justify-between",
+          )}
+        >
+          {isNew ? null : (
+            <Button
+              kind="ghost"
+              size="sm"
+              type="button"
+              variant="danger"
+              onClick={() => {
+                onDelete(task.id);
+                onClose();
+              }}
+            >
+              Delete card
+            </Button>
+          )}
           <div className="flex gap-2">
             <Button
               kind="outline"
@@ -379,7 +388,7 @@ export default function TaskDetailDialog({
               size="sm"
               type="submit"
             >
-              Save
+              {isNew ? "Add card" : "Save"}
             </Button>
           </div>
         </div>

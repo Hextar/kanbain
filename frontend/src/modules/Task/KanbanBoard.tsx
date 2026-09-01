@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, Suspense, startTransition, useCallback } from "react";
+import {
+  Fragment,
+  Suspense,
+  startTransition,
+  useCallback,
+  useState,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import KanbanHeader from "./components/KanbanHeader";
@@ -8,6 +14,7 @@ import NewColumn from "./components/NewColumn";
 import TaskColumn from "./components/TaskColumn";
 import TaskDetailDialog from "./components/TaskDetailDialog";
 import FlipItem from "./components/FlipItem";
+import FlowView from "./components/FlowView";
 import { useColumns } from "./hooks/useColumns";
 import { useHorizontalOverflowScroll } from "./hooks/useHorizontalOverflowScroll";
 import { useTasks } from "./hooks/useTasks";
@@ -24,6 +31,17 @@ import {
   serializeFilters,
   type FilterClause,
 } from "./helpers/boardFilter";
+import {
+  VIEW_PARAM,
+  boardHref,
+  parseBoardView,
+  type BoardView,
+} from "./helpers/boardView";
+import {
+  CLUSTER_PARAM,
+  parseFlowCluster,
+  type FlowCluster,
+} from "./helpers/flowCluster";
 import {
   BOARD_COLUMN_SELECTOR,
   COLUMN_DRAG_MIME,
@@ -49,7 +67,15 @@ const COLUMN_SORTABLE = {
 export default function KanbanBoard(props: KanbanBoardProps) {
   return (
     <Suspense
-      fallback={<BoardCanvas {...props} filtersParam={null} taskQuery={null} />}
+      fallback={
+        <BoardCanvas
+          {...props}
+          filtersParam={null}
+          taskQuery={null}
+          viewParam={null}
+          clusterParam={null}
+        />
+      }
     >
       <KanbanBoardWithQuery {...props} />
     </Suspense>
@@ -63,6 +89,8 @@ function KanbanBoardWithQuery(props: KanbanBoardProps) {
       {...props}
       filtersParam={searchParams.get(FILTER_PARAM)}
       taskQuery={searchParams.get("task")}
+      viewParam={searchParams.get(VIEW_PARAM)}
+      clusterParam={searchParams.get(CLUSTER_PARAM)}
     />
   );
 }
@@ -73,20 +101,30 @@ function BoardCanvas({
   initialTasks,
   taskQuery,
   filtersParam,
+  viewParam,
+  clusterParam,
 }: KanbanBoardProps & {
   taskQuery: string | null;
   filtersParam: string | null;
+  viewParam: string | null;
+  clusterParam: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const view = parseBoardView(viewParam);
+  const cluster = parseFlowCluster(clusterParam);
   const clauses = parseFilters(filtersParam);
   const { columns, createColumn, deleteColumn, moveColumn, updateColumn } =
     useColumns(project.id, initialColumns);
   const {
     tasks: queriedTasks,
+    createTask,
     updateTask,
     deleteTask,
   } = useTasks({ projectId: project.id }, initialTasks);
+  const [draft, setDraft] = useState<{ columnId: string; id: string } | null>(
+    null,
+  );
   const allTasks =
     queriedTasks.length > 0 ? queriedTasks : (initialTasks ?? []);
   const groupedTasks =
@@ -95,25 +133,68 @@ function BoardCanvas({
       : groupTasksByColumn(initialColumns ?? columns, initialTasks);
   const doneColumnId = lastColumnId(columns);
   const selected = findTaskByQuery(allTasks, taskQuery);
+  const composing = draft
+    ? {
+        id: draft.id,
+        title: "",
+        columnId: draft.columnId,
+        order: 0,
+        projectId: project.id,
+        workKind: "task" as const,
+      }
+    : null;
   const matchedTaskIds = matchingTaskIds(allTasks, clauses);
   const completedCount = doneColumnId
     ? allTasks.filter((task) => task.columnId === doneColumnId).length
     : 0;
 
   const replaceBoardQuery = useCallback(
-    (patch: { task?: string | null; filters?: string | null }) => {
-      const params = new URLSearchParams();
+    (patch: {
+      task?: string | null;
+      filters?: string | null;
+      view?: BoardView | null;
+      cluster?: FlowCluster | null;
+    }) => {
       const nextTask = patch.task !== undefined ? patch.task : taskQuery;
       const nextFilters =
         patch.filters !== undefined ? patch.filters : filtersParam;
-      if (nextTask) params.set("task", nextTask);
-      if (nextFilters) params.set(FILTER_PARAM, nextFilters);
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, {
-        scroll: false,
+      const nextView = parseBoardView(
+        patch.view !== undefined ? patch.view : viewParam,
+      );
+      const nextCluster = parseFlowCluster(
+        patch.cluster !== undefined ? patch.cluster : clusterParam,
+      );
+      const href = boardHref(pathname, {
+        view: nextView,
+        task: nextTask,
+        filters: nextFilters,
+        cluster: nextCluster,
       });
+      router.replace(href, { scroll: false });
     },
-    [filtersParam, pathname, router, taskQuery],
+    [clusterParam, filtersParam, pathname, router, taskQuery, viewParam],
+  );
+
+  const hrefForView = useCallback(
+    (nextView: BoardView) =>
+      boardHref(pathname, {
+        view: nextView,
+        task: taskQuery,
+        filters: filtersParam,
+        cluster,
+      }),
+    [cluster, filtersParam, pathname, taskQuery],
+  );
+
+  const hrefForCluster = useCallback(
+    (nextCluster: FlowCluster) =>
+      boardHref(pathname, {
+        view: "flow",
+        task: taskQuery,
+        filters: filtersParam,
+        cluster: nextCluster,
+      }),
+    [filtersParam, pathname, taskQuery],
   );
 
   const setTaskQuery = useCallback(
@@ -123,6 +204,14 @@ function BoardCanvas({
       });
     },
     [replaceBoardQuery],
+  );
+
+  const startNewCard = useCallback(
+    (columnId: string) => {
+      setDraft({ columnId, id: crypto.randomUUID() });
+      if (taskQuery) replaceBoardQuery({ task: null });
+    },
+    [replaceBoardQuery, setDraft, taskQuery],
   );
 
   const setClauses = useCallback(
@@ -152,62 +241,114 @@ function BoardCanvas({
   const boardScrollRef = useHorizontalOverflowScroll<HTMLDivElement>();
 
   return (
-    <div className="flex h-dvh w-full min-w-0 max-w-full flex-col overflow-x-clip">
+    <div className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
       <KanbanHeader
         className="w-full"
         clauses={clauses}
         columns={columns}
         completedCount={completedCount}
+        hrefForView={hrefForView}
         projectId={project.id}
         projectName={project.name}
         totalCount={allTasks.length}
+        view={view}
         onClausesChange={setClauses}
       />
-      <div
-        {...dropProps}
-        ref={boardScrollRef}
-        className="board-x-scroll relative z-0 flex min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3"
-      >
-        {columns.map((column, index) => (
-          <Fragment key={column.id}>
-            {placeholder?.index === index ? (
-              <ColumnDropShadow
-                height={placeholder.height}
-                width={placeholder.width ?? placeholder.height}
-              />
-            ) : null}
-            <FlipItem className="h-full min-h-0 w-[280px] shrink-0">
-              <TaskColumn
-                accentIndex={index}
-                allTasks={allTasks}
-                column={column}
-                doneColumnId={doneColumnId}
-                initialTasks={
-                  groupedTasks ? (groupedTasks.get(column.id) ?? []) : undefined
-                }
-                isDone={column.id === doneColumnId}
-                matchedTaskIds={matchedTaskIds}
-                projectId={project.id}
-                selectedTaskId={selected?.id}
-                onDelete={() => deleteColumn(column.id)}
-                onOpenTask={(task) => setTaskQuery(task)}
-                onUpdate={updateColumn}
-              />
-            </FlipItem>
-          </Fragment>
-        ))}
-        {placeholder?.index === columns.length ? (
-          <ColumnDropShadow
-            height={placeholder.height}
-            width={placeholder.width ?? placeholder.height}
-          />
-        ) : null}
-        <NewColumn
-          className="shrink-0 self-start"
-          onSubmit={(title) => createColumn({ title })}
+      {view === "flow" ? (
+        <FlowView
+          cluster={cluster}
+          columns={columns}
+          hrefForCluster={hrefForCluster}
+          matchedTaskIds={matchedTaskIds}
+          selectedTaskId={selected?.id}
+          tasks={allTasks}
+          onOpenTask={setTaskQuery}
         />
-      </div>
-      {selected ? (
+      ) : (
+        <div
+          {...dropProps}
+          ref={boardScrollRef}
+          aria-labelledby="view-tab-board"
+          className="board-x-scroll relative z-0 flex min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3"
+          id="view-panel-board"
+          role="tabpanel"
+        >
+          {columns.map((column, index) => (
+            <Fragment key={column.id}>
+              {placeholder?.index === index ? (
+                <ColumnDropShadow
+                  height={placeholder.height}
+                  width={placeholder.width ?? placeholder.height}
+                />
+              ) : null}
+              <FlipItem className="h-full min-h-0 w-[280px] shrink-0">
+                <TaskColumn
+                  accentIndex={index}
+                  allTasks={allTasks}
+                  column={column}
+                  doneColumnId={doneColumnId}
+                  initialTasks={
+                    groupedTasks
+                      ? (groupedTasks.get(column.id) ?? [])
+                      : undefined
+                  }
+                  isDone={column.id === doneColumnId}
+                  matchedTaskIds={matchedTaskIds}
+                  projectId={project.id}
+                  selectedTaskId={selected?.id}
+                  onAddCard={() => startNewCard(column.id)}
+                  onDelete={() => deleteColumn(column.id)}
+                  onOpenTask={(task) => setTaskQuery(task)}
+                  onUpdate={updateColumn}
+                />
+              </FlipItem>
+            </Fragment>
+          ))}
+          {placeholder?.index === columns.length ? (
+            <ColumnDropShadow
+              height={placeholder.height}
+              width={placeholder.width ?? placeholder.height}
+            />
+          ) : null}
+          <NewColumn
+            className="shrink-0 self-start"
+            onSubmit={(title) => createColumn({ title })}
+          />
+        </div>
+      )}
+      {composing ? (
+        <TaskDetailDialog
+          key={composing.id}
+          allTasks={allTasks}
+          isNew
+          open
+          projectId={project.id}
+          task={composing}
+          onClose={() => setDraft(null)}
+          onDelete={() => setDraft(null)}
+          onSave={(task) => {
+            if (task.id === composing.id) {
+              createTask({
+                id: task.id,
+                title: task.title,
+                columnId: task.columnId,
+                projectId: task.projectId,
+                parentId: task.parentId,
+                workKind: task.workKind,
+                description: task.description,
+                priority: task.priority,
+                estimateTshirt: task.estimateTshirt,
+                assigneeId: task.assigneeId,
+                milestoneId: task.milestoneId,
+                tags: task.tags,
+              });
+              setDraft(null);
+              return;
+            }
+            updateTask(task);
+          }}
+        />
+      ) : selected ? (
         <TaskDetailDialog
           key={selected.id}
           allTasks={allTasks}

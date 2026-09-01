@@ -29,12 +29,12 @@ export default function KanbanBoardSkeleton({
   return (
     <div
       aria-busy
-      className="flex h-dvh w-full min-w-0 max-w-full flex-col overflow-x-clip"
+      className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
       role="status"
     >
       <span className="sr-only">{label}</span>
-      <header className="relative z-40 flex h-12 shrink-0 items-center gap-3 border-b border-white/5 bg-[#12141c] px-4">
-        <nav className="flex max-w-[45%] min-w-0 shrink-0 items-center gap-2">
+      <header className="relative z-40 grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/5 bg-[#12141c] px-4">
+        <nav className="flex min-w-0 items-center gap-2">
           <Link
             className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-white"
             href="/"
@@ -54,7 +54,8 @@ export default function KanbanBoardSkeleton({
             <Skeleton className="h-7 w-36 rounded-full" />
           )}
         </nav>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <ViewTabsSkeleton />
+        <div className="flex min-w-0 items-center justify-end gap-2">
           {statusText ? (
             <span className="hidden truncate text-xs text-zinc-500 sm:inline">
               {statusText}
@@ -86,6 +87,22 @@ export default function KanbanBoardSkeleton({
         })}
         <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
       </div>
+    </div>
+  );
+}
+
+function ViewTabsSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="flex h-7 items-center rounded-md bg-[#181b24] p-0.5 ring-1 ring-white/8"
+    >
+      <span className="inline-flex h-6 items-center rounded bg-zinc-700/90 px-2 text-xs font-medium text-white">
+        Board
+      </span>
+      <span className="inline-flex h-6 items-center rounded px-2 text-xs font-medium text-zinc-500">
+        Flow
+      </span>
     </div>
   );
 }

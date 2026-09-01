@@ -5,9 +5,11 @@ import { ChevronRight } from "lucide-react";
 import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
 import { useAssignees, useMilestones, useTags } from "../hooks/useCatalog";
 import type { FilterClause } from "../helpers/boardFilter";
+import type { BoardView } from "../helpers/boardView";
 import type { Column } from "../types/Column";
 import BoardFilter from "./BoardFilter";
 import MilestoneMenu from "./MilestoneMenu";
+import ViewTabs from "./ViewTabs";
 
 type HeaderProps = {
   className?: string;
@@ -17,6 +19,8 @@ type HeaderProps = {
   clauses: FilterClause[];
   completedCount: number;
   totalCount: number;
+  view: BoardView;
+  hrefForView: (view: BoardView) => string;
   onClausesChange: (clauses: FilterClause[]) => void;
 };
 
@@ -28,6 +32,8 @@ export default function Header({
   clauses,
   completedCount,
   totalCount,
+  view,
+  hrefForView,
   onClausesChange,
 }: HeaderProps) {
   const { data: assignees = [] } = useAssignees();
@@ -36,9 +42,9 @@ export default function Header({
 
   return (
     <div
-      className={`relative z-40 flex h-12 shrink-0 items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
+      className={`relative z-40 grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
     >
-      <div className="flex max-w-[45%] min-w-0 shrink-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Link
           className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-white"
           href="/"
@@ -50,7 +56,8 @@ export default function Header({
           {projectName}
         </h1>
       </div>
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+      <ViewTabs hrefFor={hrefForView} view={view} />
+      <div className="flex min-w-0 items-center justify-end gap-2">
         <BoardFilter
           catalog={{ assignees, milestones, tags, columns }}
           clauses={clauses}

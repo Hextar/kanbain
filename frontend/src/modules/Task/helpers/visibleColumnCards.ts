@@ -11,12 +11,12 @@ export type VisibleColumnCard = {
 };
 
 export function lastColumnId(columns: Column[]): string | undefined {
-  if (columns.length === 0) return undefined;
-  let last = columns[0];
-  for (let index = 1; index < columns.length; index++) {
-    if (columns[index].order > last.order) last = columns[index];
-  }
-  return last.id;
+  return columns
+    .toSorted(
+      (left, right) =>
+        left.order - right.order || left.id.localeCompare(right.id),
+    )
+    .at(-1)?.id;
 }
 
 export function declaredWorkKind(task: Task): WorkKind | undefined {

@@ -206,18 +206,21 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
       throw new Error("createTask requires a columnId");
     }
 
+    const projectId = input.projectId ?? filters.projectId;
+    const columnTasks =
+      queryClient.getQueryData<Task[]>(
+        taskKeys.list({ columnId, projectId }),
+      ) ??
+      queryClient
+        .getQueryData<Task[]>(taskKeys.list({ projectId }))
+        ?.filter((item) => item.columnId === columnId);
     const task: Task = {
       id: input.id ?? crypto.randomUUID(),
       title: input.title,
       columnId,
-      order:
-        input.order ?? queryClient.getQueryData<Task[]>(listKey)?.length ?? 0,
-      taskNumber: nextTaskNumber(
-        queryClient,
-        input.projectId ?? filters.projectId,
-        listKey,
-      ),
-      projectId: input.projectId ?? filters.projectId,
+      order: input.order ?? columnTasks?.length ?? 0,
+      taskNumber: nextTaskNumber(queryClient, projectId, listKey),
+      projectId,
       description: input.description,
       priority: input.priority,
       category: input.category,
@@ -230,31 +233,24 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
     };
 
     void withSaving(task.id, async () => {
-      setListData((current) =>
-        current.some((item) => item.id === task.id)
-          ? current
-          : [...current, task],
-      );
-      if (task.projectId) {
-        queryClient.setQueryData<Task[]>(
-          taskKeys.list({ projectId: task.projectId }),
-          (current) => {
-            if (!current) return current;
-            if (current.some((item) => item.id === task.id)) return current;
-            return [...current, task];
-          },
-        );
-      }
+      syncTaskInListCaches(queryClient, task);
       try {
-        await createTaskMutation({ ...input, id: task.id, columnId });
+        await createTaskMutation({
+          ...input,
+          id: task.id,
+          columnId,
+          order: task.order,
+          projectId,
+        });
       } catch (error) {
-        setListData((current) => current.filter((item) => item.id !== task.id));
-        if (task.projectId) {
-          queryClient.setQueryData<Task[]>(
-            taskKeys.list({ projectId: task.projectId }),
-            (current) => current?.filter((item) => item.id !== task.id),
+        for (const [queryKey] of queryClient.getQueriesData<Task[]>({
+          queryKey: taskKeys.lists(),
+        })) {
+          queryClient.setQueryData<Task[]>(queryKey, (current) =>
+            current?.filter((item) => item.id !== task.id),
           );
         }
+        queryClient.removeQueries({ queryKey: taskKeys.detail(task.id) });
         throw error;
       }
     });

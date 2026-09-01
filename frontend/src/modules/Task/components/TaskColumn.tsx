@@ -33,7 +33,6 @@ import type { Task, TaskItem } from "../types/Task";
 import ColumnColorMenu from "./ColumnColorMenu";
 import DropLine from "./DropLine";
 import FlipItem from "./FlipItem";
-import NewTaskCard from "./NewTaskCard";
 import TaskCard from "./TaskCard";
 
 function isTaskDragPayload(value: unknown): value is TaskDragPayload {
@@ -57,6 +56,7 @@ type TaskColumnProps = {
   initialTasks?: Task[];
   matchedTaskIds?: Set<string> | null;
   selectedTaskId?: string;
+  onAddCard: () => void;
   onDelete: () => void;
   onOpenTask: (task: Task) => void;
   onUpdate: (column: Column) => void;
@@ -73,11 +73,11 @@ export default function TaskColumn({
   initialTasks,
   matchedTaskIds = null,
   selectedTaskId,
+  onAddCard,
   onDelete,
   onOpenTask,
   onUpdate,
 }: TaskColumnProps) {
-  const [isComposing, setIsComposing] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState(column.title);
@@ -87,7 +87,7 @@ export default function TaskColumn({
     parentId: string;
     placeholder: DropPlaceholder | null;
   } | null>(null);
-  const { tasks, createTask } = useTasks(
+  const { tasks } = useTasks(
     {
       columnId: column.id,
       projectId,
@@ -403,23 +403,13 @@ export default function TaskColumn({
             className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
             size="xs"
             variant="secondary"
-            onClick={() => setIsComposing(true)}
+            onClick={onAddCard}
           >
             <Plus size={14} />
           </IconButton>
         </Tooltip>
       </div>
       <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
-        {isComposing ? (
-          <NewTaskCard
-            accentBar={accent.bar}
-            onCancel={() => setIsComposing(false)}
-            onSubmit={(title) => {
-              createTask({ title });
-              setIsComposing(false);
-            }}
-          />
-        ) : null}
         {visible.length === 0 && gapPlaceholder ? <DropLine atStart /> : null}
         {visible.map((card, liveIndex) => (
           <FlipItem
