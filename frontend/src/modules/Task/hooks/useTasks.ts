@@ -18,14 +18,35 @@ import { ancestorsToComplete } from "../helpers/visibleColumnCards";
 import {
   nestWorkKind,
   shouldDemoteParent,
+  taskTreeIds,
   unnestWorkKind,
 } from "../helpers/nesting";
+import { showToast } from "@libraries/toast";
 import type {
   CreateTaskInput,
   Task,
   TaskItem,
   TaskListFilters,
 } from "../types/Task";
+
+function cachedTasks(queryClient: QueryClient): Task[] {
+  const byId = new Map<string, Task>();
+  for (const [, list] of queryClient.getQueriesData<Task[]>({
+    queryKey: taskKeys.lists(),
+  })) {
+    for (const task of list ?? []) byId.set(task.id, task);
+  }
+  return [...byId.values()];
+}
+
+function restoreTaskLists(
+  queryClient: QueryClient,
+  snapshots: [readonly unknown[], Task[] | undefined][],
+) {
+  for (const [queryKey, data] of snapshots) {
+    queryClient.setQueryData(queryKey, data);
+  }
+}
 
 function withoutSaving(task: TaskItem | Task): Task {
   const next = { ...task } as TaskItem;
@@ -242,7 +263,7 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
           order: task.order,
           projectId,
         });
-      } catch (error) {
+      } catch {
         for (const [queryKey] of queryClient.getQueriesData<Task[]>({
           queryKey: taskKeys.lists(),
         })) {
@@ -251,7 +272,7 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
           );
         }
         queryClient.removeQueries({ queryKey: taskKeys.detail(task.id) });
-        throw error;
+        showToast("Couldn't create the card.");
       }
     });
   }
@@ -269,27 +290,36 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
       );
       try {
         await updateTaskMutation(nextTask);
-      } catch (error) {
+      } catch {
         if (previous) {
           setListData((current) =>
             current.map((item) => (item.id === previous.id ? previous : item)),
           );
         }
-        throw error;
+        showToast("Couldn't save the card.");
       }
     });
   }
 
   function remove(id: Task["id"]) {
-    const previous = queryClient.getQueryData<Task[]>(listKey) ?? [];
+    const snapshots = queryClient.getQueriesData<Task[]>({
+      queryKey: taskKeys.lists(),
+    });
+    const ids = taskTreeIds(id, cachedTasks(queryClient));
 
     void withSaving(id, async () => {
-      setListData((current) => current.filter((item) => item.id !== id));
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists() },
+        (current) => current?.filter((item) => !ids.has(item.id)),
+      );
+      for (const taskId of ids) {
+        queryClient.removeQueries({ queryKey: taskKeys.detail(taskId) });
+      }
       try {
         await deleteTaskMutation(id);
-      } catch (error) {
-        queryClient.setQueryData<Task[]>(listKey, previous);
-        throw error;
+      } catch {
+        restoreTaskLists(queryClient, snapshots);
+        showToast("Couldn't delete the card.");
       }
     });
   }
@@ -582,6 +612,7 @@ export function useMoveTask() {
               value,
             );
           }
+          showToast("Couldn't move the card.");
         });
     },
     [queryClient, updateTaskMutation],
@@ -596,11 +627,14 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: deleteTask,
     onSuccess: (_result, id) => {
+      const ids = taskTreeIds(id, cachedTasks(queryClient));
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists() },
-        (current) => current?.filter((task) => task.id !== id),
+        (current) => current?.filter((task) => !ids.has(task.id)),
       );
-      queryClient.removeQueries({ queryKey: taskKeys.detail(id) });
+      for (const taskId of ids) {
+        queryClient.removeQueries({ queryKey: taskKeys.detail(taskId) });
+      }
     },
   });
 }

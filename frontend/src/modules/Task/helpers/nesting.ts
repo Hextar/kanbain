@@ -21,6 +21,12 @@ export function descendantIds(
   return result;
 }
 
+export function taskTreeIds(rootId: string, tasks: Task[]): Set<string> {
+  const ids = descendantIds(rootId, childrenByParentId(tasks));
+  ids.add(rootId);
+  return ids;
+}
+
 export function canNestUnder(
   dragged: Task,
   parent: Task,
