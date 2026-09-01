@@ -6,7 +6,7 @@ import {
   type Simulation,
   type SimulationNodeDatum,
 } from "d3-force";
-import { pointer, select, type Selection } from "d3-selection";
+import { select, type Selection } from "d3-selection";
 import "d3-transition";
 import { compactTaskKey } from "./taskKey";
 import type { FlowLane, FlowNode } from "./flowCluster";
@@ -50,6 +50,12 @@ export function createFlowChart(
       task: Task,
       point: { x: number; y: number },
     ) => void;
+    getOnPreviewEnter: () => (
+      task: Task,
+      anchor: Element,
+      immediate: boolean,
+    ) => void;
+    getOnPreviewLeave: () => (immediate?: boolean) => void;
   },
 ): FlowChartHandle {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -62,12 +68,6 @@ export function createFlowChart(
   const grid = svg.append("g").attr("aria-hidden", true);
   const labels = svg.append("g").attr("aria-hidden", true);
   const layer = svg.append("g");
-  const tooltip = select(host)
-    .append("div")
-    .attr(
-      "class",
-      "pointer-events-none absolute z-10 hidden max-w-56 rounded-md border border-white/10 bg-[#181b24] px-2 py-1.5 text-xs text-zinc-100 shadow-lg shadow-black/40",
-    );
 
   let sim: Simulation<SimNode, undefined> | undefined;
   let current: SimNode[] = [];
@@ -300,12 +300,13 @@ export function createFlowChart(
       .on("click", (event: MouseEvent, node) => {
         event.preventDefault();
         (event.currentTarget as SVGGElement | null)?.blur();
+        handlers.getOnPreviewLeave()(true);
         handlers.getOnOpen()(node.task);
       })
       .on("contextmenu", (event: MouseEvent, node) => {
         event.preventDefault();
         event.stopPropagation();
-        hideTooltip();
+        handlers.getOnPreviewLeave()(true);
         let { clientX: x, clientY: y } = event;
         if (x === 0 && y === 0) {
           const rect = (
@@ -319,35 +320,35 @@ export function createFlowChart(
       .on("keydown", (event: KeyboardEvent, node) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
+        handlers.getOnPreviewLeave()(true);
         handlers.getOnOpen()(node.task);
       })
       .on("pointerenter", (event: PointerEvent, node) => {
-        showTooltip(event, node);
+        handlers.getOnPreviewEnter()(
+          node.task,
+          event.currentTarget as Element,
+          false,
+        );
       })
-      .on("pointermove", (event: PointerEvent, node) => {
-        showTooltip(event, node);
+      .on("pointerleave", () => {
+        handlers.getOnPreviewLeave()();
       })
-      .on("pointerleave", hideTooltip)
       .on("focus", (event: FocusEvent, node) => {
-        const target = event.currentTarget as SVGGElement;
-        const rect = target.getBoundingClientRect();
-        const hostRect = host.getBoundingClientRect();
-        tooltip
-          .classed("hidden", false)
-          .style("left", `${rect.left - hostRect.left + rect.width / 2}px`)
-          .style("top", `${rect.top - hostRect.top - 8}px`)
-          .style("transform", "translate(-50%, -100%)")
-          .text(tooltipText(node));
+        handlers.getOnPreviewEnter()(
+          node.task,
+          event.currentTarget as Element,
+          true,
+        );
       })
-      .on("blur", hideTooltip);
+      .on("blur", () => {
+        handlers.getOnPreviewLeave()();
+      });
 
     merged
       .select<SVGCircleElement>("circle.body")
       .attr("r", (node) => node.r)
       .attr("fill", (node) => `url(#${nodeFillId(node.fill)})`);
-    merged
-      .select<SVGCircleElement>("circle.sheen")
-      .attr("r", (node) => node.r);
+    merged.select<SVGCircleElement>("circle.sheen").attr("r", (node) => node.r);
     merged
       .select<SVGCircleElement>("circle.halo")
       .attr("r", (node) => node.r + 3.5)
@@ -406,20 +407,6 @@ export function createFlowChart(
       .attr("opacity", (node) => (node.id === selectedTaskId ? 1 : 0));
   }
 
-  function showTooltip(event: PointerEvent, node: SimNode) {
-    const [x, y] = pointer(event, host);
-    tooltip
-      .classed("hidden", false)
-      .style("left", `${x}px`)
-      .style("top", `${y - 12}px`)
-      .style("transform", "translate(-50%, -100%)")
-      .text(tooltipText(node));
-  }
-
-  function hideTooltip() {
-    tooltip.classed("hidden", true);
-  }
-
   return {
     update(next) {
       const clusterChanged =
@@ -431,15 +418,9 @@ export function createFlowChart(
       sim?.stop();
       observer.disconnect();
       reduced.removeEventListener("change", onMotion);
-      tooltip.remove();
       svg.remove();
     },
   };
-}
-
-function tooltipText(node: SimNode): string {
-  const key = compactTaskKey(node.task);
-  return key ? `${key}  ${node.task.title}` : node.task.title;
 }
 
 function nodeFillId(fill: string): string {

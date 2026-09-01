@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnchoredHoverPreview } from "@uiKit/HoverPreview";
+import { columnAccent } from "../helpers/columnAccent";
+import { PRIORITY_ACCENT } from "../helpers/taskBadges";
 import type { FlowLane, FlowNode } from "../helpers/flowCluster";
 import type { Column } from "../types/Column";
 import type { Task } from "../types/Task";
+import TaskCardPreview from "./TaskCardPreview";
 import TaskContextMenu from "./TaskContextMenu";
 
 type FlowChartProps = {
@@ -34,6 +38,12 @@ type MenuAnchor = {
   y: number;
 };
 
+type NodePreview = {
+  task: Task;
+  anchor: Element | null;
+  immediate: boolean;
+};
+
 export default function FlowChart({
   columns,
   lanes,
@@ -51,8 +61,13 @@ export default function FlowChart({
   const onContextMenuRef = useRef<
     (task: Task, point: { x: number; y: number }) => void
   >(() => {});
+  const onPreviewEnterRef = useRef<
+    (task: Task, anchor: Element, immediate: boolean) => void
+  >(() => {});
+  const onPreviewLeaveRef = useRef<(immediate?: boolean) => void>(() => {});
   const modelRef = useRef({ columns, lanes, nodes, selectedTaskId });
   const [menu, setMenu] = useState<MenuAnchor | null>(null);
+  const [preview, setPreview] = useState<NodePreview | null>(null);
 
   const handleContextMenu = useCallback(
     (task: Task, point: { x: number; y: number }) => {
@@ -60,6 +75,23 @@ export default function FlowChart({
     },
     [],
   );
+
+  const handlePreviewEnter = useCallback(
+    (task: Task, anchor: Element, immediate: boolean) => {
+      setPreview({ task, anchor, immediate });
+    },
+    [],
+  );
+
+  const handlePreviewLeave = useCallback((immediate?: boolean) => {
+    if (immediate) {
+      setPreview(null);
+      return;
+    }
+    setPreview((current) =>
+      current ? { ...current, anchor: null, immediate: false } : null,
+    );
+  }, []);
 
   const closeMenu = useCallback(() => setMenu(null), []);
 
@@ -70,6 +102,14 @@ export default function FlowChart({
   useEffect(() => {
     onContextMenuRef.current = handleContextMenu;
   }, [handleContextMenu]);
+
+  useEffect(() => {
+    onPreviewEnterRef.current = handlePreviewEnter;
+  }, [handlePreviewEnter]);
+
+  useEffect(() => {
+    onPreviewLeaveRef.current = handlePreviewLeave;
+  }, [handlePreviewLeave]);
 
   useEffect(() => {
     modelRef.current = { columns, lanes, nodes, selectedTaskId };
@@ -85,6 +125,8 @@ export default function FlowChart({
       const engine = mod.createFlowChart(host, {
         getOnOpen: () => onOpenRef.current,
         getOnContextMenu: () => onContextMenuRef.current,
+        getOnPreviewEnter: () => onPreviewEnterRef.current,
+        getOnPreviewLeave: () => onPreviewLeaveRef.current,
       });
       engineRef.current = engine;
       engine.update(modelRef.current);
@@ -96,19 +138,40 @@ export default function FlowChart({
     };
   }, []);
 
-  const liveTask = menu
+  const liveMenuTask = menu
     ? (nodes.find((node) => node.id === menu.task.id)?.task ?? menu.task)
+    : null;
+  const livePreviewTask = preview
+    ? (nodes.find((node) => node.id === preview.task.id)?.task ?? preview.task)
     : null;
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-xl ring-1 ring-white/6">
       <div ref={hostRef} className="h-full min-h-0 w-full" />
-      {menu && liveTask ? (
+      <AnchoredHoverPreview
+        anchor={preview?.anchor ?? null}
+        disabled={!preview || Boolean(menu)}
+        immediate={preview?.immediate ?? false}
+        content={
+          livePreviewTask ? (
+            <TaskCardPreview
+              accentBar={previewAccentBar(
+                livePreviewTask,
+                columns,
+                doneColumnId,
+              )}
+              projectId={projectId}
+              task={livePreviewTask}
+            />
+          ) : null
+        }
+      />
+      {menu && liveMenuTask ? (
         <TaskContextMenu
           anchor={menu}
           doneColumnId={doneColumnId}
           projectId={projectId}
-          task={liveTask}
+          task={liveMenuTask}
           onClose={closeMenu}
           onDelete={onDeleteTask}
           onOpen={onOpenTask}
@@ -117,4 +180,20 @@ export default function FlowChart({
       ) : null}
     </div>
   );
+}
+
+function previewAccentBar(
+  task: Task,
+  columns: Column[],
+  doneColumnId?: string,
+) {
+  const index = columns.findIndex((column) => column.id === task.columnId);
+  if (index >= 0) {
+    return columnAccent(
+      columns[index].color,
+      index,
+      columns[index].id === doneColumnId,
+    ).bar;
+  }
+  return task.priority ? PRIORITY_ACCENT[task.priority].bar : undefined;
 }
