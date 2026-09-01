@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from .config import Config, require_secret_key
-from .extensions import db, migrate
+from .extensions import db, migrate, sock
 
 
 def create_app(config_class: type[Config] = Config) -> Flask:
@@ -12,10 +12,13 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
+    sock.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
 
     from . import models as _models  # noqa: F401
     from .cli import register_cli
+    from .realtime.hooks import register_session_hooks
+    from .realtime.ws import register_sock
     from .routes.assignees import assignees_bp
     from .routes.columns import columns_bp
     from .routes.health import health_bp
@@ -33,6 +36,8 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     app.register_blueprint(tags_bp)
     app.register_blueprint(columns_bp)
     app.register_blueprint(tasks_bp)
+    register_session_hooks()
+    register_sock(sock)
     register_cli(app)
 
     return app
