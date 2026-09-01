@@ -115,7 +115,7 @@ body {
   );
 }
 
-.light-edge {
+.light-edge:where(:not(.absolute):not(.fixed)) {
   position: relative;
 }
 

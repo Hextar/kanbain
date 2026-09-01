@@ -5,6 +5,7 @@ import { Flag, Plus } from "lucide-react";
 import Button from "@uiKit/Button";
 import IconButton from "@uiKit/IconButton";
 import Input from "@uiKit/Input";
+import LightOrb from "@uiKit/LightOrb";
 import Tooltip from "@uiKit/Tooltip";
 import {
   useCreateMilestone,
@@ -149,11 +150,13 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
       </Tooltip>
       {open ? (
         <div
-          className="absolute top-full right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40"
+          className="light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40"
+          data-light-edge=""
           role="dialog"
           aria-label="Milestones"
         >
-          <div className="max-h-56 overflow-y-auto p-1">
+          <LightOrb />
+          <div className="relative max-h-56 overflow-y-auto p-1">
             {milestones.length === 0 ? (
               <p className="px-3 py-2 text-sm text-zinc-500">
                 No milestones yet
@@ -180,7 +183,7 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
             )}
           </div>
           <form
-            className="flex items-center gap-1.5 border-t border-zinc-700 p-2"
+            className="relative flex items-center gap-1.5 border-t border-zinc-700 p-2"
             onSubmit={handleSubmit}
           >
             <Input

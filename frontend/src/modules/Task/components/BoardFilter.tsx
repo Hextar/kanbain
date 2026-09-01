@@ -6,6 +6,7 @@ import { twMerge } from "tailwind-merge";
 import Button from "@uiKit/Button";
 import IconButton from "@uiKit/IconButton";
 import Input from "@uiKit/Input";
+import LightOrb from "@uiKit/LightOrb";
 import {
   cycleClauseOperator,
   clauseKey,
@@ -30,7 +31,7 @@ type BoardFilterProps = {
 };
 
 const menuClassName =
-  "absolute top-full right-0 z-50 mt-1.5 w-[22rem] overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40";
+  "light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-[22rem] overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40";
 
 export default function BoardFilter({
   catalog,
@@ -203,8 +204,9 @@ export default function BoardFilter({
           </span>
         </Button>
         {open ? (
-          <div className={menuClassName}>
-            <div className="border-b border-zinc-700 p-2">
+          <div className={menuClassName} data-light-edge="">
+            <LightOrb />
+            <div className="relative border-b border-zinc-700 p-2">
               <Input
                 ref={inputRef}
                 aria-activedescendant={activeOptionId}
@@ -230,7 +232,7 @@ export default function BoardFilter({
               />
             </div>
             <ul
-              className="max-h-72 overflow-y-auto p-1"
+              className="relative max-h-72 overflow-y-auto p-1"
               id={listId}
               role="listbox"
             >
