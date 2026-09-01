@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
+import { noteDropAutoScroll, stopDropAutoScroll } from "./autoScroll";
 import {
   DND_ITEM_SELECTOR,
   dropHitElement,
@@ -163,6 +164,7 @@ export function useHtml5Drop<T>({
       if (!hasDragMime(event.dataTransfer, mimeType)) return;
       event.preventDefault();
       claimZone();
+      noteDropAutoScroll(event.currentTarget, event.clientX, event.clientY);
     },
     [claimZone, mimeType],
   );
@@ -173,6 +175,7 @@ export function useHtml5Drop<T>({
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       claimZone();
+      noteDropAutoScroll(event.currentTarget, event.clientX, event.clientY);
       if (!itemSelector) return;
       const insert = readInsert(event.currentTarget, event, itemSelector, axis);
       const resolvePlaceholder =
@@ -199,6 +202,7 @@ export function useHtml5Drop<T>({
   const handleDragLeave = useCallback(
     (event: DragEvent<HTMLElement>) => {
       if (stillInside(event.currentTarget, event)) return;
+      stopDropAutoScroll(event.currentTarget);
       leaveZone();
     },
     [leaveZone],
@@ -211,6 +215,7 @@ export function useHtml5Drop<T>({
       const nextIndex = itemSelector
         ? readInsert(event.currentTarget, event, itemSelector, axis).destIndex
         : undefined;
+      stopDropAutoScroll();
       leaveZone();
       const data = getDragData<T>(event.dataTransfer, mimeType);
       if (data === null) return;
