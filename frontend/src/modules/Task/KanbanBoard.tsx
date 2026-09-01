@@ -7,10 +7,12 @@ import {
   useCallback,
   useState,
 } from "react";
+import { Plus } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
+import { markSpawn } from "@libraries/particles";
+import Button from "@uiKit/Button";
 import KanbanHeader from "./components/KanbanHeader";
-import NewColumn from "./components/NewColumn";
 import TaskColumn from "./components/TaskColumn";
 import TaskDetailDialog from "./components/TaskDetailDialog";
 import FlipItem from "./components/FlipItem";
@@ -21,7 +23,6 @@ import { useTasks } from "./hooks/useTasks";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
 import type { Task } from "./types/Task";
-import { markSpawn } from "./helpers/boardParticles";
 import { groupTasksByColumn } from "./helpers/groupTasksByColumn";
 import { lastColumnId } from "./helpers/visibleColumnCards";
 import { findTaskByQuery, taskQueryValue } from "./helpers/taskKey";
@@ -48,6 +49,7 @@ import {
   COLUMN_DRAG_MIME,
   type ColumnDragPayload,
 } from "./constants";
+import { defaultColumnColor } from "./helpers/columnAccent";
 
 type KanbanBoardProps = {
   project: Pick<Project, "id" | "name">;
@@ -126,6 +128,7 @@ function BoardCanvas({
   const [draft, setDraft] = useState<{ columnId: string; id: string } | null>(
     null,
   );
+  const [composingColumn, setComposingColumn] = useState<Column | null>(null);
   const allTasks =
     queriedTasks.length > 0 ? queriedTasks : (initialTasks ?? []);
   const groupedTasks =
@@ -133,6 +136,11 @@ function BoardCanvas({
       ? undefined
       : groupTasksByColumn(initialColumns ?? columns, initialTasks);
   const doneColumnId = lastColumnId(columns);
+  const boardColumns =
+    composingColumn &&
+    columns.every((column) => column.id !== composingColumn.id)
+      ? [...columns, composingColumn]
+      : columns;
   const selected = findTaskByQuery(allTasks, taskQuery);
   const composing = draft
     ? {
@@ -215,6 +223,47 @@ function BoardCanvas({
     [replaceBoardQuery, setDraft, taskQuery],
   );
 
+  const startNewColumn = useCallback(() => {
+    const order = columns.length;
+    const id = crypto.randomUUID();
+    markSpawn(id);
+    setComposingColumn({
+      id,
+      projectId: project.id,
+      title: "",
+      order,
+      color: defaultColumnColor(order),
+    });
+  }, [columns.length, project.id]);
+
+  const saveColumn = useCallback(
+    (column: Column) => {
+      if (composingColumn?.id !== column.id) {
+        updateColumn(column);
+        return;
+      }
+      const title = column.title.trim();
+      if (!title) {
+        setComposingColumn(column);
+        return;
+      }
+      createColumn({ id: column.id, title, color: column.color });
+      setComposingColumn(null);
+    },
+    [composingColumn, createColumn, updateColumn],
+  );
+
+  const removeColumn = useCallback(
+    (id: Column["id"]) => {
+      if (composingColumn?.id === id) {
+        setComposingColumn(null);
+        return;
+      }
+      deleteColumn(id);
+    },
+    [composingColumn, deleteColumn],
+  );
+
   const setClauses = useCallback(
     (next: FilterClause[]) => {
       startTransition(() => {
@@ -281,7 +330,7 @@ function BoardCanvas({
           id="view-panel-board"
           role="tabpanel"
         >
-          {columns.map((column, index) => (
+          {boardColumns.map((column, index) => (
             <Fragment key={column.id}>
               {placeholder?.index === index ? (
                 <ColumnDropShadow
@@ -296,41 +345,39 @@ function BoardCanvas({
                   column={column}
                   doneColumnId={doneColumnId}
                   initialTasks={
-                    groupedTasks
-                      ? (groupedTasks.get(column.id) ?? [])
-                      : undefined
+                    composingColumn?.id === column.id
+                      ? []
+                      : groupedTasks
+                        ? (groupedTasks.get(column.id) ?? [])
+                        : undefined
                   }
                   isDone={column.id === doneColumnId}
+                  isNew={composingColumn?.id === column.id}
                   matchedTaskIds={matchedTaskIds}
                   projectId={project.id}
                   selectedTaskId={selected?.id}
                   onAddCard={() => startNewCard(column.id)}
-                  onDelete={() => deleteColumn(column.id)}
+                  onDelete={() => removeColumn(column.id)}
                   onDeleteTask={(id) => {
                     if (selected?.id === id) setTaskQuery(null);
                     deleteTask(id);
                   }}
                   onOpenTask={(task) => setTaskQuery(task)}
-                  onUpdate={updateColumn}
+                  onUpdate={saveColumn}
                   onUpdateTask={updateTask}
                 />
               </FlipItem>
             </Fragment>
           ))}
-          {placeholder?.index === columns.length ? (
+          {placeholder?.index === boardColumns.length ? (
             <ColumnDropShadow
               height={placeholder.height}
               width={placeholder.width ?? placeholder.height}
             />
           ) : null}
-          <NewColumn
-            className="shrink-0 self-start"
-            onSubmit={(title) => {
-              const id = crypto.randomUUID();
-              markSpawn(id);
-              createColumn({ id, title });
-            }}
-          />
+          {composingColumn ? null : (
+            <AddColumnButton onClick={startNewColumn} />
+          )}
         </div>
       )}
       {composing ? (
@@ -398,6 +445,23 @@ function columnDialogProps(
     columnOrder: column?.order ?? 0,
     isDoneColumn: columnId === doneColumnId,
   };
+}
+
+function AddColumnButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12">
+      <Button
+        className="flex h-full items-center justify-center gap-2 text-sm"
+        kind="ghost"
+        size="sm"
+        variant="secondary"
+        onClick={onClick}
+      >
+        <Plus size={16} />
+        Add column
+      </Button>
+    </div>
+  );
 }
 
 function ColumnDropShadow({

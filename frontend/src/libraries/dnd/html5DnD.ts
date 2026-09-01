@@ -36,7 +36,7 @@ export function setDragData(
   dataTransfer.setData("text/plain", payload);
 }
 
-const DRAG_IMAGE_TILT_DEG = 5;
+export const DRAG_IMAGE_TILT_DEG = 5;
 
 export function setDragImageAtCursor(
   dataTransfer: DataTransfer,

@@ -65,6 +65,7 @@ export default function Dialog({
     }
 
     if (!dialog.open) dialog.showModal();
+    dialog.querySelector<HTMLElement>("[autofocus]")?.focus();
 
     const applyHeight = () => {
       const header = headerRef.current;

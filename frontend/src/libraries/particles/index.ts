@@ -1,9 +1,8 @@
-const FX_ROOT_ID = "board-fx-root";
-const SNAP_WIPE_MS = 720;
-const SNAP_TAIL_MS = 520;
+const FX_ROOT_ID = "fx-root";
 const MATERIALIZE_MS = 460;
-const BLAST_MS = 260;
-const BLAST_TAIL_MS = 980;
+const CRUSH_MS = 110;
+const BLAST_MS = 280;
+const BLAST_TAIL_MS = 1120;
 const MAX_PARTICLES = 280;
 const MIN_PARTICLES = 56;
 
@@ -24,15 +23,7 @@ type Particle = {
   wind: number;
   grav: number;
   shape?: "rect" | "circle";
-};
-
-type SnapJob = {
-  clone: HTMLElement | null;
-  rect: Rect;
-  palette: string[];
-  startAt: number;
-  emitted: number;
-  target: number;
+  glow?: boolean;
 };
 
 type SpawnJob = {
@@ -61,12 +52,20 @@ type Shock = {
   r1: number;
 };
 
+type Flash = {
+  x: number;
+  y: number;
+  startAt: number;
+  ttl: number;
+  radius: number;
+};
+
 const pendingSpawns = new Set<string>();
 const particles: Particle[] = [];
-const snaps: SnapJob[] = [];
 const spawns: SpawnJob[] = [];
 const blasts: BlastJob[] = [];
 const shocks: Shock[] = [];
+const flashes: Flash[] = [];
 
 let overlay: HTMLElement | null = null;
 let cloneLayer: HTMLElement | null = null;
@@ -88,12 +87,12 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - (2 - 2 * t) ** 3 / 2;
-}
-
 function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3;
+}
+
+function easeInCubic(t: number) {
+  return t * t * t;
 }
 
 function readRect(el: HTMLElement): Rect {
@@ -215,10 +214,10 @@ function syncCanvas() {
 function busy() {
   return (
     particles.length > 0 ||
-    snaps.length > 0 ||
     spawns.length > 0 ||
     blasts.length > 0 ||
-    shocks.length > 0
+    shocks.length > 0 ||
+    flashes.length > 0
   );
 }
 
@@ -239,49 +238,67 @@ function emitBlast(rect: Rect, palette: string[]) {
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
   const count = clamp(
-    Math.round((rect.width * rect.height) / 110),
-    120,
-    420,
+    Math.round((rect.width * rect.height) / 72),
+    160,
+    520,
   );
   const colors = [
     ...palette,
+    "rgba(255, 247, 237, 0.98)",
     "rgba(255, 241, 242, 0.95)",
     "rgba(251, 113, 133, 0.95)",
     "rgba(244, 63, 94, 0.92)",
-    "rgba(251, 191, 36, 0.88)",
-    "rgba(255, 255, 255, 0.92)",
-    "rgba(24, 24, 27, 0.9)",
+    "rgba(251, 191, 36, 0.9)",
+    "rgba(255, 255, 255, 0.95)",
+    "rgba(24, 24, 27, 0.92)",
   ];
   for (let i = 0; i < count; i++) {
     const roll = Math.random();
-    const spark = roll < 0.34;
-    const smoke = roll > 0.84;
-    const chunk = !spark && !smoke && roll > 0.7;
+    const spark = roll < 0.42;
+    const smoke = roll > 0.88;
+    const shard = !spark && !smoke && roll > 0.62;
     const x = rect.left + Math.random() * rect.width;
     const y = rect.top + Math.random() * rect.height;
-    const angle = Math.atan2(y - cy, x - cx) + rand(-0.45, 0.45);
+    const angle = Math.atan2(y - cy, x - cx) + rand(-0.55, 0.55);
     const speed = spark
-      ? rand(420, 980)
-      : chunk
-        ? rand(180, 420)
+      ? rand(520, 1280)
+      : shard
+        ? rand(280, 640)
         : smoke
-          ? rand(28, 120)
-          : rand(240, 620);
+          ? rand(36, 140)
+          : rand(320, 820);
     particles.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - rand(40, 180),
+      vy: Math.sin(angle) * speed - rand(80, 280),
       rot: rand(0, Math.PI * 2),
-      vr: rand(-14, 14),
-      w: spark ? rand(1, 2.4) : chunk ? rand(8, 22) : smoke ? rand(10, 28) : rand(3, 9),
-      h: spark ? rand(1, 2.2) : chunk ? rand(3, 8) : smoke ? rand(10, 28) : rand(2, 5),
+      vr: shard ? rand(-22, 22) : rand(-16, 16),
+      w: spark
+        ? rand(1.2, 3.2)
+        : shard
+          ? rand(10, 28)
+          : smoke
+            ? rand(12, 32)
+            : rand(3.5, 11),
+      h: spark
+        ? rand(1, 2.4)
+        : shard
+          ? rand(2.5, 7)
+          : smoke
+            ? rand(12, 32)
+            : rand(2, 5.5),
       life: 0,
-      ttl: spark ? rand(0.28, 0.55) : smoke ? rand(0.7, 1.25) : rand(0.55, 1.15),
+      ttl: spark
+        ? rand(0.22, 0.48)
+        : smoke
+          ? rand(0.8, 1.4)
+          : rand(0.55, 1.25),
       color: pickColor(colors),
-      wind: rand(-20, 20),
-      grav: spark ? 40 : smoke ? 18 : 520,
+      wind: rand(-28, 28),
+      grav: spark ? 30 : smoke ? 14 : 640,
       shape: smoke || spark ? "circle" : "rect",
+      glow: spark,
     });
   }
 }
@@ -292,7 +309,6 @@ function emitDust(
   x1: number,
   count: number,
   palette: string[],
-  mode: "snap" | "spawn",
 ) {
   const left = Math.min(x0, x1);
   const right = Math.max(x0, x1);
@@ -302,11 +318,10 @@ function emitDust(
     const x = left + Math.random() * band;
     const y = rect.top + Math.random() * rect.height;
     const speed = spark ? rand(90, 260) : rand(50, 190);
-    const inward = mode === "spawn" ? -1 : 1;
     particles.push({
       x,
       y,
-      vx: inward * speed + rand(-18, 36),
+      vx: -speed + rand(-18, 36),
       vy: rand(-70, 55),
       rot: rand(0, Math.PI * 2),
       vr: rand(-6, 6),
@@ -315,46 +330,13 @@ function emitDust(
       life: 0,
       ttl: spark ? rand(0.28, 0.55) : rand(0.45, 1.05),
       color: pickColor(palette),
-      wind: mode === "snap" ? 36 : -12,
-      grav: mode === "snap" ? 95 : 18,
+      wind: -12,
+      grav: 18,
     });
   }
 }
 
 function advanceJobs(now: number, dt: number) {
-  for (let i = snaps.length - 1; i >= 0; i--) {
-    const job = snaps[i];
-    if (now < job.startAt) continue;
-    const t = clamp((now - job.startAt) / SNAP_WIPE_MS, 0, 1);
-    const p = easeInOutCubic(t);
-    if (job.clone) {
-      job.clone.style.clipPath = `inset(0 0 0 ${(p * 100).toFixed(2)}%)`;
-      if (p >= 1) {
-        job.clone.remove();
-        job.clone = null;
-      }
-    }
-    const shouldHave = Math.floor(p * job.target);
-    const extra = shouldHave - job.emitted;
-    if (extra > 0) {
-      const prev = (job.emitted / job.target) * job.rect.width;
-      const next = p * job.rect.width;
-      emitDust(
-        job.rect,
-        job.rect.left + prev,
-        job.rect.left + next,
-        extra,
-        job.palette,
-        "snap",
-      );
-      job.emitted = shouldHave;
-    }
-    if (now - job.startAt > SNAP_WIPE_MS + SNAP_TAIL_MS) {
-      job.clone?.remove();
-      snaps.splice(i, 1);
-    }
-  }
-
   for (let i = spawns.length - 1; i >= 0; i--) {
     const job = spawns[i];
     if (now < job.startAt) continue;
@@ -379,7 +361,6 @@ function advanceJobs(now: number, dt: number) {
           rect.left + next + 28,
           extra,
           job.palette,
-          "spawn",
         );
       }
       job.emitted = shouldHave;
@@ -399,41 +380,54 @@ function advanceJobs(now: number, dt: number) {
   for (let i = blasts.length - 1; i >= 0; i--) {
     const job = blasts[i];
     if (now < job.startAt) continue;
-    if (!job.burst) {
+    const elapsed = now - job.startAt;
+    const crushing = elapsed < CRUSH_MS;
+    if (crushing && job.clone) {
+      const p = easeInCubic(elapsed / CRUSH_MS);
+      job.clone.style.transform = `scale(${(1 - 0.14 * p).toFixed(3)})`;
+      job.clone.style.filter = `brightness(${(1 + 3.4 * p).toFixed(2)}) saturate(${(1 + 1.4 * p).toFixed(2)})`;
+    }
+    if (!job.burst && !crushing) {
       emitBlast(job.rect, job.palette);
       const cx = job.rect.left + job.rect.width / 2;
       const cy = job.rect.top + job.rect.height / 2;
       const reach = Math.max(job.rect.width, job.rect.height);
+      flashes.push({
+        x: cx,
+        y: cy,
+        startAt: now,
+        ttl: 0.22,
+        radius: reach * 1.15,
+      });
       shocks.push({
         x: cx,
         y: cy,
         startAt: now,
-        ttl: 0.38,
-        r0: reach * 0.08,
-        r1: reach * 0.95,
+        ttl: 0.32,
+        r0: reach * 0.06,
+        r1: reach * 1.15,
       });
       shocks.push({
         x: cx,
         y: cy,
-        startAt: now + 50,
-        ttl: 0.48,
+        startAt: now + 40,
+        ttl: 0.5,
         r0: reach * 0.04,
-        r1: reach * 1.25,
+        r1: reach * 1.55,
       });
       job.burst = true;
     }
-    const t = clamp((now - job.startAt) / BLAST_MS, 0, 1);
-    const p = easeOutCubic(t);
-    if (job.clone) {
+    if (job.burst && job.clone) {
+      const p = easeOutCubic(clamp((elapsed - CRUSH_MS) / BLAST_MS, 0, 1));
       job.clone.style.opacity = String(1 - p);
-      job.clone.style.transform = `scale(${(1 + 0.16 * p).toFixed(3)}) rotate(${(p * 4).toFixed(2)}deg)`;
-      job.clone.style.filter = `brightness(${(1 + 2.2 * (1 - p)).toFixed(2)})`;
+      job.clone.style.transform = `scale(${(0.86 + 0.52 * p).toFixed(3)}) rotate(${(p * 9).toFixed(2)}deg)`;
+      job.clone.style.filter = `brightness(${(4.4 * (1 - p)).toFixed(2)})`;
       if (p >= 1) {
         job.clone.remove();
         job.clone = null;
       }
     }
-    if (now - job.startAt > BLAST_MS + BLAST_TAIL_MS) {
+    if (elapsed > CRUSH_MS + BLAST_MS + BLAST_TAIL_MS) {
       job.clone?.remove();
       blasts.splice(i, 1);
     }
@@ -442,6 +436,11 @@ function advanceJobs(now: number, dt: number) {
   for (let i = shocks.length - 1; i >= 0; i--) {
     if (now < shocks[i].startAt) continue;
     if (now - shocks[i].startAt > shocks[i].ttl * 1000) shocks.splice(i, 1);
+  }
+
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    if (now < flashes[i].startAt) continue;
+    if (now - flashes[i].startAt > flashes[i].ttl * 1000) flashes.splice(i, 1);
   }
 
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -460,6 +459,31 @@ function draw() {
   if (!ctx || !canvas) return;
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
   const now = lastTs;
+  for (const flash of flashes) {
+    if (now < flash.startAt) continue;
+    const t = clamp((now - flash.startAt) / (flash.ttl * 1000), 0, 1);
+    const p = easeOutCubic(t);
+    const radius = flash.radius * (0.35 + 0.65 * p);
+    const gradient = ctx.createRadialGradient(
+      flash.x,
+      flash.y,
+      0,
+      flash.x,
+      flash.y,
+      radius,
+    );
+    const fade = 1 - p;
+    gradient.addColorStop(0, `rgba(255, 252, 245, ${(0.72 * fade).toFixed(3)})`);
+    gradient.addColorStop(0.28, `rgba(251, 113, 133, ${(0.32 * fade).toFixed(3)})`);
+    gradient.addColorStop(1, "rgba(244, 63, 94, 0)");
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(flash.x, flash.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   for (const shock of shocks) {
     if (now < shock.startAt) continue;
     const t = clamp((now - shock.startAt) / (shock.ttl * 1000), 0, 1);
@@ -467,8 +491,8 @@ function draw() {
     ctx.save();
     ctx.beginPath();
     ctx.arc(shock.x, shock.y, shock.r0 + (shock.r1 - shock.r0) * p, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255, 228, 230, ${(0.55 * (1 - p)).toFixed(3)})`;
-    ctx.lineWidth = Math.max(1, 5 * (1 - p));
+    ctx.strokeStyle = `rgba(255, 228, 230, ${(0.7 * (1 - p)).toFixed(3)})`;
+    ctx.lineWidth = Math.max(1.2, 7 * (1 - p));
     ctx.stroke();
     ctx.restore();
   }
@@ -478,6 +502,7 @@ function draw() {
     ctx.translate(particle.x, particle.y);
     ctx.rotate(particle.rot);
     ctx.globalAlpha = fade * fade;
+    if (particle.glow) ctx.globalCompositeOperation = "lighter";
     ctx.fillStyle = particle.color;
     if (particle.shape === "circle") {
       ctx.beginPath();
@@ -550,36 +575,9 @@ export function releaseSpawn(el: HTMLElement | null) {
   el.style.boxShadow = "";
 }
 
-export function snapByTaskId(id: string) {
-  const node = document.querySelector(`[data-task-id="${CSS.escape(id)}"]`);
-  snap(node instanceof HTMLElement ? node : null);
-}
-
-export function snap(el: HTMLElement | null) {
-  if (!el || prefersReducedMotion()) return;
-  const rect = readRect(el);
-  if (rect.width < 2 || rect.height < 2) return;
-  ensureOverlay();
-  const clone = el.cloneNode(true) as HTMLElement;
-  neutralizeClone(clone, rect);
-  cloneLayer?.append(clone);
-  el.style.visibility = "hidden";
-  snaps.push({
-    clone,
-    rect,
-    palette: samplePalette(el),
-    startAt: performance.now(),
-    emitted: 0,
-    target: particleBudget(rect),
-  });
-  startLoop();
-}
-
-export function shatterByProjectId(id: string) {
-  const node = document.querySelector(
-    `[data-project-id="${CSS.escape(id)}"]`,
-  );
-  shatter(node instanceof HTMLElement ? node : null);
+function elementByAttr(attr: string, value: string) {
+  const node = document.querySelector(`[${attr}="${CSS.escape(value)}"]`);
+  return node instanceof HTMLElement ? node : null;
 }
 
 export function shatter(el: HTMLElement | null) {
@@ -600,4 +598,8 @@ export function shatter(el: HTMLElement | null) {
     burst: false,
   });
   startLoop();
+}
+
+export function shatterByAttr(attr: string, value: string) {
+  shatter(elementByAttr(attr, value));
 }

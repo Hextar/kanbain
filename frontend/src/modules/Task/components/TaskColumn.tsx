@@ -8,6 +8,12 @@ import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import type { DropPlaceholder } from "@libraries/dnd/html5DnD";
 import {
+  consumeSpawn,
+  isSpawnPending,
+  releaseSpawn,
+  shatter,
+} from "@libraries/particles";
+import {
   COLUMN_CARD_SELECTOR,
   COLUMN_DRAG_MIME,
   TASK_DRAG_MIME,
@@ -27,13 +33,7 @@ import {
   visibleColumnCards,
 } from "../helpers/visibleColumnCards";
 import { filterColumnCards } from "../helpers/boardFilter";
-import {
-  consumeSpawn,
-  isSpawnPending,
-  releaseSpawn,
-  snap,
-} from "../helpers/boardParticles";
-import { columnAccent } from "../helpers/columnAccent";
+import { COLUMN_COLOR_FILL, columnAccent } from "../helpers/columnAccent";
 import type { Column, ColumnItem } from "../types/Column";
 import type { Task, TaskItem } from "../types/Task";
 import ColumnColorMenu from "./ColumnColorMenu";
@@ -59,6 +59,7 @@ type TaskColumnProps = {
   allTasks: TaskItem[];
   accentIndex?: number;
   isDone?: boolean;
+  isNew?: boolean;
   doneColumnId?: string;
   initialTasks?: Task[];
   matchedTaskIds?: Set<string> | null;
@@ -78,6 +79,7 @@ export default function TaskColumn({
   allTasks,
   accentIndex = 0,
   isDone = false,
+  isNew = false,
   doneColumnId,
   initialTasks,
   matchedTaskIds = null,
@@ -90,7 +92,7 @@ export default function TaskColumn({
   onUpdate,
 }: TaskColumnProps) {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(isNew);
   const [draftTitle, setDraftTitle] = useState(column.title);
   const skipTitleBlurRef = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -274,8 +276,11 @@ export default function TaskColumn({
   useLayoutEffect(() => {
     const node = rootRef.current;
     consumeSpawn(column.id, node);
+    if (isNew) {
+      node?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
     return () => releaseSpawn(node);
-  }, [column.id]);
+  }, [column.id, isNew]);
 
   const taskCount = tasks.length;
   const cardCount = visible.length;
@@ -303,34 +308,62 @@ export default function TaskColumn({
     setIsEditingTitle(true);
   }
 
+  function discardNew() {
+    skipTitleBlurRef.current = true;
+    const node = rootRef.current;
+    releaseSpawn(node);
+    shatter(node);
+    onDelete();
+  }
+
   function commitTitle() {
     if (skipTitleBlurRef.current) {
       skipTitleBlurRef.current = false;
       return;
     }
     const next = draftTitle.trim();
-    setIsEditingTitle(false);
-    if (!next || next === column.title) {
+    if (!next) {
+      if (isNew) {
+        discardNew();
+        return;
+      }
+      skipTitleBlurRef.current = true;
+      setIsEditingTitle(false);
       setDraftTitle(column.title);
       return;
     }
+    skipTitleBlurRef.current = true;
+    setIsEditingTitle(false);
+    if (next === column.title) return;
     persist({ title: next });
   }
 
   function cancelTitle() {
+    if (isNew) {
+      discardNew();
+      return;
+    }
     skipTitleBlurRef.current = true;
     setDraftTitle(column.title);
     setIsEditingTitle(false);
+  }
+
+  function requestDelete() {
+    if (isNew) {
+      discardNew();
+      return;
+    }
+    setIsDeleteConfirmOpen(true);
   }
 
   return (
     <ColumnContextMenu
       color={column.color}
       columnTitle={column.title}
-      disabled={column.isSaving}
+      disabled={column.isSaving || isNew}
       onAddCard={onAddCard}
       onChangeColor={(next) => persist({ color: next })}
-      onDelete={() => setIsDeleteConfirmOpen(true)}
+      onDelete={requestDelete}
       onRename={startEditTitle}
     >
       <div
@@ -338,6 +371,7 @@ export default function TaskColumn({
         ref={rootRef}
         data-dnd-board-column=""
         data-dnd-item=""
+        data-dnd-accent-fill={COLUMN_COLOR_FILL[accent.id]}
         data-spawning={isSpawnPending(column.id) ? "" : undefined}
         className={twMerge(
           "group/column relative isolate flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]",
@@ -384,9 +418,16 @@ export default function TaskColumn({
               <input
                 aria-label="Column name"
                 autoFocus
-                className="h-7 min-w-0 flex-1 rounded bg-zinc-900 px-1.5 text-[11px] leading-none font-semibold text-zinc-200 ring-1 ring-white/15 outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                className="h-7 min-w-0 flex-1 rounded bg-zinc-900 px-1.5 text-[11px] leading-none font-semibold text-zinc-200 ring-1 ring-white/15 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-purple-500"
+                placeholder="Column name"
                 value={draftTitle}
-                onBlur={commitTitle}
+                onBlur={(event) => {
+                  const next = event.relatedTarget;
+                  if (next instanceof Node && rootRef.current?.contains(next)) {
+                    return;
+                  }
+                  commitTitle();
+                }}
                 onChange={(event) => setDraftTitle(event.target.value)}
                 onFocus={(event) => event.currentTarget.select()}
                 onKeyDown={(event) => {
@@ -424,30 +465,32 @@ export default function TaskColumn({
           </div>
           <Tooltip
             align="end"
-            content="Delete column"
+            content={isNew ? "Discard column" : "Delete column"}
             wrapperClassName="shrink-0"
           >
             <IconButton
-              aria-label={`Delete ${column.title}`}
+              aria-label={isNew ? "Discard column" : `Delete ${column.title}`}
               className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
               size="xs"
               variant="secondary"
-              onClick={() => setIsDeleteConfirmOpen(true)}
+              onClick={requestDelete}
             >
               <Trash size={14} />
             </IconButton>
           </Tooltip>
-          <Tooltip align="end" content="Add card" wrapperClassName="shrink-0">
-            <IconButton
-              aria-label={`Add card to ${column.title}`}
-              className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
-              size="xs"
-              variant="secondary"
-              onClick={onAddCard}
-            >
-              <Plus size={14} />
-            </IconButton>
-          </Tooltip>
+          {isNew ? null : (
+            <Tooltip align="end" content="Add card" wrapperClassName="shrink-0">
+              <IconButton
+                aria-label={`Add card to ${column.title}`}
+                className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
+                size="xs"
+                variant="secondary"
+                onClick={onAddCard}
+              >
+                <Plus size={14} />
+              </IconButton>
+            </Tooltip>
+          )}
         </div>
         <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
           {visible.length === 0 && gapPlaceholder ? (
@@ -504,7 +547,7 @@ export default function TaskColumn({
           onCancel={() => setIsDeleteConfirmOpen(false)}
           onConfirm={() => {
             setIsDeleteConfirmOpen(false);
-            snap(rootRef.current);
+            shatter(rootRef.current);
             onDelete();
           }}
         />

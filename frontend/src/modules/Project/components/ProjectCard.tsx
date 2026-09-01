@@ -1,12 +1,18 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { CircleAlert, RotateCw, Sparkles, Trash } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import IconButton from "@uiKit/IconButton";
 import Tooltip from "@uiKit/Tooltip";
+import {
+  consumeSpawn,
+  isSpawnPending,
+  releaseSpawn,
+} from "@libraries/particles";
 import type { Project } from "../types/Project";
 import { usePlanLive } from "../hooks/usePlanLive";
 import {
@@ -68,6 +74,7 @@ export default function ProjectCard({
   isDeleting = false,
   isOpening = false,
 }: ProjectCardProps) {
+  const rootRef = useRef<HTMLElement>(null);
   const { accent, Icon } = projectIdentity(project.id);
   const initials = projectInitials(project.name);
   const createdLabel = project.createdAt
@@ -92,6 +99,12 @@ export default function ProjectCard({
     Number(Boolean(onDelete));
   const titlePad =
     actionCount >= 3 ? "pr-28" : actionCount === 2 ? "pr-20" : "pr-12";
+
+  useLayoutEffect(() => {
+    const node = rootRef.current;
+    consumeSpawn(project.id, node);
+    return () => releaseSpawn(node);
+  }, [project.id]);
 
   const body = (
     <>
@@ -200,7 +213,12 @@ export default function ProjectCard({
   );
 
   return (
-    <article className="relative flex h-full min-w-0 flex-col hover:z-10">
+    <article
+      ref={rootRef}
+      className="relative flex h-full min-w-0 flex-col hover:z-10"
+      data-project-id={project.id}
+      data-spawning={isSpawnPending(project.id) ? "" : undefined}
+    >
       {canOpen ? (
         <Link className={cardClassName} href={`/project/${project.id}`}>
           {body}

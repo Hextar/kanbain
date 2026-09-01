@@ -61,6 +61,8 @@ export default function FlowChart({
     [],
   );
 
+  const closeMenu = useCallback(() => setMenu(null), []);
+
   useEffect(() => {
     onOpenRef.current = onOpenTask;
   }, [onOpenTask]);
@@ -107,7 +109,7 @@ export default function FlowChart({
           doneColumnId={doneColumnId}
           projectId={projectId}
           task={liveTask}
-          onClose={() => setMenu(null)}
+          onClose={closeMenu}
           onDelete={onDeleteTask}
           onOpen={onOpenTask}
           onUpdate={onUpdateTask}

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Columns3 } from "lucide-react";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
+import { markSpawn, shatterByAttr } from "@libraries/particles";
 import NewProjectForm from "./components/NewProjectForm";
 import ProjectCard from "./components/ProjectCard";
 import ProjectEmptyState from "./components/ProjectEmptyState";
@@ -34,12 +35,14 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
 
   function remember(project: Project) {
     const next = reviveProject(project);
+    const list = queryClient.getQueryData<Project[]>(projectKeys.list()) ?? [];
+    if (!list.some((item) => item.id === next.id)) markSpawn(next.id);
     queryClient.setQueryData<Project[]>(projectKeys.list(), (current) => {
-      const list = current ?? [];
-      if (list.some((item) => item.id === next.id)) {
-        return list.map((item) => (item.id === next.id ? next : item));
+      const items = current ?? [];
+      if (items.some((item) => item.id === next.id)) {
+        return items.map((item) => (item.id === next.id ? next : item));
       }
-      return [next, ...list];
+      return [next, ...items];
     });
     queryClient.setQueryData(projectKeys.detail(next.id), next);
   }
@@ -119,6 +122,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
           const project = projectToDelete;
           if (!project) return;
           setProjectToDelete(null);
+          shatterByAttr("data-project-id", project.id);
           void handleDelete(project.id);
         }}
       />

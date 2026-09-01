@@ -15,6 +15,7 @@ import ConfirmDialog from "@uiKit/ConfirmDialog";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
 import Input from "@uiKit/Input";
 import Select from "@uiKit/Select";
+import { shatterByAttr } from "@libraries/particles";
 import {
   useAssignees,
   useCreateAssignee,
@@ -39,7 +40,6 @@ import {
   PRIORITY_STYLES,
   WORK_KIND_STYLES,
 } from "../helpers/taskBadges";
-import { snapByTaskId } from "../helpers/boardParticles";
 import { taskKey, taskQueryValue } from "../helpers/taskKey";
 import type { TaskPriority, TshirtSize } from "../types/Catalog";
 import type { Task, TaskItem } from "../types/Task";
@@ -415,7 +415,7 @@ export default function TaskDetailDialog({
           <div className="flex flex-col gap-1.5">
             <Input
               aria-label="Title"
-              autoFocus
+              autoFocus={isNew}
               className="h-auto min-h-0 w-full flex-none rounded-none border-0 bg-transparent px-0 py-0 text-lg leading-snug font-semibold text-white placeholder:text-zinc-600 focus-visible:ring-0"
               placeholder="Task title"
               value={title}
@@ -566,7 +566,7 @@ export default function TaskDetailDialog({
         onCancel={() => setIsDeleteConfirmOpen(false)}
         onConfirm={() => {
           setIsDeleteConfirmOpen(false);
-          snapByTaskId(task.id);
+          shatterByAttr("data-task-id", task.id);
           onDelete(task.id);
           onClose();
         }}

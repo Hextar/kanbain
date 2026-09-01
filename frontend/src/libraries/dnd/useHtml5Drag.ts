@@ -9,11 +9,13 @@ import {
   setDragData,
   setDragImageAtCursor,
 } from "./html5DnD";
+import { clearLiveDragGhost, startLiveDragGhost } from "./liveGhost";
 
 type UseHtml5DragOptions<T> = {
   data: T;
   mimeType: string;
   disabled?: boolean;
+  livePreview?: boolean;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
 };
@@ -22,6 +24,7 @@ export function useHtml5Drag<T>({
   data,
   mimeType,
   disabled = false,
+  livePreview = false,
   onDragStart,
   onDragEnd,
 }: UseHtml5DragOptions<T>) {
@@ -45,24 +48,34 @@ export function useHtml5Drag<T>({
         mimeType,
       );
       setDragData(event.dataTransfer, mimeType, data);
-      setDragImageAtCursor(
-        event.dataTransfer,
-        source,
-        event.clientX,
-        event.clientY,
-      );
+      if (livePreview) {
+        startLiveDragGhost(
+          event.dataTransfer,
+          source,
+          event.clientX,
+          event.clientY,
+        );
+      } else {
+        setDragImageAtCursor(
+          event.dataTransfer,
+          source,
+          event.clientX,
+          event.clientY,
+        );
+      }
       onDragStart?.(event);
       cancelAnimationFrame(dragFrameRef.current);
       dragFrameRef.current = requestAnimationFrame(() => {
         setIsDragging(true);
       });
     },
-    [data, disabled, mimeType, onDragStart],
+    [data, disabled, livePreview, mimeType, onDragStart],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEvent<HTMLElement>) => {
       cancelAnimationFrame(dragFrameRef.current);
+      clearLiveDragGhost();
       clearDragSources();
       setIsDragging(false);
       onDragEnd?.(event);

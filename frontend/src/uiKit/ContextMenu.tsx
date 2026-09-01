@@ -65,6 +65,7 @@ type ContextMenuProps = {
 type Coords = { top: number; left: number };
 
 let closeActiveMenu: (() => void) | null = null;
+let closeActiveOwner: symbol | null = null;
 
 function isSeparator(entry: ContextMenuEntry): entry is ContextMenuSeparator {
   return entry.type === "separator";
@@ -181,6 +182,8 @@ export default function ContextMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef(new Map<string, HTMLButtonElement>());
+  const onCloseRef = useRef(onClose);
+  const ownerRef = useRef(Symbol("context-menu"));
   const closeRef = useRef<() => void>(() => {});
   const [open, setOpen] = useState(() => Boolean(anchor));
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(
@@ -190,17 +193,31 @@ export default function ContextMenu({
   const [submenuId, setSubmenuId] = useState<string | null>(null);
   const [submenuCoords, setSubmenuCoords] = useState<Coords | null>(null);
 
+  onCloseRef.current = onClose;
+
   const close = useCallback(() => {
     setOpen(false);
     setCursor(null);
     setCoords(null);
     setSubmenuId(null);
     setSubmenuCoords(null);
-    if (closeActiveMenu === closeRef.current) closeActiveMenu = null;
-    onClose?.();
-  }, [onClose]);
+    if (closeActiveOwner === ownerRef.current) {
+      closeActiveOwner = null;
+      closeActiveMenu = null;
+    }
+    onCloseRef.current?.();
+  }, []);
 
   closeRef.current = close;
+
+  useEffect(() => {
+    return () => {
+      if (closeActiveOwner === ownerRef.current) {
+        closeActiveOwner = null;
+        closeActiveMenu = null;
+      }
+    };
+  }, []);
 
   const resolved =
     typeof items === "function" ? items(close) : items;
@@ -219,7 +236,8 @@ export default function ContextMenu({
       if (visibleEntries(nextItems).length === 0) return;
       event.preventDefault();
       event.stopPropagation();
-      closeActiveMenu?.();
+      if (closeActiveOwner !== ownerRef.current) closeActiveMenu?.();
+      closeActiveOwner = ownerRef.current;
       closeActiveMenu = closeRef.current;
       setSubmenuId(null);
       setSubmenuCoords(null);
@@ -231,9 +249,10 @@ export default function ContextMenu({
 
   useEffect(() => {
     if (!anchor) return;
-    if (closeActiveMenu && closeActiveMenu !== closeRef.current) {
-      closeActiveMenu();
+    if (closeActiveOwner && closeActiveOwner !== ownerRef.current) {
+      closeActiveMenu?.();
     }
+    closeActiveOwner = ownerRef.current;
     closeActiveMenu = closeRef.current;
     setSubmenuId(null);
     setSubmenuCoords(null);
@@ -243,12 +262,14 @@ export default function ContextMenu({
 
   useEffect(() => {
     if (!open) return;
-    if (closeActiveMenu !== closeRef.current) {
+    if (closeActiveOwner && closeActiveOwner !== ownerRef.current) {
       closeActiveMenu?.();
-      closeActiveMenu = closeRef.current;
     }
+    closeActiveOwner = ownerRef.current;
+    closeActiveMenu = closeRef.current;
 
     function onPointerDown(event: PointerEvent) {
+      if (event.button === 2) return;
       const target = event.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (submenuRef.current?.contains(target)) return;
@@ -266,6 +287,7 @@ export default function ContextMenu({
     }
 
     function onDocumentContextMenu(event: Event) {
+      if (event.defaultPrevented) return;
       const target = event.target as Node;
       if (panelRef.current?.contains(target)) {
         event.preventDefault();

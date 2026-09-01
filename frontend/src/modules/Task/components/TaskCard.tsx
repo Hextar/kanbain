@@ -5,12 +5,12 @@ import { ChevronRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
 import type { DropPlaceholder } from "@libraries/dnd/html5DnD";
-import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import {
   consumeSpawn,
   isSpawnPending,
   releaseSpawn,
-} from "../helpers/boardParticles";
+} from "@libraries/particles";
+import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import type { Task, TaskItem } from "../types/Task";
 import CollapsibleSlot from "./CollapsibleSlot";
 import FlipItem from "./FlipItem";
@@ -76,6 +76,7 @@ export default function TaskCard({
     mimeType: TASK_DRAG_MIME,
     data: { taskId: task.id, sourceColumnId: task.columnId },
     disabled: Boolean(task.isSaving),
+    livePreview: true,
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
   });
@@ -118,6 +119,7 @@ export default function TaskCard({
           {accentBar ? (
             <div
               aria-hidden
+              data-dnd-ghost-accent=""
               className={twMerge(
                 "absolute top-0 bottom-0 left-0 w-[3px] rounded-l-lg",
                 accentBar,

@@ -4,10 +4,10 @@ import { useRef, useState, type ReactElement } from "react";
 import { Columns3, Flag, Link2, Maximize2, Trash2, User } from "lucide-react";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import ContextMenu, { type ContextMenuEntry } from "@uiKit/ContextMenu";
+import { shatterByAttr } from "@libraries/particles";
 import { useAssignees } from "../hooks/useCatalog";
 import { useColumns } from "../hooks/useColumns";
 import { useMoveTask } from "../hooks/useTasks";
-import { snapByTaskId } from "../helpers/boardParticles";
 import { taskQueryValue } from "../helpers/taskKey";
 import type { TaskPriority } from "../types/Catalog";
 import type { Task, TaskItem } from "../types/Task";
@@ -191,7 +191,7 @@ export default function TaskContextMenu({
         onConfirm={() => {
           retainRef.current = false;
           setConfirmOpen(false);
-          snapByTaskId(task.id);
+          shatterByAttr("data-task-id", task.id);
           onDelete(task.id);
           onClose?.();
         }}

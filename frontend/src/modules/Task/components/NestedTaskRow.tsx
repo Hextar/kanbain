@@ -51,6 +51,7 @@ export default function NestedTaskRow({
     mimeType: TASK_DRAG_MIME,
     data: { taskId: task.id, sourceColumnId: task.columnId },
     disabled: Boolean(task.isSaving),
+    livePreview: true,
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
   });
@@ -120,6 +121,7 @@ export default function NestedTaskRow({
             {accentBar ? (
               <div
                 aria-hidden
+                data-dnd-ghost-accent=""
                 className={twMerge(
                   "absolute top-0 bottom-0 left-0 w-[2px] rounded-l-md",
                   accentBar,
