@@ -10,6 +10,7 @@ import {
 import { X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import IconButton from "./IconButton";
+import LightOrb from "./LightOrb";
 
 export type DialogAccent = {
   bar: string;
@@ -122,7 +123,7 @@ export default function Dialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className={twMerge("app-dialog light-edge", className)}
+      className={twMerge("app-dialog light-edge light-edge-card", className)}
       data-light-edge=""
       onCancel={(event) => {
         event.preventDefault();
@@ -134,13 +135,7 @@ export default function Dialog({
         aria-hidden
         className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)}
       />
-      <div
-        aria-hidden
-        className={twMerge(
-          "light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
-          accent.glow,
-        )}
-      />
+      <LightOrb className={accent.glow} />
       <div
         ref={headerRef}
         className="relative flex shrink-0 items-start justify-between gap-3 border-b border-white/6 px-4 pt-3 pb-2.5"
