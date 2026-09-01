@@ -14,6 +14,15 @@ export default function TaskCardFrame({
   className,
 }: TaskCardFrameProps) {
   return (
-    <div className={twMerge(taskCardClassName, className)}>{children}</div>
+    <div
+      className={twMerge(
+        "light-edge light-edge-card",
+        taskCardClassName,
+        className,
+      )}
+      data-light-edge=""
+    >
+      {children}
+    </div>
   );
 }

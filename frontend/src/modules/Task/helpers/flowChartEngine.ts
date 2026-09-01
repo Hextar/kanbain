@@ -6,7 +6,7 @@ import {
   type Simulation,
   type SimulationNodeDatum,
 } from "d3-force";
-import { pointer, select } from "d3-selection";
+import { pointer, select, type Selection } from "d3-selection";
 import "d3-transition";
 import { compactTaskKey } from "./taskKey";
 import type { FlowLane, FlowNode } from "./flowCluster";
@@ -40,6 +40,7 @@ const PAD_LEFT_STAGE = 16;
 const LANE_LABEL_FAMILY = "ui-sans-serif, system-ui, sans-serif";
 const LANE_LABEL_FONT = `500 11px ${LANE_LABEL_FAMILY}`;
 const LANE_LINE_HEIGHT = 14;
+const NODE_SHEEN_ID = "flow-node-sheen";
 
 export function createFlowChart(
   host: HTMLElement,
@@ -56,6 +57,8 @@ export function createFlowChart(
     .append("svg")
     .attr("class", "h-full w-full touch-manipulation")
     .attr("role", "group");
+  const defs = svg.append("defs");
+  paintNodeSheen(defs);
   const grid = svg.append("g").attr("aria-hidden", true);
   const labels = svg.append("g").attr("aria-hidden", true);
   const layer = svg.append("g");
@@ -144,6 +147,7 @@ export function createFlowChart(
       };
     });
     current = nodes;
+    paintNodeFills(defs, [...new Set(nodes.map((node) => node.fill))]);
 
     svg.attr(
       "aria-label",
@@ -268,6 +272,11 @@ export function createFlowChart(
       .attr("opacity", 0);
     enter.append("circle").attr("class", "body");
     enter
+      .append("circle")
+      .attr("class", "sheen")
+      .attr("fill", `url(#${NODE_SHEEN_ID})`)
+      .attr("pointer-events", "none");
+    enter
       .append("text")
       .attr("class", "key")
       .attr("fill", "#09090b")
@@ -335,7 +344,10 @@ export function createFlowChart(
     merged
       .select<SVGCircleElement>("circle.body")
       .attr("r", (node) => node.r)
-      .attr("fill", (node) => node.fill);
+      .attr("fill", (node) => `url(#${nodeFillId(node.fill)})`);
+    merged
+      .select<SVGCircleElement>("circle.sheen")
+      .attr("r", (node) => node.r);
     merged
       .select<SVGCircleElement>("circle.halo")
       .attr("r", (node) => node.r + 3.5)
@@ -428,6 +440,90 @@ export function createFlowChart(
 function tooltipText(node: SimNode): string {
   const key = compactTaskKey(node.task);
   return key ? `${key}  ${node.task.title}` : node.task.title;
+}
+
+function nodeFillId(fill: string): string {
+  return `flow-fill-${fill.replace(/[^a-zA-Z0-9]/g, "")}`;
+}
+
+type SvgDefs = Selection<SVGDefsElement, unknown, null, undefined>;
+
+function paintNodeSheen(defs: SvgDefs) {
+  const sheen = defs
+    .append("radialGradient")
+    .attr("id", NODE_SHEEN_ID)
+    .attr("cx", "32%")
+    .attr("cy", "26%")
+    .attr("r", "68%");
+  sheen
+    .append("stop")
+    .attr("offset", "0%")
+    .attr("stop-color", "#fff")
+    .attr("stop-opacity", 0.42);
+  sheen
+    .append("stop")
+    .attr("offset", "42%")
+    .attr("stop-color", "#fff")
+    .attr("stop-opacity", 0.1);
+  sheen
+    .append("stop")
+    .attr("offset", "100%")
+    .attr("stop-color", "#fff")
+    .attr("stop-opacity", 0);
+}
+
+function paintNodeFills(defs: SvgDefs, fills: string[]) {
+  const fillSel = defs
+    .selectAll<SVGLinearGradientElement, string>("linearGradient.node-fill")
+    .data(fills, (fill) => fill);
+  fillSel.exit().remove();
+  const fillEnter = fillSel
+    .enter()
+    .append("linearGradient")
+    .attr("class", "node-fill")
+    .attr("gradientUnits", "objectBoundingBox")
+    .attr("x1", 0)
+    .attr("y1", 0)
+    .attr("x2", 1)
+    .attr("y2", 1);
+  fillEnter.append("stop").attr("class", "from").attr("offset", "0%");
+  fillEnter.append("stop").attr("class", "to").attr("offset", "100%");
+  const merged = fillEnter.merge(fillSel);
+  merged.attr("id", (fill) => nodeFillId(fill));
+  merged
+    .select<SVGStopElement>("stop.from")
+    .attr("stop-color", (fill) => mixHex(fill, 255, 0.34));
+  merged
+    .select<SVGStopElement>("stop.to")
+    .attr("stop-color", (fill) => mixHex(fill, 0, 0.3));
+}
+
+function mixHex(hex: string, toward: number, amount: number): string {
+  const rgb = parseHex(hex);
+  if (!rgb) return hex;
+  return toHex(
+    rgb[0] + (toward - rgb[0]) * amount,
+    rgb[1] + (toward - rgb[1]) * amount,
+    rgb[2] + (toward - rgb[2]) * amount,
+  );
+}
+
+function parseHex(hex: string): [number, number, number] | null {
+  const raw = hex.startsWith("#") ? hex.slice(1) : hex;
+  if (raw.length !== 6) return null;
+  const value = Number.parseInt(raw, 16);
+  if (!Number.isFinite(value)) return null;
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function toHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b]
+    .map((channel) =>
+      Math.max(0, Math.min(255, Math.round(channel)))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
 }
 
 function nodeRadius(densest: number, colW: number, laneH: number): number {

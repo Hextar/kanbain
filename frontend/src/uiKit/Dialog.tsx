@@ -122,7 +122,8 @@ export default function Dialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className={twMerge("app-dialog", className)}
+      className={twMerge("app-dialog light-edge", className)}
+      data-light-edge=""
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -136,7 +137,7 @@ export default function Dialog({
       <div
         aria-hidden
         className={twMerge(
-          "pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
+          "light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
           accent.glow,
         )}
       />

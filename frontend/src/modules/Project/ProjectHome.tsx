@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Columns3 } from "lucide-react";
+import CanvasDots from "@uiKit/CanvasDots";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import { markSpawn, shatterByAttr } from "@libraries/particles";
 import NewProjectForm from "./components/NewProjectForm";
@@ -91,7 +92,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
           <SettingsButton size="xs" />
         </div>
       </header>
-      <div className="canvas-dots flex min-h-dvh w-full flex-col">
+      <CanvasDots className="flex min-h-dvh w-full flex-col">
         {hasProjects ? (
           <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (
@@ -110,7 +111,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
         ) : (
           <ProjectEmptyState onCreated={remember} />
         )}
-      </div>
+      </CanvasDots>
       <ConfirmDialog
         open={projectToDelete !== null}
         title={`Delete “${projectToDelete?.name ?? "this project"}”?`}

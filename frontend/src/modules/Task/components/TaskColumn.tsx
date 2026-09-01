@@ -384,7 +384,7 @@ export default function TaskColumn({
         <div
           aria-hidden
           className={twMerge(
-            "pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl",
+            "light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl",
             accent.glow,
           )}
         />

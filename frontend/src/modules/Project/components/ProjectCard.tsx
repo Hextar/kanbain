@@ -128,7 +128,7 @@ export default function ProjectCard({
       <div
         aria-hidden
         className={twMerge(
-          "pointer-events-none absolute -top-16 -right-6 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
+          "light-orb pointer-events-none absolute -top-16 -right-6 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
           accent.glow,
         )}
       />
@@ -205,7 +205,7 @@ export default function ProjectCard({
   );
 
   const cardClassName = twMerge(
-    "relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24] p-5 pt-4 text-left",
+    "light-edge light-edge-card relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24] p-5 pt-4 text-left",
     canOpen &&
       `transition-colors ${accent.hoverBorder} focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none`,
     isPlanning && "plan-shimmer pointer-events-none border-purple-500/40",
@@ -220,7 +220,11 @@ export default function ProjectCard({
       data-spawning={isSpawnPending(project.id) ? "" : undefined}
     >
       {canOpen ? (
-        <Link className={cardClassName} href={`/project/${project.id}`}>
+        <Link
+          className={cardClassName}
+          data-light-edge=""
+          href={`/project/${project.id}`}
+        >
           {body}
         </Link>
       ) : (
@@ -228,6 +232,7 @@ export default function ProjectCard({
           aria-busy={isPlanning || undefined}
           aria-disabled={isPlanning || undefined}
           className={cardClassName}
+          data-light-edge=""
           role={isPlanning ? "status" : undefined}
         >
           {body}

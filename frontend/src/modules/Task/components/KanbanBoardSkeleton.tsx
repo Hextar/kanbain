@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, GripVertical } from "lucide-react";
 import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
 import { COLUMN_COLOR_OPTIONS } from "@modules/Task/helpers/columnAccent";
+import CanvasDots from "@uiKit/CanvasDots";
 import Skeleton from "@uiKit/Skeleton";
 import PlanningStatus from "@modules/Project/components/PlanningStatus";
 
@@ -31,9 +32,9 @@ export default function KanbanBoardSkeleton({
 }: KanbanBoardSkeletonProps) {
   const showProgress = statusText !== undefined && progress !== undefined;
   return (
-    <div
+    <CanvasDots
       aria-busy
-      className="canvas-dots flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
+      className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
       role="status"
     >
       <span className="sr-only">{label}</span>
@@ -101,7 +102,7 @@ export default function KanbanBoardSkeleton({
         <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
         </div>
       </div>
-    </div>
+    </CanvasDots>
   );
 }
 
@@ -141,7 +142,7 @@ function ColumnSkeleton({
       <div className={`h-[3px] w-full shrink-0 ${accentBar}`} />
       <div
         aria-hidden
-        className={`pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl ${accentGlow}`}
+        className={`light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl ${accentGlow}`}
       />
       <header className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
         <span className="flex h-7 w-4 shrink-0 items-center justify-center">

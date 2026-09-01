@@ -12,6 +12,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import { markSpawn } from "@libraries/particles";
 import Button from "@uiKit/Button";
+import CanvasDots from "@uiKit/CanvasDots";
 import KanbanHeader from "./components/KanbanHeader";
 import TaskColumn from "./components/TaskColumn";
 import TaskDetailDialog from "./components/TaskDetailDialog";
@@ -291,7 +292,7 @@ function BoardCanvas({
   const boardScrollRef = useHorizontalOverflowScroll<HTMLDivElement>();
 
   return (
-    <div className="canvas-dots flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
+    <CanvasDots className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
       <KanbanHeader
         className="w-full"
         clauses={clauses}
@@ -430,7 +431,7 @@ function BoardCanvas({
           onSave={(task) => updateTask(task)}
         />
       ) : null}
-    </div>
+    </CanvasDots>
   );
 }
 

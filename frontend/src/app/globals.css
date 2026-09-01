@@ -40,6 +40,8 @@ body {
 }
 
 .canvas-dots {
+  position: relative;
+  isolation: isolate;
   background-color: #12141c;
   background-image:
     radial-gradient(circle, rgb(255 255 255 / 0.05) 1px, transparent 1px),
@@ -54,6 +56,128 @@ body {
     20px 20px,
     100% 100%;
   background-repeat: repeat, no-repeat;
+}
+
+.canvas-lantern {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.canvas-lantern-wash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 420px;
+  height: 420px;
+  margin: -210px 0 0 -210px;
+  background: radial-gradient(
+    circle,
+    rgb(167 139 250 / 0.028) 0%,
+    rgb(255 255 255 / 0.012) 28%,
+    transparent 62%
+  );
+  transform: translate3d(
+    var(--lantern-x, -999px),
+    var(--lantern-y, -999px),
+    0
+  );
+}
+
+.canvas-lantern-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    rgb(196 181 253 / 0.18) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+  mask-image: radial-gradient(
+    220px circle at var(--lantern-x, -999px) var(--lantern-y, -999px),
+    #000 0%,
+    transparent 70%
+  );
+  -webkit-mask-image: radial-gradient(
+    220px circle at var(--lantern-x, -999px) var(--lantern-y, -999px),
+    #000 0%,
+    transparent 70%
+  );
+}
+
+.light-orb {
+  transform: translate3d(
+    calc(var(--light-nx, 0) * -8px),
+    calc(var(--light-ny, 0) * -6px),
+    0
+  );
+}
+
+.light-edge {
+  position: relative;
+}
+
+.light-edge::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    280px circle at var(--spec-x, 50%) var(--spec-y, 50%),
+    rgb(255 255 255 / 0.38),
+    rgb(196 181 253 / 0.14) 28%,
+    transparent 55%
+  );
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.light-edge:hover::after {
+  opacity: 1;
+}
+
+.light-edge-card::after {
+  background: radial-gradient(
+    180px circle at var(--spec-x, 50%) var(--spec-y, 50%),
+    rgb(255 255 255 / 0.06),
+    rgb(196 181 253 / 0.02) 18%,
+    transparent 36%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-lantern,
+  .light-edge::after {
+    display: none;
+  }
+
+  .light-orb {
+    transform: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .canvas-lantern,
+  .light-edge::after {
+    display: none;
+  }
+
+  .light-orb {
+    transform: none;
+  }
 }
 
 .board-x-scroll {

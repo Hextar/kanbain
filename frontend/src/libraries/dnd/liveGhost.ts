@@ -76,13 +76,11 @@ function accentFillFromPoint(clientX: number, clientY: number): string | null {
 function applyGhostAccent(fill: string | null) {
   if (!liveGhost || fill === liveGhost.currentFill) return;
   liveGhost.currentFill = fill;
-  const { wrapper } = liveGhost;
-  wrapper.querySelectorAll<HTMLElement>(GHOST_ACCENT_SELECTOR).forEach((bar) => {
-    bar.style.backgroundColor = fill ?? "";
-  });
-  wrapper.style.filter = fill
-    ? `drop-shadow(0 0 10px ${fill}99) drop-shadow(0 12px 18px rgb(0 0 0 / 0.45))`
-    : "drop-shadow(0 12px 18px rgb(0 0 0 / 0.45))";
+  liveGhost.wrapper
+    .querySelectorAll<HTMLElement>(GHOST_ACCENT_SELECTOR)
+    .forEach((bar) => {
+      bar.style.backgroundColor = fill ?? "";
+    });
 }
 
 function positionGhost(clientX: number, clientY: number) {
@@ -145,6 +143,7 @@ export function startLiveDragGhost(
   wrapper.style.padding = `${pad}px`;
   wrapper.style.pointerEvents = "none";
   wrapper.style.willChange = "transform";
+  wrapper.style.filter = "drop-shadow(0 12px 18px rgb(0 0 0 / 0.45))";
 
   const clone = source.cloneNode(true) as HTMLElement;
   clone.style.width = `${rect.width}px`;
