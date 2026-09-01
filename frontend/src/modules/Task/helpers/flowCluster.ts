@@ -130,9 +130,7 @@ export function clusterLabel(
     case "milestone": {
       if (key === "none") return "No milestone";
       const milestone = milestones.find((item) => item.id === key);
-      return milestone
-        ? milestoneLabel(milestone, milestones)
-        : "Unknown";
+      return milestone ? milestoneLabel(milestone, milestones) : "Unknown";
     }
     case "stage":
       return columns.find((column) => column.id === key)?.title ?? "Stage";

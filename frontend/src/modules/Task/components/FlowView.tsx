@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ChartColumn } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import Skeleton from "@uiKit/Skeleton";
-import { useAssignees } from "../hooks/useCatalog";
+import { useAssignees, useMilestones } from "../hooks/useCatalog";
 import {
   FLOW_CLUSTER_OPTIONS,
   clusterInsight,
@@ -23,6 +23,7 @@ const FlowChart = dynamic(() => import("./FlowChart"), {
 });
 
 type FlowViewProps = {
+  projectId: string;
   columns: Column[];
   tasks: Task[];
   matchedTaskIds: Set<string> | null;
@@ -33,6 +34,7 @@ type FlowViewProps = {
 };
 
 export default function FlowView({
+  projectId,
   columns,
   tasks,
   matchedTaskIds,
@@ -42,6 +44,7 @@ export default function FlowView({
   onOpenTask,
 }: FlowViewProps) {
   const { data: assignees = [] } = useAssignees();
+  const { data: milestones = [] } = useMilestones(projectId);
 
   if (columns.length === 0) {
     return (
@@ -66,7 +69,7 @@ export default function FlowView({
     );
   }
 
-  const lanes = flowLanes(cluster, nodes, columns, assignees);
+  const lanes = flowLanes(cluster, nodes, columns, assignees, milestones);
   const insight = clusterInsight(cluster, lanes, nodes);
 
   return (

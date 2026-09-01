@@ -260,6 +260,7 @@ function BoardCanvas({
           columns={columns}
           hrefForCluster={hrefForCluster}
           matchedTaskIds={matchedTaskIds}
+          projectId={project.id}
           selectedTaskId={selected?.id}
           tasks={allTasks}
           onOpenTask={setTaskQuery}
