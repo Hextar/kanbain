@@ -5,7 +5,7 @@ export const DND_GHOST_ACCENT_ATTR = "data-dnd-ghost-accent";
 export const DND_LIVE_GHOST_ATTR = "data-dnd-live-ghost";
 
 const GHOST_ACCENT_SELECTOR = `[${DND_GHOST_ACCENT_ATTR}]`;
-const COLUMN_SELECTOR = "[data-dnd-board-column]";
+const ACCENT_FILL_SELECTOR = `[${DND_ACCENT_FILL_ATTR}]`;
 
 type LiveGhost = {
   wrapper: HTMLElement;
@@ -65,9 +65,9 @@ function accentFillFromPoint(clientX: number, clientY: number): string | null {
   for (const node of stack) {
     if (!(node instanceof Element)) continue;
     if (node.closest(`[${DND_LIVE_GHOST_ATTR}]`)) continue;
-    const column = node.closest(COLUMN_SELECTOR);
-    if (column instanceof HTMLElement) {
-      return column.getAttribute(DND_ACCENT_FILL_ATTR);
+    const zone = node.closest(ACCENT_FILL_SELECTOR);
+    if (zone instanceof HTMLElement) {
+      return zone.getAttribute(DND_ACCENT_FILL_ATTR);
     }
   }
   return null;
@@ -162,8 +162,8 @@ export function startLiveDragGhost(
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
 
-  const sourceColumn = source.closest<HTMLElement>(COLUMN_SELECTOR);
-  const originalFill = sourceColumn?.getAttribute(DND_ACCENT_FILL_ATTR) ?? null;
+  const sourceZone = source.closest<HTMLElement>(ACCENT_FILL_SELECTOR);
+  const originalFill = sourceZone?.getAttribute(DND_ACCENT_FILL_ATTR) ?? null;
 
   liveGhost = {
     wrapper,
@@ -174,9 +174,7 @@ export function startLiveDragGhost(
     currentFill: null,
   };
   positionGhost(clientX, clientY);
-  applyGhostAccent(
-    accentFillFromPoint(clientX, clientY) ?? originalFill,
-  );
+  applyGhostAccent(accentFillFromPoint(clientX, clientY) ?? originalFill);
   bindListeners();
 }
 
