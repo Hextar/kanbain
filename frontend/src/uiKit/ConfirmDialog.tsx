@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  type FormEvent,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useId, type FormEvent, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 import Button from "./Button";
+import Dialog, { DIALOG_ACCENTS } from "./Dialog";
 
 export type ConfirmDialogProps = {
   open: boolean;
@@ -34,28 +28,8 @@ export default function ConfirmDialog({
   onCancel,
   className,
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
   const descriptionId = useId();
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-
-    if (open) {
-      if (!dialog.open) dialog.showModal();
-      const focusTimer = window.setTimeout(() => {
-        confirmRef.current?.focus();
-      }, 0);
-      return () => window.clearTimeout(focusTimer);
-    }
-    if (dialog.open) dialog.close();
-  }, [open]);
-
-  function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
-    if (event.target === dialogRef.current) onCancel();
-  }
+  const formId = useId();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -63,28 +37,14 @@ export default function ConfirmDialog({
   }
 
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
-      className={twMerge("confirm-dialog", className)}
-      onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
-      }}
-      onClick={handleBackdropClick}
-    >
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-2">
-          <h2 id={titleId} className="text-lg font-semibold text-white">
-            {title}
-          </h2>
-          {description ? (
-            <p id={descriptionId} className="text-sm text-zinc-300">
-              {description}
-            </p>
-          ) : null}
-        </div>
+    <Dialog
+      accent={
+        variant === "danger" ? DIALOG_ACCENTS.danger : DIALOG_ACCENTS.primary
+      }
+      className={twMerge("max-w-sm", className)}
+      descriptionId={description ? descriptionId : undefined}
+      eyebrow={variant === "danger" ? "Warning" : "Confirm"}
+      footer={
         <div className="flex flex-row items-center justify-end gap-2">
           <Button
             kind="outline"
@@ -95,11 +55,31 @@ export default function ConfirmDialog({
           >
             {cancelLabel}
           </Button>
-          <Button ref={confirmRef} size="sm" type="submit" variant={variant}>
+          <Button
+            autoFocus
+            form={formId}
+            size="sm"
+            type="submit"
+            variant={variant}
+          >
             {confirmLabel}
           </Button>
         </div>
+      }
+      open={open}
+      title={title}
+      onClose={onCancel}
+    >
+      <form id={formId} onSubmit={handleSubmit}>
+        {description ? (
+          <p
+            className="text-sm leading-relaxed text-zinc-400"
+            id={descriptionId}
+          >
+            {description}
+          </p>
+        ) : null}
       </form>
-    </dialog>
+    </Dialog>
   );
 }

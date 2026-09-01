@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Link2, Plus } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import Button from "@uiKit/Button";
-import Dialog from "@uiKit/Dialog";
+import Dialog, { DialogPanel } from "@uiKit/Dialog";
 import Input from "@uiKit/Input";
 import Select from "@uiKit/Select";
 import {
@@ -45,30 +52,13 @@ const TSHIRTS: TshirtSize[] = ["xs", "s", "m", "l", "xl"];
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
 
 const CONTROL =
-  "box-border h-8 min-h-8 max-h-8 w-full flex-none rounded-md border border-white/8 bg-[#12141c] px-2.5 py-0 text-sm text-zinc-100";
+  "box-border h-8 min-h-8 max-h-8 min-w-0 flex-1 rounded-md border border-white/8 bg-[#12141c] px-2.5 py-0 text-sm text-zinc-100";
 
 type ChoiceOption<T extends string> = {
   value: T;
   label: string;
   className: string;
 };
-
-function PropertyPanel({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-xl border border-white/6 bg-[#14161e]/90 p-3">
-      <h3 className="mb-2.5 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
-        {title}
-      </h3>
-      {children}
-    </section>
-  );
-}
 
 function FieldRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -124,6 +114,37 @@ function SegmentedChoice<T extends string>({
   );
 }
 
+function AutoGrowTextarea({
+  value,
+  onChange,
+  className,
+  ...props
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+} & Omit<ComponentProps<"textarea">, "value" | "onChange" | "children">) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.style.height = "auto";
+    node.style.height = `${node.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      {...props}
+      ref={ref}
+      className={className}
+      rows={1}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
+
 function InlineAdd({
   placeholder,
   value,
@@ -138,7 +159,7 @@ function InlineAdd({
   onAdd: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-1.5">
       <Input
         className={CONTROL}
         placeholder={placeholder}
@@ -366,7 +387,7 @@ export default function TaskDetailDialog({
     >
       <form
         id="task-detail-form"
-        className="flex flex-col gap-3"
+        className="flex min-w-0 flex-col gap-3"
         onSubmit={handleSave}
       >
         <div className="flex flex-col gap-1.5">
@@ -378,16 +399,16 @@ export default function TaskDetailDialog({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
-          <textarea
+          <AutoGrowTextarea
             aria-label="Description"
-            className="min-h-16 w-full resize-y rounded-md border-0 bg-transparent px-0 py-0 text-sm leading-5 text-zinc-400 placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:outline-none"
+            className="min-h-5 w-full resize-none overflow-hidden border-0 bg-transparent px-0 py-0 text-sm leading-5 text-zinc-400 placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:outline-none"
             placeholder="Add a description…"
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={setDescription}
           />
         </div>
 
-        <PropertyPanel title="Properties">
+        <DialogPanel title="Properties">
           <div className="flex flex-col gap-2.5">
             <FieldRow label="Priority">
               <SegmentedChoice
@@ -438,9 +459,9 @@ export default function TaskDetailDialog({
               </Select>
             </FieldRow>
           </div>
-        </PropertyPanel>
+        </DialogPanel>
 
-        <PropertyPanel title="People">
+        <DialogPanel title="People">
           <div className="flex flex-col gap-2.5">
             <FieldRow label="Assignee">
               <Select
@@ -465,9 +486,9 @@ export default function TaskDetailDialog({
               />
             </FieldRow>
           </div>
-        </PropertyPanel>
+        </DialogPanel>
 
-        <PropertyPanel title="Tags">
+        <DialogPanel title="Tags">
           <div className="flex flex-col gap-2.5">
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => {
@@ -478,7 +499,7 @@ export default function TaskDetailDialog({
                     className={twMerge(
                       "cursor-pointer rounded-full px-2 py-0.5 text-[11px] focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
                       selected
-                        ? "bg-purple-500/20 text-purple-200 ring-1 ring-purple-400/40"
+                        ? "bg-gradient-to-br from-violet-500/30 to-purple-600/20 text-purple-100 ring-1 ring-violet-400/40"
                         : "bg-zinc-800/80 text-zinc-400 ring-1 ring-white/6 hover:text-zinc-200",
                     )}
                     type="button"
@@ -500,7 +521,7 @@ export default function TaskDetailDialog({
               onChange={setNewTagName}
             />
           </div>
-        </PropertyPanel>
+        </DialogPanel>
 
         {shareUrl ? (
           <button

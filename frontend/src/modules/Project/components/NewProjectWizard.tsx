@@ -2,11 +2,12 @@
 
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { twMerge } from "tailwind-merge";
 import Button from "@uiKit/Button";
 import Input from "@uiKit/Input";
 import Select from "@uiKit/Select";
 import Textarea from "@uiKit/Textarea";
-import Dialog from "@uiKit/Dialog";
+import Dialog, { DialogPanel } from "@uiKit/Dialog";
 import IconButton from "@uiKit/IconButton";
 import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import { createProjectAction } from "../actions/createProject";
@@ -50,6 +51,12 @@ const EMPTY_DRAFT: WizardDraft = {
   qualityBar: "mvp",
   riskTolerance: "medium",
 };
+
+const CONTROL =
+  "box-border h-8 min-h-8 max-h-8 w-full flex-none rounded-md border border-white/8 bg-[#12141c] px-2.5 py-0 text-sm text-zinc-100";
+
+const AREA =
+  "min-h-20 w-full flex-none resize-y rounded-md border border-white/8 bg-[#12141c] px-2.5 py-2 text-sm text-zinc-100";
 
 type NewProjectWizardProps = {
   open: boolean;
@@ -112,14 +119,16 @@ export default function NewProjectWizard({
 
   return (
     <Dialog
+      eyebrow="New project"
       open={open}
-      title="Create new project"
+      title="Create"
       onClose={resetAndClose}
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             disabled={isPending}
             kind="outline"
+            size="sm"
             type="button"
             variant="secondary"
             onClick={resetAndClose}
@@ -129,6 +138,7 @@ export default function NewProjectWizard({
           <Button
             disabled={!canCreateEmpty || isPending}
             kind="outline"
+            size="sm"
             type="button"
             variant="secondary"
             onClick={() => void handleCreate(true)}
@@ -138,6 +148,7 @@ export default function NewProjectWizard({
           <Button
             disabled={!canPlan || isPending}
             form="new-project-wizard"
+            size="sm"
             type="submit"
           >
             {pending === "plan" ? "Planning…" : "Generate board"}
@@ -146,55 +157,66 @@ export default function NewProjectWizard({
       }
     >
       <form
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
         id="new-project-wizard"
         onSubmit={handleSubmit}
       >
-        <Field htmlFor="wizard-name" label="Title">
-          <Input
-            autoFocus
-            className="bg-zinc-900"
-            id="wizard-name"
-            placeholder="KanbAIn"
-            required
-            value={draft.name}
-            onChange={(event) => update("name", event.target.value)}
-          />
-        </Field>
-        <Field htmlFor="wizard-goal" label="Description">
-          <Textarea
-            className="bg-zinc-900"
-            id="wizard-goal"
-            placeholder="What are you building? Constraints, outcomes, anything the planner should know."
-            value={draft.goal}
-            onChange={(event) => update("goal", event.target.value)}
-          />
-        </Field>
+        <DialogPanel title="Project">
+          <div className="flex flex-col gap-2.5">
+            <FieldRow htmlFor="wizard-name" label="Title">
+              <Input
+                autoFocus
+                className={CONTROL}
+                id="wizard-name"
+                placeholder="KanbAIn"
+                required
+                value={draft.name}
+                onChange={(event) => update("name", event.target.value)}
+              />
+            </FieldRow>
+            <FieldRow align="start" htmlFor="wizard-goal" label="Description">
+              <Textarea
+                className={AREA}
+                id="wizard-goal"
+                placeholder="What are you building? Constraints, outcomes, anything the planner should know…"
+                value={draft.goal}
+                onChange={(event) => update("goal", event.target.value)}
+              />
+            </FieldRow>
+          </div>
+        </DialogPanel>
         <div>
-          <Button
+          <button
             aria-controls={showAdvanced ? advancedId : undefined}
             aria-expanded={showAdvanced}
-            kind="ghost"
-            size="sm"
+            className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
             type="button"
-            variant="secondary"
             onClick={() => setShowAdvanced((current) => !current)}
           >
-            <span
-              className={`inline-flex transition-transform motion-reduce:transition-none ${showAdvanced ? "rotate-180" : ""}`}
-            >
-              <ChevronDown aria-hidden size={16} />
-            </span>
+            <ChevronDown
+              aria-hidden
+              className={twMerge(
+                "size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
+                showAdvanced && "rotate-90",
+              )}
+              size={14}
+            />
             Advanced
-          </Button>
+          </button>
           {showAdvanced ? (
-            <div className="mt-4 flex flex-col gap-5" id={advancedId}>
-              <TeamStep
-                members={draft.members}
-                onChange={(members) => update("members", members)}
-              />
-              <DeadlineStep draft={draft} onChange={update} />
-              <WorkStep draft={draft} onChange={update} />
+            <div className="mt-3 flex flex-col gap-3" id={advancedId}>
+              <DialogPanel title="Team">
+                <TeamStep
+                  members={draft.members}
+                  onChange={(members) => update("members", members)}
+                />
+              </DialogPanel>
+              <DialogPanel title="Deadline">
+                <DeadlineStep draft={draft} onChange={update} />
+              </DialogPanel>
+              <DialogPanel title="Planning">
+                <WorkStep draft={draft} onChange={update} />
+              </DialogPanel>
             </div>
           ) : null}
         </div>
@@ -212,16 +234,18 @@ function TeamStep({
   onChange: (members: MemberDraft[]) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-zinc-300">Team</p>
+    <div className="flex flex-col gap-2.5">
+      {members.length === 0 ? (
+        <span className="text-[11px] text-zinc-500">No teammates yet</span>
+      ) : null}
       {members.map((member) => (
         <div
-          className="grid grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-zinc-700 p-3 sm:grid-cols-[1fr_1fr_8rem_5rem_auto]"
+          className="grid grid-cols-[1fr_1fr_auto] items-center gap-1.5 sm:grid-cols-[1fr_1fr_7.5rem_4.5rem_auto]"
           key={member.key}
         >
           <Input
             aria-label="Name"
-            className="bg-zinc-900"
+            className={CONTROL}
             placeholder="Name"
             value={member.name}
             onChange={(event) =>
@@ -236,7 +260,7 @@ function TeamStep({
           />
           <Input
             aria-label="Role"
-            className="bg-zinc-900"
+            className={CONTROL}
             placeholder="Role"
             value={member.role}
             onChange={(event) =>
@@ -251,7 +275,6 @@ function TeamStep({
           />
           <Select
             aria-label="Seniority"
-            className="bg-zinc-900"
             value={member.seniority}
             onChange={(event) =>
               onChange(
@@ -275,7 +298,7 @@ function TeamStep({
           </Select>
           <Input
             aria-label="Capacity"
-            className="bg-zinc-900"
+            className={CONTROL}
             min="0"
             placeholder="1"
             step="0.1"
@@ -293,19 +316,21 @@ function TeamStep({
           />
           <IconButton
             aria-label={`Remove ${member.name || "member"}`}
-            size="sm"
+            size="xs"
             type="button"
             variant="secondary"
             onClick={() =>
               onChange(members.filter((item) => item.key !== member.key))
             }
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
           </IconButton>
         </div>
       ))}
       <Button
-        kind="outline"
+        className="self-start"
+        kind="ghost"
+        size="xs"
         type="button"
         variant="secondary"
         onClick={() =>
@@ -321,8 +346,8 @@ function TeamStep({
           ])
         }
       >
-        <span className="inline-flex items-center gap-2">
-          <Plus size={16} />
+        <span className="inline-flex items-center gap-1.5">
+          <Plus size={14} />
           Add teammate
         </span>
       </Button>
@@ -342,9 +367,8 @@ function DeadlineStep({
 }) {
   const needsDate = draft.deadlineKind !== "ongoing";
   return (
-    <div className="flex flex-col gap-4">
-      <ChoiceGroup
-        legend="Deadline"
+    <div className="flex flex-col gap-2.5">
+      <Segmented
         options={[
           { value: "hard", label: "Hard date" },
           { value: "nice_to_have", label: "Nice to have" },
@@ -354,16 +378,16 @@ function DeadlineStep({
         onChange={(value) => onChange("deadlineKind", value as DeadlineKind)}
       />
       {needsDate ? (
-        <Field htmlFor="wizard-deadline" label="Target date">
+        <FieldRow htmlFor="wizard-deadline" label="Target date">
           <Input
-            className="bg-zinc-900 [color-scheme:dark]"
+            className={twMerge(CONTROL, "[color-scheme:dark]")}
             id="wizard-deadline"
             required
             type="date"
             value={draft.deadlineDate}
             onChange={(event) => onChange("deadlineDate", event.target.value)}
           />
-        </Field>
+        </FieldRow>
       ) : null}
     </div>
   );
@@ -380,9 +404,9 @@ function WorkStep({
   ) => void;
 }) {
   return (
-    <div className="flex flex-col gap-5">
-      <ChoiceGroup
-        legend="Methodology"
+    <div className="flex flex-col gap-2.5">
+      <Segmented
+        label="Method"
         options={[
           { value: "kanban", label: "Kanban" },
           { value: "scrum", label: "Scrum" },
@@ -390,8 +414,8 @@ function WorkStep({
         value={draft.methodology}
         onChange={(value) => onChange("methodology", value as Methodology)}
       />
-      <ChoiceGroup
-        legend="Quality bar"
+      <Segmented
+        label="Quality"
         options={[
           { value: "mvp", label: "MVP" },
           { value: "production_grade", label: "Production-grade" },
@@ -399,8 +423,8 @@ function WorkStep({
         value={draft.qualityBar}
         onChange={(value) => onChange("qualityBar", value as QualityBar)}
       />
-      <ChoiceGroup
-        legend="Risk tolerance"
+      <Segmented
+        label="Risk"
         options={[
           { value: "low", label: "Low" },
           { value: "medium", label: "Medium" },
@@ -413,62 +437,76 @@ function WorkStep({
   );
 }
 
-function Field({
+function FieldRow({
   label,
   htmlFor,
+  align = "center",
   children,
 }: {
   label: string;
-  htmlFor: string;
+  htmlFor?: string;
+  align?: "center" | "start";
   children: ReactNode;
 }) {
+  const labelClass = "text-[11px] font-medium tracking-wide text-zinc-500";
   return (
-    <label
-      className="flex flex-col gap-1.5 text-sm text-zinc-300"
-      htmlFor={htmlFor}
+    <div
+      className={twMerge(
+        "grid grid-cols-[5.75rem_minmax(0,1fr)] gap-x-3 gap-y-1",
+        align === "start" ? "items-start" : "items-center",
+      )}
     >
-      {label}
-      {children}
-    </label>
+      {htmlFor ? (
+        <label
+          className={twMerge(labelClass, align === "start" && "pt-2")}
+          htmlFor={htmlFor}
+        >
+          {label}
+        </label>
+      ) : (
+        <span className={labelClass}>{label}</span>
+      )}
+      <div className="min-w-0">{children}</div>
+    </div>
   );
 }
 
-function ChoiceGroup({
-  legend,
+function Segmented({
+  label,
   value,
   options,
   onChange,
 }: {
-  legend: string;
+  label?: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
 }) {
-  return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm text-zinc-300">{legend}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = option.value === value;
-          return (
-            <button
-              aria-pressed={selected}
-              className={
-                selected
-                  ? "rounded-md bg-purple-500 px-4 py-2 text-white"
-                  : "rounded-md bg-zinc-900 px-4 py-2 text-zinc-300 hover:bg-zinc-700"
-              }
-              key={option.value}
-              type="button"
-              onClick={() => onChange(option.value)}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+  const control = (
+    <div className="flex h-8 min-w-0 rounded-md bg-[#12141c] p-0.5 ring-1 ring-white/8">
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            aria-pressed={selected}
+            className={twMerge(
+              "h-full min-w-0 flex-1 cursor-pointer rounded px-1 text-[10px] font-medium tracking-wide focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
+              selected
+                ? "bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-[inset_0_1px_0_0_rgb(255_255_255/0.22)]"
+                : "text-zinc-500 hover:text-zinc-300",
+            )}
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
+  if (!label) return control;
+  return <FieldRow label={label}>{control}</FieldRow>;
 }
 
 function deadlineIsValid(draft: WizardDraft) {

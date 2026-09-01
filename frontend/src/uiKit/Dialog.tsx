@@ -16,6 +16,11 @@ export type DialogAccent = {
   glow: string;
 };
 
+export const DIALOG_ACCENTS = {
+  primary: { bar: "bg-violet-400/80", glow: "from-violet-400/25" },
+  danger: { bar: "bg-rose-400", glow: "from-rose-400/30" },
+} as const satisfies Record<string, DialogAccent>;
+
 export type DialogProps = {
   open: boolean;
   title: string;
@@ -39,7 +44,7 @@ export default function Dialog({
   descriptionId,
   eyebrow,
   subtitle,
-  accent,
+  accent = DIALOG_ACCENTS.primary,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -123,21 +128,17 @@ export default function Dialog({
       }}
       onClick={handleBackdropClick}
     >
-      {accent ? (
-        <>
-          <div
-            aria-hidden
-            className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)}
-          />
-          <div
-            aria-hidden
-            className={twMerge(
-              "pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
-              accent.glow,
-            )}
-          />
-        </>
-      ) : null}
+      <div
+        aria-hidden
+        className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)}
+      />
+      <div
+        aria-hidden
+        className={twMerge(
+          "pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent blur-2xl",
+          accent.glow,
+        )}
+      />
       <div
         ref={headerRef}
         className="relative flex shrink-0 items-start justify-between gap-3 border-b border-white/6 px-4 pt-3 pb-2.5"
@@ -186,5 +187,24 @@ export default function Dialog({
         </div>
       ) : null}
     </dialog>
+  );
+}
+
+export function DialogPanel({
+  title,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="min-w-0 rounded-xl border border-white/6 bg-[#14161e]/90 p-3">
+      {title ? (
+        <h3 className="mb-2.5 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+          {title}
+        </h3>
+      ) : null}
+      {children}
+    </section>
   );
 }
