@@ -33,7 +33,7 @@ export default function KanbanBoardSkeleton({
   return (
     <div
       aria-busy
-      className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
+      className="canvas-dots flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
       role="status"
     >
       <span className="sr-only">{label}</span>

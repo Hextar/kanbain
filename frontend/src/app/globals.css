@@ -39,6 +39,16 @@ body {
   background: transparent;
 }
 
+.canvas-dots {
+  background-color: #12141c;
+  background-image: radial-gradient(
+    circle,
+    rgb(255 255 255 / 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
 .board-x-scroll {
   scrollbar-color: rgb(255 255 255 / 0.28) rgb(255 255 255 / 0.06);
 }

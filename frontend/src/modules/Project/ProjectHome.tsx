@@ -88,24 +88,26 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
           <SettingsButton size="xs" />
         </div>
       </header>
-      {hasProjects ? (
-        <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
-          {projects.map((project) => (
-            <li key={project.id} className="h-full min-w-0">
-              <ProjectCard
-                isDeleting={deletingId === project.id}
-                isOpening={warmingIds.has(project.id)}
-                isRetrying={retryingId === project.id}
-                project={project}
-                onDelete={() => setProjectToDelete(project)}
-                onRetry={handleRetry}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <ProjectEmptyState onCreated={remember} />
-      )}
+      <div className="canvas-dots flex min-h-dvh w-full flex-col">
+        {hasProjects ? (
+          <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project) => (
+              <li key={project.id} className="h-full min-w-0">
+                <ProjectCard
+                  isDeleting={deletingId === project.id}
+                  isOpening={warmingIds.has(project.id)}
+                  isRetrying={retryingId === project.id}
+                  project={project}
+                  onDelete={() => setProjectToDelete(project)}
+                  onRetry={handleRetry}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ProjectEmptyState onCreated={remember} />
+        )}
+      </div>
       <ConfirmDialog
         open={projectToDelete !== null}
         title={`Delete “${projectToDelete?.name ?? "this project"}”?`}

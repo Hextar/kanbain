@@ -241,7 +241,7 @@ function BoardCanvas({
   const boardScrollRef = useHorizontalOverflowScroll<HTMLDivElement>();
 
   return (
-    <div className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
+    <div className="canvas-dots flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
       <KanbanHeader
         className="w-full"
         clauses={clauses}
