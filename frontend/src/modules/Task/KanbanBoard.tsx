@@ -21,6 +21,7 @@ import { useTasks } from "./hooks/useTasks";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
 import type { Task } from "./types/Task";
+import { markSpawn } from "./helpers/boardParticles";
 import { groupTasksByColumn } from "./helpers/groupTasksByColumn";
 import { lastColumnId } from "./helpers/visibleColumnCards";
 import { findTaskByQuery, taskQueryValue } from "./helpers/taskKey";
@@ -258,12 +259,18 @@ function BoardCanvas({
         <FlowView
           cluster={cluster}
           columns={columns}
+          doneColumnId={doneColumnId}
           hrefForCluster={hrefForCluster}
           matchedTaskIds={matchedTaskIds}
           projectId={project.id}
           selectedTaskId={selected?.id}
           tasks={allTasks}
+          onDeleteTask={(id) => {
+            if (selected?.id === id) setTaskQuery(null);
+            deleteTask(id);
+          }}
           onOpenTask={setTaskQuery}
+          onUpdateTask={updateTask}
         />
       ) : (
         <div
@@ -299,8 +306,13 @@ function BoardCanvas({
                   selectedTaskId={selected?.id}
                   onAddCard={() => startNewCard(column.id)}
                   onDelete={() => deleteColumn(column.id)}
+                  onDeleteTask={(id) => {
+                    if (selected?.id === id) setTaskQuery(null);
+                    deleteTask(id);
+                  }}
                   onOpenTask={(task) => setTaskQuery(task)}
                   onUpdate={updateColumn}
+                  onUpdateTask={updateTask}
                 />
               </FlipItem>
             </Fragment>
@@ -313,7 +325,11 @@ function BoardCanvas({
           ) : null}
           <NewColumn
             className="shrink-0 self-start"
-            onSubmit={(title) => createColumn({ title })}
+            onSubmit={(title) => {
+              const id = crypto.randomUUID();
+              markSpawn(id);
+              createColumn({ id, title });
+            }}
           />
         </div>
       )}
@@ -330,6 +346,7 @@ function BoardCanvas({
           onDelete={() => setDraft(null)}
           onSave={(task) => {
             if (task.id === composing.id) {
+              if (view === "board") markSpawn(task.id);
               createTask({
                 id: task.id,
                 title: task.title,

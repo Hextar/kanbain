@@ -57,6 +57,10 @@ export default function BoardFilter({
   useEffect(() => {
     if (!open) return;
     inputRef.current?.focus();
+  }, [open, drillField]);
+
+  useEffect(() => {
+    if (!open) return;
     function onPointerDown(event: PointerEvent) {
       if (rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
@@ -80,12 +84,14 @@ export default function BoardFilter({
       setDrillField(suggestion.drillField);
       setQuery("");
       setActiveIndex(0);
+      inputRef.current?.focus();
       return;
     }
     onChange(upsertClause(clauses, suggestion.clause));
     setQuery("");
     setDrillField(undefined);
     setActiveIndex(0);
+    inputRef.current?.focus();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -251,6 +257,7 @@ export default function BoardFilter({
                         role="option"
                         type="button"
                         onClick={() => applySuggestion(suggestion)}
+                        onMouseDown={(event) => event.preventDefault()}
                         onMouseEnter={() => setActiveIndex(index)}
                       >
                         <span>{suggestion.label}</span>

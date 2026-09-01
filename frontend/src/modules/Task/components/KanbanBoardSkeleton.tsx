@@ -91,6 +91,7 @@ export default function KanbanBoardSkeleton({
               key={accent.id}
               accentBar={accent.bar}
               accentDot={accent.dot}
+              accentGlow={accent.glow}
               cardCount={column.cards}
               titleWidth={column.titleWidth}
               titleWidths={column.widths}
@@ -123,12 +124,14 @@ function ViewTabsSkeleton() {
 function ColumnSkeleton({
   accentBar,
   accentDot,
+  accentGlow,
   cardCount,
   titleWidth,
   titleWidths,
 }: {
   accentBar: string;
   accentDot: string;
+  accentGlow: string;
   cardCount: number;
   titleWidth: string;
   titleWidths: readonly string[];
@@ -136,7 +139,11 @@ function ColumnSkeleton({
   return (
     <section className="relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]">
       <div className={`h-[3px] w-full shrink-0 ${accentBar}`} />
-      <header className="flex h-10 w-full flex-row items-center gap-1 px-2">
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl ${accentGlow}`}
+      />
+      <header className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
         <span className="flex h-7 w-4 shrink-0 items-center justify-center">
           <GripVertical aria-hidden className="block text-zinc-600" size={14} />
         </span>

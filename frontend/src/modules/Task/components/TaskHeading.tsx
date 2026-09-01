@@ -7,13 +7,19 @@ type TaskHeadingProps = {
   taskKey?: string;
   title: string;
   className?: string;
+  tooltip?: boolean;
 };
 
 export default function TaskHeading({
   taskKey,
   title,
   className,
+  tooltip = true,
 }: TaskHeadingProps) {
+  const titleClassName =
+    "block w-full min-w-0 truncate font-medium text-zinc-100";
+  const titleNode = <span className={titleClassName}>{title}</span>;
+
   return (
     <span className={twMerge("flex min-w-0 items-baseline gap-2", className)}>
       {taskKey ? (
@@ -21,16 +27,18 @@ export default function TaskHeading({
           {taskKey}
         </span>
       ) : null}
-      <Tooltip
-        align="start"
-        className="max-w-xs"
-        content={title}
-        wrapperClassName="min-w-0 flex-1 overflow-hidden"
-      >
-        <span className="block w-full min-w-0 truncate font-medium text-zinc-100">
-          {title}
-        </span>
-      </Tooltip>
+      {tooltip ? (
+        <Tooltip
+          align="start"
+          className="max-w-xs"
+          content={title}
+          wrapperClassName="min-w-0 flex-1 overflow-hidden"
+        >
+          {titleNode}
+        </Tooltip>
+      ) : (
+        <span className="min-w-0 flex-1 overflow-hidden">{titleNode}</span>
+      )}
     </span>
   );
 }

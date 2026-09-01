@@ -28,9 +28,12 @@ type FlowViewProps = {
   tasks: Task[];
   matchedTaskIds: Set<string> | null;
   selectedTaskId?: string;
+  doneColumnId?: string;
   cluster: FlowCluster;
   hrefForCluster: (cluster: FlowCluster) => string;
   onOpenTask: (task: Task) => void;
+  onUpdateTask: (task: Task) => void;
+  onDeleteTask: (id: Task["id"]) => void;
 };
 
 export default function FlowView({
@@ -39,9 +42,12 @@ export default function FlowView({
   tasks,
   matchedTaskIds,
   selectedTaskId,
+  doneColumnId,
   cluster,
   hrefForCluster,
   onOpenTask,
+  onUpdateTask,
+  onDeleteTask,
 }: FlowViewProps) {
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
@@ -91,10 +97,14 @@ export default function FlowView({
       <div className="min-h-0 min-w-0 flex-1 px-4 pb-4">
         <FlowChart
           columns={columns}
+          doneColumnId={doneColumnId}
           lanes={lanes}
           nodes={nodes}
+          projectId={projectId}
           selectedTaskId={selectedTaskId}
+          onDeleteTask={onDeleteTask}
           onOpenTask={onOpenTask}
+          onUpdateTask={onUpdateTask}
         />
       </div>
     </div>

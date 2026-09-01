@@ -43,7 +43,13 @@ const LANE_LINE_HEIGHT = 14;
 
 export function createFlowChart(
   host: HTMLElement,
-  getOnOpen: () => (task: Task) => void,
+  handlers: {
+    getOnOpen: () => (task: Task) => void;
+    getOnContextMenu: () => (
+      task: Task,
+      point: { x: number; y: number },
+    ) => void;
+  },
 ): FlowChartHandle {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   const svg = select(host)
@@ -146,7 +152,7 @@ export function createFlowChart(
 
     const colSel = grid
       .selectAll<SVGLineElement, Column>("line.col")
-      .data(next.columns, (column) => column.id);
+      .data(next.columns.slice(0, -1), (column) => column.id);
     colSel.exit().remove();
     colSel
       .enter()
@@ -285,12 +291,26 @@ export function createFlowChart(
       .on("click", (event: MouseEvent, node) => {
         event.preventDefault();
         (event.currentTarget as SVGGElement | null)?.blur();
-        getOnOpen()(node.task);
+        handlers.getOnOpen()(node.task);
+      })
+      .on("contextmenu", (event: MouseEvent, node) => {
+        event.preventDefault();
+        event.stopPropagation();
+        hideTooltip();
+        let { clientX: x, clientY: y } = event;
+        if (x === 0 && y === 0) {
+          const rect = (
+            event.currentTarget as SVGGElement
+          ).getBoundingClientRect();
+          x = rect.left + rect.width / 2;
+          y = rect.bottom;
+        }
+        handlers.getOnContextMenu()(node.task, { x, y });
       })
       .on("keydown", (event: KeyboardEvent, node) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
-        getOnOpen()(node.task);
+        handlers.getOnOpen()(node.task);
       })
       .on("pointerenter", (event: PointerEvent, node) => {
         showTooltip(event, node);

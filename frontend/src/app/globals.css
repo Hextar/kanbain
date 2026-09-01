@@ -41,12 +41,19 @@ body {
 
 .canvas-dots {
   background-color: #12141c;
-  background-image: radial-gradient(
-    circle,
-    rgb(255 255 255 / 0.05) 1px,
-    transparent 1px
-  );
-  background-size: 20px 20px;
+  background-image:
+    radial-gradient(circle, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(
+      to bottom,
+      rgba(18, 20, 28, 1) 0%,
+      rgba(18, 20, 28, 0.85) 30%,
+      rgba(18, 20, 28, 0.65) 60%,
+      rgba(18, 20, 28, 0) 100%
+    );
+  background-size:
+    20px 20px,
+    100% 100%;
+  background-repeat: repeat, no-repeat;
 }
 
 .board-x-scroll {
@@ -156,6 +163,18 @@ body {
   .app-dialog[data-height-ready],
   .app-dialog::backdrop {
     transition: none;
+  }
+}
+
+[data-spawning] {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-spawning] {
+    opacity: 1;
+    clip-path: none;
   }
 }
 
