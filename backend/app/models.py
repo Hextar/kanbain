@@ -244,7 +244,7 @@ class Task(db.Model):
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
     parent_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("tasks.id", ondelete="SET NULL"), index=True
+        String(36), ForeignKey("tasks.id", ondelete="CASCADE"), index=True
     )
     work_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="task")
     description: Mapped[str | None] = mapped_column(Text)

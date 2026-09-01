@@ -438,6 +438,16 @@ def update_task(task_id: str):
 def delete_task(task_id: str):
     task = db.session.get(Task, task_id)
     if task is not None:
-        db.session.delete(task)
+        _delete_task_tree(task)
         db.session.commit()
     return ("", 204)
+
+
+def _delete_task_tree(task: Task, seen: set[str] | None = None) -> None:
+    visited = seen if seen is not None else set()
+    if task.id in visited:
+        return
+    visited.add(task.id)
+    for child in list(task.children):
+        _delete_task_tree(child, visited)
+    db.session.delete(task)

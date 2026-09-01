@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Columns3 } from "lucide-react";
 import CanvasDots from "@uiKit/CanvasDots";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
+import { showToast } from "@libraries/toast";
 import { markSpawn, shatterByAttr } from "@libraries/particles";
 import NewProjectForm from "./components/NewProjectForm";
 import ProjectCard from "./components/ProjectCard";
@@ -53,6 +54,8 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
     setRetryingId(projectId);
     try {
       remember(await retryProjectPlanAction(projectId));
+    } catch {
+      showToast("Couldn't retry planning.");
     } finally {
       setRetryingId(null);
     }
@@ -70,6 +73,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       queryClient.removeQueries({ queryKey: projectKeys.board(projectId) });
     } catch {
       if (previous) queryClient.setQueryData(projectKeys.list(), previous);
+      showToast("Couldn't delete the project.");
     } finally {
       setDeletingId(null);
     }

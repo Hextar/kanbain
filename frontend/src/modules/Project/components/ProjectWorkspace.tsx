@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import Button from "@uiKit/Button";
+import { showToast } from "@libraries/toast";
 import KanbanBoard from "@modules/Task/KanbanBoard";
 import KanbanBoardSkeleton from "@modules/Task/components/KanbanBoardSkeleton";
 import { retryProjectPlanAction } from "@modules/Project/actions/retryPlan";
@@ -88,6 +89,8 @@ export default function ProjectWorkspace({
         list?.map((item) => (item.id === next.id ? next : item)),
       );
       queryClient.removeQueries({ queryKey: projectKeys.board(current.id) });
+    } catch {
+      showToast("Couldn't retry planning.");
     } finally {
       setIsRetrying(false);
     }
@@ -111,6 +114,25 @@ export default function ProjectWorkspace({
   }
 
   const board: ProjectBoard | undefined = boardQuery.data;
+  if (current.planStatus === "ready" && boardQuery.isError && !board) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
+        <h1 className="text-2xl font-semibold text-white">{current.name}</h1>
+        <p className="max-w-md text-zinc-400">Couldn't load the board.</p>
+        <Button
+          disabled={boardQuery.isFetching}
+          type="button"
+          onClick={() => void boardQuery.refetch()}
+        >
+          {boardQuery.isFetching ? "Retrying…" : "Try again"}
+        </Button>
+        <Link className="text-purple-400 hover:text-purple-300" href="/">
+          Back to projects
+        </Link>
+      </div>
+    );
+  }
+
   if (current.planStatus !== "ready" || !board) {
     const opening = current.planStatus === "ready";
     return (

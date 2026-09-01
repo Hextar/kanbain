@@ -560,7 +560,7 @@ export default function TaskDetailDialog({
       <ConfirmDialog
         open={isDeleteConfirmOpen}
         title={`Delete “${task.title || keyLabel || "this card"}”?`}
-        description="This will permanently delete this card. This cannot be undone."
+        description="This will permanently delete this card and any nested cards. This cannot be undone."
         confirmLabel="Delete card"
         variant="danger"
         onCancel={() => setIsDeleteConfirmOpen(false)}

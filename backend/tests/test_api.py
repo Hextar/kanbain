@@ -192,6 +192,30 @@ def test_task_crud(client):
     assert client.get(f"/api/tasks/{task_id}").status_code == 404
 
 
+def test_delete_task_deletes_nested_cards(client):
+    todo_id = client.get("/api/columns").get_json()[0]["id"]
+    parent = client.post(
+        "/api/tasks",
+        json={"title": "Story", "columnId": todo_id},
+    ).get_json()
+    child = client.post(
+        "/api/tasks",
+        json={"title": "Nested", "columnId": todo_id, "parentId": parent["id"]},
+    ).get_json()
+    sibling = client.post(
+        "/api/tasks",
+        json={"title": "Stay", "columnId": todo_id},
+    ).get_json()
+
+    deleted = client.delete(f"/api/tasks/{parent['id']}")
+    assert deleted.status_code == 204
+    assert client.get(f"/api/tasks/{parent['id']}").status_code == 404
+    assert client.get(f"/api/tasks/{child['id']}").status_code == 404
+    stayed = client.get(f"/api/tasks/{sibling['id']}")
+    assert stayed.status_code == 200
+    assert stayed.get_json()["id"] == sibling["id"]
+
+
 def test_move_task_to_another_column(client):
     columns = client.get("/api/columns").get_json()
     todo_id = columns[0]["id"]
