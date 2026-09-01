@@ -1,4 +1,4 @@
-import { DRAG_IMAGE_TILT_DEG } from "./html5DnD";
+import { clearDragSources, DRAG_IMAGE_TILT_DEG } from "./html5DnD";
 
 export const DND_ACCENT_FILL_ATTR = "data-dnd-accent-fill";
 export const DND_GHOST_ACCENT_ATTR = "data-dnd-ghost-accent";
@@ -18,6 +18,14 @@ type LiveGhost = {
 
 let liveGhost: LiveGhost | null = null;
 let listening = false;
+const sessionEnded = new Set<() => void>();
+
+export function subscribeDragSessionEnd(listener: () => void) {
+  sessionEnded.add(listener);
+  return () => {
+    sessionEnded.delete(listener);
+  };
+}
 
 function hideNativeDragImage(dataTransfer: DataTransfer) {
   const blank = document.createElement("div");
@@ -97,22 +105,39 @@ function onDragOver(event: DragEvent) {
   );
 }
 
-function onDragEnd() {
-  clearLiveDragGhost();
+function discardGhost() {
+  if (!liveGhost) return;
+  liveGhost.wrapper.remove();
+  liveGhost = null;
+}
+
+function endDragSession() {
+  unbindListeners();
+  discardGhost();
+  clearDragSources();
+  for (const listener of sessionEnded) listener();
+}
+
+function onDropCapture() {
+  discardGhost();
 }
 
 function bindListeners() {
   if (listening) return;
   listening = true;
   document.addEventListener("dragover", onDragOver, true);
-  document.addEventListener("dragend", onDragEnd, true);
+  document.addEventListener("dragend", endDragSession, true);
+  document.addEventListener("drop", onDropCapture, true);
+  document.addEventListener("drop", endDragSession);
 }
 
 function unbindListeners() {
   if (!listening) return;
   listening = false;
   document.removeEventListener("dragover", onDragOver, true);
-  document.removeEventListener("dragend", onDragEnd, true);
+  document.removeEventListener("dragend", endDragSession, true);
+  document.removeEventListener("drop", onDropCapture, true);
+  document.removeEventListener("drop", endDragSession);
 }
 
 export function startLiveDragGhost(
@@ -121,7 +146,8 @@ export function startLiveDragGhost(
   clientX: number,
   clientY: number,
 ) {
-  clearLiveDragGhost();
+  discardGhost();
+  unbindListeners();
   hideNativeDragImage(dataTransfer);
 
   const rect = source.getBoundingClientRect();
@@ -178,8 +204,5 @@ export function startLiveDragGhost(
 }
 
 export function clearLiveDragGhost() {
-  if (!liveGhost) return;
-  unbindListeners();
-  liveGhost.wrapper.remove();
-  liveGhost = null;
+  endDragSession();
 }

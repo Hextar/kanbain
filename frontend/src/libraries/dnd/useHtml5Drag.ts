@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import {
   DND_ITEM_SELECTOR,
@@ -9,7 +9,11 @@ import {
   setDragData,
   setDragImageAtCursor,
 } from "./html5DnD";
-import { clearLiveDragGhost, startLiveDragGhost } from "./liveGhost";
+import {
+  clearLiveDragGhost,
+  startLiveDragGhost,
+  subscribeDragSessionEnd,
+} from "./liveGhost";
 
 type UseHtml5DragOptions<T> = {
   data: T;
@@ -30,6 +34,13 @@ export function useHtml5Drag<T>({
 }: UseHtml5DragOptions<T>) {
   const [isDragging, setIsDragging] = useState(false);
   const dragFrameRef = useRef(0);
+
+  useEffect(() => {
+    return subscribeDragSessionEnd(() => {
+      cancelAnimationFrame(dragFrameRef.current);
+      setIsDragging(false);
+    });
+  }, []);
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLElement>) => {
