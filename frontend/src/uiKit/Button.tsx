@@ -12,6 +12,8 @@ export type ButtonProps = {
   onClick?: () => void;
 } & ComponentProps<"button">;
 
+const SHINE = "shadow-[inset_0_1px_0_0_rgb(255_255_255/0.22)]";
+
 function _onClick(disabled: boolean | undefined, onClick?: () => void) {
   if (disabled) return;
   onClick?.();
@@ -31,42 +33,51 @@ export default function Button({
     case "primary":
       if (kind === "outline") {
         colorStyles =
-          "outline outline-purple-500 text-purple-500 bg-transparent hover:bg-purple-500 hover:text-white";
+          "outline outline-purple-500 text-purple-300 bg-transparent hover:bg-gradient-to-br hover:from-violet-400 hover:to-purple-600 hover:text-white hover:outline-transparent";
       } else if (kind === "ghost") {
         colorStyles =
           "bg-transparent text-purple-400 hover:bg-purple-500/15 hover:text-purple-300";
       } else {
-        colorStyles = "bg-purple-500 hover:bg-purple-600 text-white";
+        colorStyles = twMerge(
+          "bg-gradient-to-br from-violet-400 to-purple-600 text-white hover:from-violet-300 hover:to-purple-500",
+          SHINE,
+        );
       }
       break;
     case "secondary":
       if (kind === "outline") {
         colorStyles =
-          "outline outline-gray-500 text-gray-500 bg-transparent hover:bg-gray-500 hover:text-white";
+          "outline outline-white/15 text-zinc-300 bg-transparent hover:bg-gradient-to-br hover:from-zinc-600 hover:to-zinc-700 hover:text-white hover:outline-transparent";
       } else if (kind === "ghost") {
         colorStyles =
           "bg-transparent text-zinc-400 hover:bg-zinc-700 hover:text-white";
       } else {
-        colorStyles = "bg-gray-500 hover:bg-gray-600 text-white";
+        colorStyles = twMerge(
+          "bg-gradient-to-br from-zinc-500 to-zinc-700 text-white hover:from-zinc-400 hover:to-zinc-600",
+          SHINE,
+        );
       }
       break;
     case "danger":
     default:
       if (kind === "outline") {
         colorStyles =
-          "outline outline-red-500 text-red-500 bg-transparent hover:bg-red-500 hover:text-white";
+          "outline outline-rose-500 text-rose-300 bg-transparent hover:bg-gradient-to-br hover:from-rose-400 hover:to-red-600 hover:text-white hover:outline-transparent";
       } else if (kind === "ghost") {
         colorStyles =
           "bg-transparent text-red-400 hover:bg-red-500/15 hover:text-red-300";
       } else {
-        colorStyles = "bg-red-500 hover:bg-red-600 text-white";
+        colorStyles = twMerge(
+          "bg-gradient-to-br from-rose-400 to-red-600 text-white hover:from-rose-300 hover:to-red-500",
+          SHINE,
+        );
       }
       break;
   }
 
   const reactiveStyles = props.disabled
     ? "pointer-events-none opacity-50"
-    : "transition-colors cursor-pointer";
+    : "transition-[color,background-color,box-shadow,filter] cursor-pointer";
 
   let sizeStyles: string;
   switch (size) {
@@ -77,7 +88,7 @@ export default function Button({
       sizeStyles = "text-sm px-3 py-2";
       break;
     case "md":
-      sizeStyles = "text-md px-4 py-2";
+      sizeStyles = "text-sm px-4 py-2";
       break;
     case "lg":
     default:
@@ -90,7 +101,10 @@ export default function Button({
       {...props}
       ref={ref}
       className={twMerge(
-        `inline-flex items-center justify-center gap-1.5 rounded-md text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none ${sizeStyles} ${colorStyles} ${reactiveStyles}`,
+        "inline-flex items-center justify-center gap-1.5 rounded-md focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
+        sizeStyles,
+        colorStyles,
+        reactiveStyles,
         className,
       )}
       onClick={() => _onClick(props.disabled, onClick)}

@@ -18,22 +18,22 @@ export default function RadioButton({
   const selectedBackgroundColor =
     kind === "outline"
       ? "outline-2 outline-purple-500 hover:outline-purple-600"
-      : "bg-purple-500 hover:bg-purple-600";
+      : "bg-gradient-to-br from-violet-400 to-purple-600 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.22)] hover:from-violet-300 hover:to-purple-500";
   const unselectedBackgroundColor =
     kind === "outline"
       ? "outline-2 outline-zinc-500 hover:outline-zinc-600"
-      : "bg-zinc-900 hover:bg-zinc-700";
+      : "bg-gradient-to-br from-zinc-800 to-zinc-900 hover:from-zinc-700 hover:to-zinc-800";
   const backgroundColor = selected
     ? selectedBackgroundColor
     : unselectedBackgroundColor;
   const selectedTextColor =
-    kind === "outline" ? "text-purple-500" : "text-white";
+    kind === "outline" ? "text-purple-300" : "text-white";
   const unselectedTextColor =
-    kind === "outline" ? "text-zinc-400" : "text-zinc-600";
+    kind === "outline" ? "text-zinc-400" : "text-zinc-500";
   const textColor = selected ? selectedTextColor : unselectedTextColor;
   const reactiveStyles = props.disabled
     ? "opacity-50 pointer-events-none"
-    : "transition-colors cursor-pointer";
+    : "transition-[color,background-color,box-shadow] cursor-pointer";
 
   return (
     <label
