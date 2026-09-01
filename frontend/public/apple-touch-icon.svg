@@ -9,8 +9,8 @@
       <stop offset="1" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#kb-bg)"/>
-  <rect width="32" height="32" rx="8" fill="url(#kb-shine)"/>
+  <rect width="32" height="32" fill="url(#kb-bg)"/>
+  <rect width="32" height="32" fill="url(#kb-shine)"/>
   <rect x="6.25" y="15.75" width="5" height="8.75" rx="2.5" fill="#f5f3ff"/>
   <rect x="13.5" y="8.5" width="5" height="16" rx="2.5" fill="#f5f3ff"/>
   <rect x="20.75" y="12.25" width="5" height="12.25" rx="2.5" fill="#f5f3ff"/>
