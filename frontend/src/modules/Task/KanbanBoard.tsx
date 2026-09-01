@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Fragment,
-  Suspense,
-  startTransition,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import { Fragment, Suspense, startTransition, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import KanbanHeader from "./components/KanbanHeader";
@@ -15,8 +8,8 @@ import NewColumn from "./components/NewColumn";
 import TaskColumn from "./components/TaskColumn";
 import TaskDetailDialog from "./components/TaskDetailDialog";
 import FlipItem from "./components/FlipItem";
-import { useDropShadow } from "./components/TaskDropShadow";
 import { useColumns } from "./hooks/useColumns";
+import { useHorizontalOverflowScroll } from "./hooks/useHorizontalOverflowScroll";
 import { useTasks } from "./hooks/useTasks";
 import type { Project } from "@modules/Project/types/Project";
 import type { Column } from "./types/Column";
@@ -106,7 +99,6 @@ function BoardCanvas({
   const completedCount = doneColumnId
     ? allTasks.filter((task) => task.columnId === doneColumnId).length
     : 0;
-  const skipExitAnimationRef = useRef(() => {});
 
   const replaceBoardQuery = useCallback(
     (patch: { task?: string | null; filters?: string | null }) => {
@@ -147,7 +139,6 @@ function BoardCanvas({
   const onDropColumn = useCallback(
     (payload: ColumnDragPayload, _event: unknown, insertIndex?: number) => {
       if (!isColumnDragPayload(payload) || insertIndex == null) return;
-      skipExitAnimationRef.current();
       moveColumn(payload.columnId, insertIndex);
     },
     [moveColumn],
@@ -158,18 +149,10 @@ function BoardCanvas({
     onDrop: onDropColumn,
     sortable: COLUMN_SORTABLE,
   });
-  const {
-    slot: shadowSlot,
-    open: shadowOpen,
-    skipExitAnimation,
-  } = useDropShadow(placeholder);
-
-  useEffect(() => {
-    skipExitAnimationRef.current = skipExitAnimation;
-  });
+  const boardScrollRef = useHorizontalOverflowScroll<HTMLDivElement>();
 
   return (
-    <div className="flex h-dvh w-full max-w-full flex-col">
+    <div className="flex h-dvh w-full min-w-0 max-w-full flex-col overflow-x-clip">
       <KanbanHeader
         className="w-full"
         clauses={clauses}
@@ -182,21 +165,18 @@ function BoardCanvas({
       />
       <div
         {...dropProps}
-        className="flex min-h-0 w-full flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden px-4 py-3"
+        ref={boardScrollRef}
+        className="board-x-scroll relative z-0 flex min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3"
       >
         {columns.map((column, index) => (
           <Fragment key={column.id}>
-            {shadowSlot?.index === index ? (
+            {placeholder?.index === index ? (
               <ColumnDropShadow
-                height={shadowSlot.height}
-                open={shadowOpen}
-                width={shadowSlot.width ?? shadowSlot.height}
+                height={placeholder.height}
+                width={placeholder.width ?? placeholder.height}
               />
             ) : null}
-            <FlipItem
-              className="h-full min-h-0 w-[280px] shrink-0"
-              index={column.order}
-            >
+            <FlipItem className="h-full min-h-0 w-[280px] shrink-0">
               <TaskColumn
                 accentIndex={index}
                 allTasks={allTasks}
@@ -216,15 +196,14 @@ function BoardCanvas({
             </FlipItem>
           </Fragment>
         ))}
-        {shadowSlot?.index === columns.length ? (
+        {placeholder?.index === columns.length ? (
           <ColumnDropShadow
-            height={shadowSlot.height}
-            open={shadowOpen}
-            width={shadowSlot.width ?? shadowSlot.height}
+            height={placeholder.height}
+            width={placeholder.width ?? placeholder.height}
           />
         ) : null}
         <NewColumn
-          className="self-start"
+          className="shrink-0 self-start"
           onSubmit={(title) => createColumn({ title })}
         />
       </div>
@@ -249,23 +228,17 @@ function BoardCanvas({
 
 function ColumnDropShadow({
   height,
-  open,
   width,
 }: {
   height: number;
-  open: boolean;
   width: number;
 }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none shrink-0 overflow-hidden transition-[width,margin-right] duration-200 ease-out motion-reduce:transition-none"
+      className="pointer-events-none shrink-0"
       data-dnd-placeholder=""
-      style={{
-        width: open ? width : 0,
-        height,
-        marginRight: open ? 0 : "-1rem",
-      }}
+      style={{ width, height }}
     >
       <div
         className="box-border h-full rounded-xl border border-dashed border-zinc-500 bg-[#181b24]/50"

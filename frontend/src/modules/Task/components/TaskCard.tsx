@@ -18,7 +18,6 @@ import {
   PRIORITY_STYLES,
   WORK_KIND_STYLES,
 } from "../helpers/taskBadges";
-import { useListPresence } from "../helpers/useListPresence";
 import type { Task, TaskItem } from "../types/Task";
 import CollapsibleSlot from "./CollapsibleSlot";
 import FlipItem from "./FlipItem";
@@ -69,10 +68,6 @@ function Badge({
   );
 }
 
-function nestedTaskId(task: TaskItem) {
-  return task.id;
-}
-
 export default function TaskCard({
   task,
   nested,
@@ -89,8 +84,7 @@ export default function TaskCard({
   const skipClickRef = useRef(false);
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
-  const nestedPresence = useListPresence(nested, nestedTaskId);
-  const showNested = nestedPresence.length > 0;
+  const showNested = nested.length > 0;
   const keyLabel = compactTaskKey(task);
   const summary = task.description?.trim();
   const stamp = task.updatedAt ?? task.createdAt;
@@ -337,43 +331,27 @@ export default function TaskCard({
               <div className="w-px self-stretch bg-zinc-700" />
             </div>
             <div
-              className="relative flex min-w-0 flex-1 flex-col gap-1.5 pl-2"
+              className="relative flex min-w-0 flex-1 flex-col gap-2 pl-2"
               data-dnd-nested-list={showNested && expanded ? "" : undefined}
               data-parent-id={showNested && expanded ? task.id : undefined}
             >
               {nestedPlaceholder?.index === nested.length ? (
                 <DropLine atEnd />
               ) : null}
-              {nestedPresence.map(({ item: child, present, animateEnter }) => {
-                const liveIndex = nested.findIndex(
-                  (item) => item.id === child.id,
-                );
-                return (
-                  <FlipItem
-                    key={child.id}
-                    enabled={present}
-                    index={liveIndex < 0 ? 0 : liveIndex}
-                  >
-                    <CollapsibleSlot
-                      animateEnter={animateEnter}
-                      present={present}
-                    >
-                      <div
-                        className={twMerge("relative", !present && "invisible")}
-                      >
-                        {present && nestedPlaceholder?.index === liveIndex ? (
-                          <DropLine />
-                        ) : null}
-                        <NestedTaskRow
-                          selected={selectedTaskId === child.id}
-                          task={child}
-                          onOpen={onOpen}
-                        />
-                      </div>
-                    </CollapsibleSlot>
-                  </FlipItem>
-                );
-              })}
+              {nested.map((child, liveIndex) => (
+                <FlipItem key={child.id}>
+                  <div className="relative">
+                    {nestedPlaceholder?.index === liveIndex ? (
+                      <DropLine atStart={liveIndex === 0} />
+                    ) : null}
+                    <NestedTaskRow
+                      selected={selectedTaskId === child.id}
+                      task={child}
+                      onOpen={onOpen}
+                    />
+                  </div>
+                </FlipItem>
+              ))}
             </div>
           </div>
         </CollapsibleSlot>

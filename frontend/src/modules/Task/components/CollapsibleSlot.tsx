@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
-import { COLLAPSE_MS } from "../helpers/useListPresence";
+
+const COLLAPSE_MS = 200;
 
 export default function CollapsibleSlot({
   present,
-  animateEnter = false,
   children,
 }: {
   present: boolean;
-  animateEnter?: boolean;
   children: ReactNode;
 }) {
   const innerRef = useRef<HTMLDivElement>(null);
   const primedRef = useRef(false);
   const [height, setHeight] = useState<number | undefined>(
-    present && !animateEnter ? undefined : 0,
+    present ? undefined : 0,
   );
 
   useEffect(() => {
@@ -23,12 +22,15 @@ export default function CollapsibleSlot({
 
     if (!primedRef.current) {
       primedRef.current = true;
-      if (!animateEnter) return;
+      return;
     }
 
     if (present) {
       setHeight(node.scrollHeight);
-      const timeout = window.setTimeout(() => setHeight(undefined), COLLAPSE_MS);
+      const timeout = window.setTimeout(
+        () => setHeight(undefined),
+        COLLAPSE_MS,
+      );
       return () => window.clearTimeout(timeout);
     }
 
@@ -41,7 +43,7 @@ export default function CollapsibleSlot({
       cancelAnimationFrame(outerFrame);
       cancelAnimationFrame(innerFrame);
     };
-  }, [animateEnter, present]);
+  }, [present]);
 
   return (
     <div
@@ -54,7 +56,10 @@ export default function CollapsibleSlot({
         transitionTimingFunction: "ease-out",
       }}
     >
-      <div ref={innerRef} className={twMerge(!present && "pointer-events-none")}>
+      <div
+        ref={innerRef}
+        className={twMerge(!present && "pointer-events-none")}
+      >
         {children}
       </div>
     </div>

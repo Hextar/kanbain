@@ -12,10 +12,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-dvh w-full">
+      <body className="min-h-dvh w-full min-w-0 overflow-x-clip">
         <Providers>
           <SettingsProvider>
-            <div className="flex min-h-dvh w-full flex-col">{children}</div>
+            <div className="flex min-h-dvh w-full min-w-0 flex-col">
+              {children}
+            </div>
           </SettingsProvider>
         </Providers>
       </body>

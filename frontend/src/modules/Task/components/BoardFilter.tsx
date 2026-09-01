@@ -244,7 +244,7 @@ export default function BoardFilter({
                         className={twMerge(
                           "flex w-full cursor-pointer flex-col items-start rounded-md px-3 py-1.5 text-left text-sm text-zinc-200",
                           selected
-                            ? "bg-purple-500/20 text-white"
+                            ? "bg-gradient-to-br from-violet-500/25 to-purple-600/20 text-white"
                             : "hover:bg-zinc-700/80",
                         )}
                         id={`${listId}-${suggestion.id}`}

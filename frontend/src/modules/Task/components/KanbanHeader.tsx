@@ -36,7 +36,7 @@ export default function Header({
 
   return (
     <div
-      className={`relative z-10 flex h-12 shrink-0 items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
+      className={`relative z-40 flex h-12 shrink-0 items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
     >
       <div className="flex max-w-[45%] min-w-0 shrink-0 items-center gap-2">
         <Link

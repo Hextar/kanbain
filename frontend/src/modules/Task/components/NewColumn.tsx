@@ -37,7 +37,7 @@ type NewColumnButtonProps = {
 function NewColumnButton({ className, onSubmit }: NewColumnButtonProps) {
   return (
     <div
-      className={`flex h-[52px] w-[280px] flex-col overflow-hidden rounded-xl border border-dashed border-white/12 ${className ?? ""}`}
+      className={`flex h-[52px] w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-dashed border-white/12 ${className ?? ""}`}
     >
       <Button
         className="flex h-full items-center justify-center gap-2 text-sm"
@@ -75,12 +75,11 @@ function NewColumnCard({ className, onSubmit, onCancel }: NewColumnCardProps) {
 
   return (
     <form
-      className={`flex w-[280px] flex-col gap-2 rounded-xl border border-white/6 bg-[#181b24] p-3 ${className ?? ""}`}
+      className={`flex w-[280px] shrink-0 flex-col gap-2 rounded-xl border border-white/6 bg-[#181b24] p-3 ${className ?? ""}`}
       onSubmit={(event) => handleSubmit(event)}
     >
       <Input
         autoFocus
-        className="bg-zinc-900"
         placeholder="Column name"
         value={title}
         onChange={(event) => setTitle(event.target.value)}

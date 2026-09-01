@@ -25,23 +25,16 @@ import {
   insertIndexAmongColumnTasks,
   mergeTaskLists,
   visibleColumnCards,
-  type VisibleColumnCard,
 } from "../helpers/visibleColumnCards";
 import { filterColumnCards } from "../helpers/boardFilter";
-import { useListPresence } from "../helpers/useListPresence";
 import { columnAccent } from "../helpers/columnAccent";
 import type { Column, ColumnItem } from "../types/Column";
 import type { Task, TaskItem } from "../types/Task";
-import CollapsibleSlot from "./CollapsibleSlot";
 import ColumnColorMenu from "./ColumnColorMenu";
 import DropLine from "./DropLine";
 import FlipItem from "./FlipItem";
 import NewTaskCard from "./NewTaskCard";
 import TaskCard from "./TaskCard";
-
-function visibleCardId(card: VisibleColumnCard) {
-  return card.task.id;
-}
 
 function isTaskDragPayload(value: unknown): value is TaskDragPayload {
   if (typeof value !== "object" || value === null) return false;
@@ -112,8 +105,6 @@ export default function TaskColumn({
     visibleColumnCards(column.id, tasks, allTasks, doneColumnId),
     matchedTaskIds,
   );
-  const visiblePresence = useListPresence(visible, visibleCardId);
-
   const clearHover = useCallback(() => {
     setNestTargetId(null);
     setNestedOver(null);
@@ -320,7 +311,7 @@ export default function TaskColumn({
       data-dnd-board-column=""
       data-dnd-item=""
       className={twMerge(
-        "group/column flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]",
+        "group/column relative isolate flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]",
         isOver && "border-zinc-400",
         (column.isSaving || isDragging) && "opacity-50",
         className,
@@ -429,61 +420,43 @@ export default function TaskColumn({
             }}
           />
         ) : null}
-        {visible.length === 0 && gapPlaceholder ? <DropLine /> : null}
-        {visiblePresence.map(({ item: card, present, animateEnter }) => {
-          const liveIndex = visible.findIndex(
-            (item) => item.task.id === card.task.id,
-          );
-          return (
-            <FlipItem
-              key={card.task.id}
-              className="relative w-full min-w-0 hover:z-10"
-              enabled={present}
-              index={liveIndex < 0 ? 0 : liveIndex}
-            >
-              <CollapsibleSlot animateEnter={animateEnter} present={present}>
-                <div
-                  className={twMerge(
-                    "relative min-w-0",
-                    !present && "invisible",
-                  )}
-                >
-                  {present && gapPlaceholder?.index === liveIndex ? (
-                    <DropLine />
-                  ) : null}
-                  {present &&
-                  gapPlaceholder?.index === visible.length &&
-                  liveIndex === lastIndex ? (
-                    <DropLine atEnd />
-                  ) : null}
-                  <TaskCard
-                    accentBar={accent.bar}
-                    childCount={card.childCount}
-                    doneCount={card.doneCount}
-                    nestActive={
-                      isOver &&
-                      present &&
-                      (nestTargetId === card.task.id ||
-                        nestedOver?.parentId === card.task.id)
-                    }
-                    nested={card.nested.map(
-                      (child) => byId.get(child.id) ?? child,
-                    )}
-                    nestedPlaceholder={
-                      isOver && present && nestedOver?.parentId === card.task.id
-                        ? nestedOver.placeholder
-                        : null
-                    }
-                    projectId={projectId}
-                    selectedTaskId={selectedTaskId}
-                    task={byId.get(card.task.id) ?? card.task}
-                    onOpen={onOpenTask}
-                  />
-                </div>
-              </CollapsibleSlot>
-            </FlipItem>
-          );
-        })}
+        {visible.length === 0 && gapPlaceholder ? <DropLine atStart /> : null}
+        {visible.map((card, liveIndex) => (
+          <FlipItem
+            key={card.task.id}
+            className="relative w-full min-w-0 hover:z-10"
+          >
+            <div className="relative min-w-0">
+              {gapPlaceholder?.index === liveIndex ? (
+                <DropLine atStart={liveIndex === 0} />
+              ) : null}
+              {gapPlaceholder?.index === visible.length &&
+              liveIndex === lastIndex ? (
+                <DropLine atEnd />
+              ) : null}
+              <TaskCard
+                accentBar={accent.bar}
+                childCount={card.childCount}
+                doneCount={card.doneCount}
+                nestActive={
+                  isOver &&
+                  (nestTargetId === card.task.id ||
+                    nestedOver?.parentId === card.task.id)
+                }
+                nested={card.nested.map((child) => byId.get(child.id) ?? child)}
+                nestedPlaceholder={
+                  isOver && nestedOver?.parentId === card.task.id
+                    ? nestedOver.placeholder
+                    : null
+                }
+                projectId={projectId}
+                selectedTaskId={selectedTaskId}
+                task={byId.get(card.task.id) ?? card.task}
+                onOpen={onOpenTask}
+              />
+            </div>
+          </FlipItem>
+        ))}
       </div>
       <ConfirmDialog
         open={isDeleteConfirmOpen}
