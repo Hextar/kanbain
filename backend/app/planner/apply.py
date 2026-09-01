@@ -69,8 +69,22 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
 
 
 def _clear_board(project: Project) -> None:
-    for task in list(project.tasks):
+    remaining = list(project.tasks)
+    seen: set[str] = set()
+
+    def delete_tree(task: Task) -> None:
+        if task.id in seen:
+            return
+        seen.add(task.id)
+        for child in [item for item in remaining if item.parent_id == task.id]:
+            delete_tree(child)
         db.session.delete(task)
+
+    for task in remaining:
+        if task.parent_id is None:
+            delete_tree(task)
+    for task in remaining:
+        delete_tree(task)
     for milestone in list(project.milestones):
         db.session.delete(milestone)
     db.session.flush()

@@ -12,6 +12,7 @@ function emit() {
 }
 
 export function showToast(message: string) {
+  if (typeof window === "undefined") return;
   const id = nextId++;
   toasts = [...toasts, { id, message }];
   emit();
