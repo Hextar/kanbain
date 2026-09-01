@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, GripVertical } from "lucide-react";
 import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
-import { COLUMN_COLOR_OPTIONS } from "@modules/Task/helpers/columnAccent";
 import CanvasDots from "@uiKit/CanvasDots";
 import Skeleton from "@uiKit/Skeleton";
 import PlanningStatus from "@modules/Project/components/PlanningStatus";
@@ -85,20 +84,14 @@ export default function KanbanBoardSkeleton({
           </div>
         ) : null}
         <div className="board-x-scroll relative z-0 flex h-full min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3">
-        {COLUMNS.map((column, index) => {
-          const accent = COLUMN_COLOR_OPTIONS[index];
-          return (
-            <ColumnSkeleton
-              key={accent.id}
-              accentBar={accent.bar}
-              accentDot={accent.dot}
-              accentGlow={accent.glow}
-              cardCount={column.cards}
-              titleWidth={column.titleWidth}
-              titleWidths={column.widths}
-            />
-          );
-        })}
+        {COLUMNS.map((column, index) => (
+          <ColumnSkeleton
+            key={index}
+            cardCount={column.cards}
+            titleWidth={column.titleWidth}
+            titleWidths={column.widths}
+          />
+        ))}
         <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
         </div>
       </div>
@@ -123,32 +116,22 @@ function ViewTabsSkeleton() {
 }
 
 function ColumnSkeleton({
-  accentBar,
-  accentDot,
-  accentGlow,
   cardCount,
   titleWidth,
   titleWidths,
 }: {
-  accentBar: string;
-  accentDot: string;
-  accentGlow: string;
   cardCount: number;
   titleWidth: string;
   titleWidths: readonly string[];
 }) {
   return (
     <section className="relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]">
-      <div className={`h-[3px] w-full shrink-0 ${accentBar}`} />
-      <div
-        aria-hidden
-        className={`light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl ${accentGlow}`}
-      />
+      <div className="h-[3px] w-full shrink-0 bg-white/10" />
       <header className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
         <span className="flex h-7 w-4 shrink-0 items-center justify-center">
           <GripVertical aria-hidden className="block text-zinc-600" size={14} />
         </span>
-        <span className={`size-2 shrink-0 rounded-full ${accentDot}`} />
+        <span className="size-2 shrink-0 rounded-full bg-white/15" />
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <Skeleton className={`h-3 ${titleWidth}`} />
           <Skeleton className="h-5 min-w-5 rounded-full" />
@@ -156,26 +139,17 @@ function ColumnSkeleton({
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-2.5 pb-3">
         {titleWidths.slice(0, cardCount).map((width, index) => (
-          <CardSkeleton key={index} accentBar={accentBar} titleWidth={width} />
+          <CardSkeleton key={index} titleWidth={width} />
         ))}
       </div>
     </section>
   );
 }
 
-function CardSkeleton({
-  accentBar,
-  titleWidth,
-}: {
-  accentBar: string;
-  titleWidth: string;
-}) {
+function CardSkeleton({ titleWidth }: { titleWidth: string }) {
   return (
     <article className="relative min-w-0 rounded-lg border border-white/8 bg-[#14161e] p-3 shadow-sm shadow-black/25">
-      <div
-        className={`absolute top-0 bottom-0 left-0 w-[3px] rounded-l-lg ${accentBar}`}
-      />
-      <div className="flex flex-col gap-1.5 pl-1">
+      <div className="flex flex-col gap-1.5">
         <Skeleton className="h-3 w-10" />
         <Skeleton className={`h-4 ${titleWidth}`} />
         <div className="flex items-center gap-1">
