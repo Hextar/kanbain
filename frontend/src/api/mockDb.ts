@@ -27,6 +27,7 @@ import { compareTasksByOrder } from "@modules/Task/helpers/taskOrder";
 import {
   nestWorkKind,
   shouldDemoteParent,
+  taskTreeIds,
   unnestWorkKind,
 } from "@modules/Task/helpers/nesting";
 import {
@@ -580,8 +581,10 @@ function maybeCompleteAncestors(task: Task) {
 }
 
 export function deleteTask(id: string) {
-  const index = tasks.findIndex((task) => task.id === id);
-  if (index !== -1) tasks.splice(index, 1);
+  const ids = taskTreeIds(id, tasks);
+  for (let index = tasks.length - 1; index >= 0; index--) {
+    if (ids.has(tasks[index].id)) tasks.splice(index, 1);
+  }
 }
 
 function respond<T>(run: () => T, status = 200) {

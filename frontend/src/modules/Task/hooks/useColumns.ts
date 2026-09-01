@@ -8,6 +8,7 @@ import {
 } from "../api/columns";
 import { columnKeys } from "../api/columnKeys";
 import { defaultColumnColor } from "../helpers/columnAccent";
+import { showToast } from "@libraries/toast";
 import type { Column, ColumnItem, CreateColumnInput } from "../types/Column";
 
 function compareColumnsByOrder(left: Column, right: Column) {
@@ -81,11 +82,11 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
           projectId: nextProjectId,
           color: column.color,
         });
-      } catch (error) {
+      } catch {
         setListData((current) =>
           current.filter((item) => item.id !== column.id),
         );
-        throw error;
+        showToast("Couldn't create the column.");
       }
     });
   }
@@ -102,13 +103,13 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
       );
       try {
         await updateColumnMutation(column);
-      } catch (error) {
+      } catch {
         if (previous) {
           setListData((current) =>
             current.map((item) => (item.id === previous.id ? previous : item)),
           );
         }
-        throw error;
+        showToast("Couldn't save the column.");
       }
     });
   }
@@ -137,9 +138,9 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
       queryClient.setQueryData<Column[]>(listKey, next);
       try {
         await updateColumnMutation(nextMoved);
-      } catch (error) {
+      } catch {
         queryClient.setQueryData<Column[]>(listKey, previous);
-        throw error;
+        showToast("Couldn't move the column.");
       }
     });
   }
@@ -151,9 +152,9 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
       setListData((current) => current.filter((item) => item.id !== id));
       try {
         await deleteColumnMutation(id);
-      } catch (error) {
+      } catch {
         queryClient.setQueryData<Column[]>(listKey, previous);
-        throw error;
+        showToast("Couldn't delete the column.");
       }
     });
   }
