@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import {
   DND_ITEM_SELECTOR,
+  dropHitElement,
   getDragData,
   getHorizontalInsert,
   getVerticalInsert,
@@ -86,6 +87,25 @@ function placeholdersEqual(
   );
 }
 
+type DropZone = object;
+type OverListener = (zone: DropZone | null) => void;
+
+let activeDropZone: DropZone | null = null;
+const overListeners = new Set<OverListener>();
+
+function setActiveDropZone(zone: DropZone | null) {
+  if (activeDropZone === zone) return;
+  activeDropZone = zone;
+  for (const listener of overListeners) listener(zone);
+}
+
+function stillInside(container: HTMLElement, event: DragEvent<HTMLElement>) {
+  const related = event.relatedTarget;
+  if (related instanceof Node && container.contains(related)) return true;
+  const hit = dropHitElement(event.clientX, event.clientY);
+  return Boolean(hit && container.contains(hit));
+}
+
 export function useHtml5Drop<T>({
   mimeType,
   onDrop,
@@ -95,7 +115,7 @@ export function useHtml5Drop<T>({
 }: UseHtml5DropOptions<T>) {
   const [isOver, setIsOver] = useState(false);
   const [placeholder, setPlaceholder] = useState<DropPlaceholder | null>(null);
-  const enterCountRef = useRef(0);
+  const zoneRef = useRef<DropZone>({});
   const placeholderRef = useRef<DropPlaceholder | null>(null);
   const itemSelector = sortableItemSelector(sortable);
   const axis = sortableAxis(sortable);
@@ -110,24 +130,41 @@ export function useHtml5Drop<T>({
   );
 
   const resetOver = useCallback(() => {
-    enterCountRef.current = 0;
     setIsOver(false);
     setPlaceholderIfChanged(null);
   }, [setPlaceholderIfChanged]);
 
-  useEffect(() => {
-    document.addEventListener("dragend", resetOver);
-    return () => document.removeEventListener("dragend", resetOver);
+  const leaveZone = useCallback(() => {
+    if (activeDropZone === zoneRef.current) setActiveDropZone(null);
+    resetOver();
   }, [resetOver]);
+
+  const claimZone = useCallback(() => {
+    setActiveDropZone(zoneRef.current);
+    setIsOver(true);
+  }, []);
+
+  useEffect(() => {
+    const zone = zoneRef.current;
+    const onActiveChange = (active: DropZone | null) => {
+      if (active !== zone) resetOver();
+    };
+    overListeners.add(onActiveChange);
+    document.addEventListener("dragend", leaveZone);
+    return () => {
+      overListeners.delete(onActiveChange);
+      document.removeEventListener("dragend", leaveZone);
+      if (activeDropZone === zone) setActiveDropZone(null);
+    };
+  }, [leaveZone, resetOver]);
 
   const handleDragEnter = useCallback(
     (event: DragEvent<HTMLElement>) => {
       if (!hasDragMime(event.dataTransfer, mimeType)) return;
       event.preventDefault();
-      enterCountRef.current += 1;
-      setIsOver(true);
+      claimZone();
     },
-    [mimeType],
+    [claimZone, mimeType],
   );
 
   const handleDragOver = useCallback(
@@ -135,6 +172,7 @@ export function useHtml5Drop<T>({
       if (!hasDragMime(event.dataTransfer, mimeType)) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
+      claimZone();
       if (!itemSelector) return;
       const insert = readInsert(event.currentTarget, event, itemSelector, axis);
       const resolvePlaceholder =
@@ -149,6 +187,7 @@ export function useHtml5Drop<T>({
     },
     [
       axis,
+      claimZone,
       itemSelector,
       mimeType,
       onDragOver,
@@ -159,16 +198,10 @@ export function useHtml5Drop<T>({
 
   const handleDragLeave = useCallback(
     (event: DragEvent<HTMLElement>) => {
-      const related = event.relatedTarget;
-      if (related instanceof Node && event.currentTarget.contains(related)) {
-        return;
-      }
-      enterCountRef.current -= 1;
-      if (enterCountRef.current <= 0) {
-        resetOver();
-      }
+      if (stillInside(event.currentTarget, event)) return;
+      leaveZone();
     },
-    [resetOver],
+    [leaveZone],
   );
 
   const handleDrop = useCallback(
@@ -178,13 +211,13 @@ export function useHtml5Drop<T>({
       const nextIndex = itemSelector
         ? readInsert(event.currentTarget, event, itemSelector, axis).destIndex
         : undefined;
-      resetOver();
+      leaveZone();
       const data = getDragData<T>(event.dataTransfer, mimeType);
       if (data === null) return;
       if (canDrop && !canDrop(data)) return;
       onDrop(data, event, nextIndex);
     },
-    [axis, canDrop, itemSelector, mimeType, onDrop, resetOver],
+    [axis, canDrop, itemSelector, mimeType, onDrop, leaveZone],
   );
 
   return {
