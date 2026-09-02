@@ -31,9 +31,15 @@ export function HeaderProvider({ children }: { children: ReactNode }) {
   const [targets, setTargets] = useState<HeaderTargets>(EMPTY_TARGETS);
   const setTarget = useCallback(
     (slot: keyof HeaderTargets, el: HTMLElement | null) => {
-      setTargets((current) =>
-        current[slot] === el ? current : { ...current, [slot]: el },
-      );
+      setTargets((current) => {
+        const owned = current[slot];
+        if (el == null) {
+          if (owned?.isConnected) return current;
+          return owned == null ? current : { ...current, [slot]: null };
+        }
+        if (owned && owned !== el && owned.isConnected) return current;
+        return owned === el ? current : { ...current, [slot]: el };
+      });
     },
     [],
   );

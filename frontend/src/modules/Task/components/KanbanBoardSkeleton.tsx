@@ -1,6 +1,5 @@
 import { GripVertical } from "lucide-react";
-import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
-import AppHeader from "@uiKit/AppHeader";
+import { HeaderSlot } from "@uiKit/AppHeader";
 import CanvasDots from "@uiKit/CanvasDots";
 import Skeleton from "@uiKit/Skeleton";
 import PlanningStatus from "@modules/Project/components/PlanningStatus";
@@ -17,14 +16,12 @@ const COLUMNS = [
 ] as const;
 
 type KanbanBoardSkeletonProps = {
-  projectName?: string;
   label?: string;
   statusText?: string;
   progress?: number;
 };
 
 export default function KanbanBoardSkeleton({
-  projectName,
   label = "Loading board…",
   statusText,
   progress,
@@ -33,14 +30,11 @@ export default function KanbanBoardSkeleton({
   return (
     <CanvasDots
       aria-busy
-      className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
+      className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-x-clip"
       role="status"
     >
       <span className="sr-only">{label}</span>
-      <AppHeader
-        center={<ViewTabsSkeleton />}
-        projectName={projectName ?? <Skeleton className="h-3 w-24" />}
-      >
+      <HeaderSlot center={<ViewTabsSkeleton />}>
         {statusText ? (
           <span className="hidden truncate text-xs text-zinc-500 sm:inline">
             {showProgress ? "Planning" : statusText}
@@ -53,8 +47,7 @@ export default function KanbanBoardSkeleton({
           </>
         )}
         <Skeleton className="size-7 rounded-md" />
-        <SettingsButton size="xs" />
-      </AppHeader>
+      </HeaderSlot>
       <div className="relative min-h-0 min-w-0 flex-1">
         {showProgress ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center px-4">
