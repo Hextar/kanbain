@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import Button from "@uiKit/Button";
+import EmptyState from "@uiKit/EmptyState";
 import { showToast } from "@libraries/toast";
 import KanbanBoard from "@modules/Task/KanbanBoard";
 import KanbanBoardSkeleton from "@modules/Task/components/KanbanBoardSkeleton";
@@ -98,38 +99,50 @@ export default function ProjectWorkspace({
 
   if (current.planStatus === "failed") {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-2xl font-semibold text-white">{current.name}</p>
-        <p className="max-w-md text-red-400">
-          {current.planError ?? "Planning failed."}
-        </p>
-        <Button disabled={isRetrying} type="button" onClick={handleRetry}>
-          {isRetrying ? "Retrying…" : "Retry planning"}
-        </Button>
-        <Link className="text-purple-400 hover:text-purple-300" href="/">
-          Back to projects
-        </Link>
-      </div>
+      <EmptyState
+        action={
+          <>
+            <Button disabled={isRetrying} type="button" onClick={handleRetry}>
+              {isRetrying ? "Retrying…" : "Retry planning"}
+            </Button>
+            <Link className="text-purple-400 hover:text-purple-300" href="/">
+              Back to projects
+            </Link>
+          </>
+        }
+        body={
+          <p className="text-red-400">
+            {current.planError ?? "Planning failed."}
+          </p>
+        }
+        size="page"
+        title={current.name}
+      />
     );
   }
 
   const board: ProjectBoard | undefined = boardQuery.data;
   if (current.planStatus === "ready" && boardQuery.isError && !board) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-2xl font-semibold text-white">{current.name}</p>
-        <p className="max-w-md text-zinc-400">Couldn't load the board.</p>
-        <Button
-          disabled={boardQuery.isFetching}
-          type="button"
-          onClick={() => void boardQuery.refetch()}
-        >
-          {boardQuery.isFetching ? "Retrying…" : "Try again"}
-        </Button>
-        <Link className="text-purple-400 hover:text-purple-300" href="/">
-          Back to projects
-        </Link>
-      </div>
+      <EmptyState
+        action={
+          <>
+            <Button
+              disabled={boardQuery.isFetching}
+              type="button"
+              onClick={() => void boardQuery.refetch()}
+            >
+              {boardQuery.isFetching ? "Retrying…" : "Try again"}
+            </Button>
+            <Link className="text-purple-400 hover:text-purple-300" href="/">
+              Back to projects
+            </Link>
+          </>
+        }
+        body="Couldn't load the board."
+        size="page"
+        title={current.name}
+      />
     );
   }
 

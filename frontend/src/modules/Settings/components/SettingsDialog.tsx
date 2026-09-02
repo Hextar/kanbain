@@ -3,7 +3,9 @@
 import { useId, type FormEvent } from "react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import Button from "@uiKit/Button";
+import Callout from "@uiKit/Callout";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
+import { FieldLabel, FormMessage } from "@uiKit/Field";
 import Input from "@uiKit/Input";
 import { OPENAI_API_KEY_DOCS_URL } from "../api/settings";
 
@@ -97,64 +99,28 @@ export default function SettingsDialog({
           can generate boards. It is never shown in full after you save it.
         </p>
         {loadFailed ? (
-          <p
-            className="rounded-xl bg-red-500/15 px-3 py-2.5 text-sm text-red-300"
-            role="alert"
-          >
+          <Callout tone="danger">
             Could not load settings from the server.
-          </p>
+          </Callout>
         ) : (
-          <div
-            className={
-              status.tone === "ok"
-                ? "flex items-start gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300"
-                : status.tone === "warn"
-                  ? "flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200"
-                  : "flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#14161e]/55 px-3 py-2.5 text-sm text-zinc-400 backdrop-blur-sm"
+          <Callout
+            body={status.body}
+            icon={
+              status.tone === "ok" ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <CircleAlert size={16} />
+              )
             }
-            role={status.tone === "ok" ? "status" : "alert"}
-          >
-            {status.tone === "ok" ? (
-              <CheckCircle2
-                aria-hidden="true"
-                className="mt-0.5 shrink-0"
-                size={16}
-              />
-            ) : (
-              <CircleAlert
-                aria-hidden="true"
-                className="mt-0.5 shrink-0"
-                size={16}
-              />
-            )}
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <p
-                className={
-                  status.tone === "ok"
-                    ? "font-medium text-emerald-100"
-                    : "font-medium text-zinc-200"
-                }
-              >
-                {status.title}
-              </p>
-              <p
-                className={
-                  status.tone === "ok" ? "text-emerald-300/80" : "text-zinc-400"
-                }
-              >
-                {status.body}
-              </p>
-            </div>
-          </div>
+            title={status.title}
+            tone={status.tone}
+          />
         )}
         <DialogPanel title={configured ? "Replace key" : "API key"}>
           <div className="flex flex-col gap-2">
-            <label
-              className="text-[11px] font-medium tracking-wide text-zinc-500"
-              htmlFor={inputId}
-            >
+            <FieldLabel htmlFor={inputId}>
               {configured ? "Replace OpenAI API key" : "OpenAI API key"}
-            </label>
+            </FieldLabel>
             <Input
               autoComplete="off"
               autoFocus={open}
@@ -179,13 +145,9 @@ export default function SettingsDialog({
               </a>
             </p>
             {error ? (
-              <p aria-live="polite" className="text-sm text-red-400">
-                {error}
-              </p>
+              <FormMessage>{error}</FormMessage>
             ) : notice ? (
-              <p aria-live="polite" className="text-sm text-emerald-300">
-                {notice}
-              </p>
+              <FormMessage tone="success">{notice}</FormMessage>
             ) : null}
           </div>
         </DialogPanel>

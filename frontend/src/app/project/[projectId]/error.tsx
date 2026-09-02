@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@uiKit/Button";
+import EmptyState from "@uiKit/EmptyState";
 
 export default function Error({
   reset,
@@ -9,13 +10,14 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex flex-col items-start gap-4 p-6">
-      <h1 className="text-2xl font-bold text-white">
-        Could not load this board
-      </h1>
-      <Button type="button" onClick={reset}>
-        Try again
-      </Button>
-    </div>
+    <EmptyState
+      action={
+        <Button type="button" onClick={reset}>
+          Try again
+        </Button>
+      }
+      size="compact"
+      title="Could not load this board"
+    />
   );
 }

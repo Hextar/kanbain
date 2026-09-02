@@ -8,6 +8,10 @@ import { CircleAlert, RotateCw, Sparkles, Trash } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import IconButton from "@uiKit/IconButton";
 import Tooltip from "@uiKit/Tooltip";
+import Avatar, { AvatarStack } from "@uiKit/Avatar";
+import Badge from "@uiKit/Badge";
+import Card, { cardClassName } from "@uiKit/Card";
+import ProgressBar from "@uiKit/ProgressBar";
 import {
   consumeSpawn,
   isSpawnPending,
@@ -58,46 +62,6 @@ function PlanErrorIcon({ message }: { message: string }) {
   );
 }
 
-function MetaPill({ children }: { children: string }) {
-  return (
-    <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] text-zinc-400 ring-1 ring-white/6">
-      {children}
-    </span>
-  );
-}
-
-function CardProgressBar({
-  barClassName,
-  label,
-  percent,
-  trackClassName,
-}: {
-  barClassName: string;
-  label: string;
-  percent: number;
-  trackClassName: string;
-}) {
-  return (
-    <div
-      aria-label={label}
-      aria-valuemax={100}
-      aria-valuemin={0}
-      aria-valuenow={percent}
-      className="absolute inset-x-0 top-0 h-1 overflow-hidden"
-      role="progressbar"
-    >
-      <div aria-hidden className={twMerge("absolute inset-0", trackClassName)} />
-      <div
-        className={twMerge(
-          "relative h-full motion-safe:transition-[width] motion-safe:duration-700",
-          barClassName,
-        )}
-        style={{ width: `${percent}%` }}
-      />
-    </div>
-  );
-}
-
 export default function ProjectCard({
   project,
   onRetry,
@@ -121,7 +85,10 @@ export default function ProjectCard({
     Math.min(1, Math.max(0, live.progress)) * 100,
   );
   const taskCount = Math.max(0, project.taskCount);
-  const completedCount = Math.min(taskCount, Math.max(0, project.completedCount));
+  const completedCount = Math.min(
+    taskCount,
+    Math.max(0, project.completedCount),
+  );
   const completionPercent =
     taskCount === 0 ? 0 : Math.round((completedCount / taskCount) * 100);
   const summary = (project.goal ?? project.description ?? "").trim();
@@ -145,14 +112,15 @@ export default function ProjectCard({
   const body = (
     <>
       {isPlanning && !isOpening ? (
-        <CardProgressBar
+        <ProgressBar
           barClassName="bg-gradient-to-r from-violet-400 to-purple-600"
           label="Planning progress"
           percent={progressPercent}
           trackClassName="bg-purple-950"
+          variant="flush"
         />
       ) : (
-        <CardProgressBar
+        <ProgressBar
           barClassName={accent.bar}
           label={
             taskCount === 0
@@ -161,6 +129,7 @@ export default function ProjectCard({
           }
           percent={completionPercent}
           trackClassName={twMerge(accent.bar, "opacity-20")}
+          variant="flush"
         />
       )}
       <div
@@ -171,21 +140,13 @@ export default function ProjectCard({
         )}
       />
       <div className="flex items-start gap-3">
-        <div
-          className={twMerge(
-            "relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl",
-            accent.tile,
-          )}
-        >
+        <Avatar className={accent.tile} initials={initials} size="md">
           <Icon
             aria-hidden
             className="absolute size-9 opacity-25"
             strokeWidth={1.5}
           />
-          <span className="relative text-sm font-semibold tracking-wide">
-            {initials}
-          </span>
-        </div>
+        </Avatar>
         <div className={twMerge("min-w-0 flex-1", titlePad)}>
           <h2 className="min-w-0 truncate text-lg font-semibold text-white">
             {project.name}
@@ -196,54 +157,43 @@ export default function ProjectCard({
               "mt-1 line-clamp-2 min-h-10 min-w-0 text-sm leading-5 break-words",
               isPlanning && !isOpening ? "text-purple-200/90" : "text-zinc-400",
             )}
-            title={
-              isPlanning && !isOpening ? undefined : summary || undefined
-            }
+            title={isPlanning && !isOpening ? undefined : summary || undefined}
           >
             {isPlanning && !isOpening ? live.message : summary || "\u00a0"}
           </p>
         </div>
       </div>
       <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1.5 pt-4">
-        {isFailed ? (
-          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] text-red-300">
-            Failed
-          </span>
-        ) : null}
-        <MetaPill>{methodologyLabel}</MetaPill>
-        <MetaPill>{DEADLINE_LABELS[project.deadlineKind]}</MetaPill>
-        {createdLabel ? <MetaPill>{createdLabel}</MetaPill> : null}
+        {isFailed ? <Badge tone="danger">Failed</Badge> : null}
+        <Badge tone="muted">{methodologyLabel}</Badge>
+        <Badge tone="muted">{DEADLINE_LABELS[project.deadlineKind]}</Badge>
+        {createdLabel ? <Badge tone="muted">{createdLabel}</Badge> : null}
         {members.length > 0 ? (
-          <span className="ml-auto inline-flex items-center pl-1">
+          <AvatarStack className="ml-auto" extra={extraMembers}>
             {members.slice(0, VISIBLE_MEMBERS).map((member, index) => (
               <Tooltip
                 key={member.id}
                 content={member.name}
                 wrapperClassName={index === 0 ? undefined : "-ml-1.5"}
               >
-                <span
+                <Avatar
                   className={twMerge(
-                    "inline-flex size-6 items-center justify-center rounded-full text-[10px] font-medium ring-2 ring-[#181b24]",
+                    "ring-2 ring-[#181b24]",
                     memberAccent(member.id),
                   )}
-                >
-                  {projectInitials(member.name)}
-                </span>
+                  initials={projectInitials(member.name)}
+                />
               </Tooltip>
             ))}
-            {extraMembers > 0 ? (
-              <span className="-ml-1.5 inline-flex size-6 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-zinc-400 ring-2 ring-[#181b24]">
-                +{extraMembers}
-              </span>
-            ) : null}
-          </span>
+          </AvatarStack>
         ) : null}
       </div>
     </>
   );
 
-  const cardClassName = twMerge(
-    "light-edge light-edge-card relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24] p-5 pt-4 text-left",
+  const surfaceClassName = twMerge(
+    cardClassName("md"),
+    "relative flex h-full min-w-0 flex-col overflow-hidden pt-4 text-left",
     canOpen &&
       `transition-colors ${accent.hoverBorder} focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none`,
     isPlanning && "plan-shimmer pointer-events-none border-purple-500/40",
@@ -259,22 +209,22 @@ export default function ProjectCard({
     >
       {canOpen ? (
         <Link
-          className={cardClassName}
+          className={surfaceClassName}
           data-light-edge=""
           href={`/project/${project.id}`}
         >
           {body}
         </Link>
       ) : (
-        <div
+        <Card
           aria-busy={isPlanning || undefined}
           aria-disabled={isPlanning || undefined}
-          className={cardClassName}
-          data-light-edge=""
+          className={surfaceClassName}
           role={isPlanning ? "status" : undefined}
+          size="md"
         >
           {body}
-        </div>
+        </Card>
       )}
       <div
         className="absolute top-4 right-4 z-20 flex items-center gap-1"

@@ -1,13 +1,15 @@
 "use client";
 
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import Button from "@uiKit/Button";
+import ButtonGroup, { ButtonGroupItem } from "@uiKit/ButtonGroup";
 import Input from "@uiKit/Input";
 import Select from "@uiKit/Select";
 import Textarea from "@uiKit/Textarea";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
+import Field, { FormMessage } from "@uiKit/Field";
 import IconButton from "@uiKit/IconButton";
 import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import { createProjectAction } from "../actions/createProject";
@@ -166,7 +168,7 @@ export default function NewProjectWizard({
       >
         <DialogPanel title="Project">
           <div className="flex flex-col gap-2.5">
-            <FieldRow htmlFor="wizard-name" label="Title">
+            <Field htmlFor="wizard-name" label="Title">
               <Input
                 autoFocus
                 className={CONTROL}
@@ -176,8 +178,8 @@ export default function NewProjectWizard({
                 value={draft.name}
                 onChange={(event) => update("name", event.target.value)}
               />
-            </FieldRow>
-            <FieldRow align="start" htmlFor="wizard-goal" label="Description">
+            </Field>
+            <Field align="start" htmlFor="wizard-goal" label="Description">
               <Textarea
                 className={AREA}
                 id="wizard-goal"
@@ -185,8 +187,8 @@ export default function NewProjectWizard({
                 value={draft.goal}
                 onChange={(event) => update("goal", event.target.value)}
               />
-            </FieldRow>
-            <FieldRow label="Effort">
+            </Field>
+            <Field label="Effort">
               <Segmented
                 options={[
                   { value: "low", label: "Low" },
@@ -199,7 +201,7 @@ export default function NewProjectWizard({
                   update("thoughtEffort", value as ThoughtEffort)
                 }
               />
-            </FieldRow>
+            </Field>
             <p className="pl-[6.5rem] text-[11px] leading-4 text-zinc-500">
               Higher effort thinks longer and uses more tokens.
             </p>
@@ -240,7 +242,7 @@ export default function NewProjectWizard({
             </div>
           ) : null}
         </div>
-        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        {error ? <FormMessage>{error}</FormMessage> : null}
       </form>
     </Dialog>
   );
@@ -398,7 +400,7 @@ function DeadlineStep({
         onChange={(value) => onChange("deadlineKind", value as DeadlineKind)}
       />
       {needsDate ? (
-        <FieldRow htmlFor="wizard-deadline" label="Target date">
+        <Field htmlFor="wizard-deadline" label="Target date">
           <Input
             className={twMerge(CONTROL, "[color-scheme:dark]")}
             id="wizard-deadline"
@@ -407,7 +409,7 @@ function DeadlineStep({
             value={draft.deadlineDate}
             onChange={(event) => onChange("deadlineDate", event.target.value)}
           />
-        </FieldRow>
+        </Field>
       ) : null}
     </div>
   );
@@ -457,40 +459,6 @@ function WorkStep({
   );
 }
 
-function FieldRow({
-  label,
-  htmlFor,
-  align = "center",
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  align?: "center" | "start";
-  children: ReactNode;
-}) {
-  const labelClass = "text-[11px] font-medium tracking-wide text-zinc-500";
-  return (
-    <div
-      className={twMerge(
-        "grid grid-cols-[5.75rem_minmax(0,1fr)] gap-x-3 gap-y-1",
-        align === "start" ? "items-start" : "items-center",
-      )}
-    >
-      {htmlFor ? (
-        <label
-          className={twMerge(labelClass, align === "start" && "pt-2")}
-          htmlFor={htmlFor}
-        >
-          {label}
-        </label>
-      ) : (
-        <span className={labelClass}>{label}</span>
-      )}
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
-}
-
 function Segmented({
   label,
   value,
@@ -503,30 +471,21 @@ function Segmented({
   onChange: (value: string) => void;
 }) {
   const control = (
-    <div className="flex h-8 min-w-0 rounded-md bg-[#12141c] p-0.5 ring-1 ring-white/8">
-      {options.map((option) => {
-        const selected = option.value === value;
-        return (
-          <button
-            aria-pressed={selected}
-            className={twMerge(
-              "h-full min-w-0 flex-1 cursor-pointer rounded px-1 text-[10px] font-medium tracking-wide focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
-              selected
-                ? "bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-[inset_0_1px_0_0_rgb(255_255_255/0.22)]"
-                : "text-zinc-500 hover:text-zinc-300",
-            )}
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+    <ButtonGroup size="sm">
+      {options.map((option) => (
+        <ButtonGroupItem
+          key={option.value}
+          selected={option.value === value}
+          tone="primary"
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </ButtonGroupItem>
+      ))}
+    </ButtonGroup>
   );
   if (!label) return control;
-  return <FieldRow label={label}>{control}</FieldRow>;
+  return <Field label={label}>{control}</Field>;
 }
 
 function deadlineIsValid(draft: WizardDraft) {

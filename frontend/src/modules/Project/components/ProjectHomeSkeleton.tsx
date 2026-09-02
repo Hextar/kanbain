@@ -1,4 +1,5 @@
 import { HeaderSlot } from "@uiKit/AppHeader";
+import Card from "@uiKit/Card";
 import Skeleton from "@uiKit/Skeleton";
 
 const CARD_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
@@ -27,7 +28,10 @@ export default function ProjectHomeSkeleton() {
 
 function ProjectCardSkeleton() {
   return (
-    <article className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24] p-5 pt-4">
+    <Card
+      className="relative flex h-full min-w-0 flex-col overflow-hidden pt-4"
+      size="md"
+    >
       <div className="absolute inset-x-0 top-0 h-1 bg-white/10" />
       <Skeleton className="absolute top-4 right-4 size-7 rounded-md" />
       <div className="flex items-start gap-3">
@@ -45,6 +49,6 @@ function ProjectCardSkeleton() {
         <Skeleton className="h-5 w-[5.5rem] rounded-full" />
         <Skeleton className="h-5 w-16 rounded-full" />
       </div>
-    </article>
+    </Card>
   );
 }
