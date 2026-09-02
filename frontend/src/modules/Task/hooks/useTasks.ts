@@ -12,6 +12,7 @@ import {
   getTasks,
   updateTask,
 } from "../api/tasks";
+import { columnKeys } from "../api/columnKeys";
 import { taskKeys } from "../api/taskKeys";
 import { compareTasksByOrder } from "../helpers/taskOrder";
 import { ancestorsToComplete } from "../helpers/visibleColumnCards";
@@ -23,6 +24,7 @@ import {
 } from "../helpers/nesting";
 import { showToast } from "@libraries/toast";
 import { markCelebrate } from "@libraries/particles";
+import type { Column } from "../types/Column";
 import type {
   CreateTaskInput,
   Task,
@@ -163,6 +165,37 @@ function nextTaskNumber(
     if ((task.taskNumber ?? 0) > max) max = task.taskNumber ?? 0;
   }
   return max + 1;
+}
+
+function compareColumnsByOrder(left: Column, right: Column) {
+  return left.order - right.order || left.id.localeCompare(right.id);
+}
+
+function celebrateRightwardMove(
+  queryClient: QueryClient,
+  taskId: Task["id"],
+  sourceColumnId: Task["columnId"],
+  targetColumnId: Task["columnId"],
+  projectId: Task["projectId"] | undefined,
+  doneColumnId: Task["columnId"] | undefined,
+) {
+  if (sourceColumnId === targetColumnId) return;
+  const columns = (
+    projectId
+      ? (queryClient.getQueryData<Column[]>(columnKeys.list(projectId)) ?? [])
+      : []
+  ).toSorted(compareColumnsByOrder);
+  const fromIndex = columns.findIndex((column) => column.id === sourceColumnId);
+  const toIndex = columns.findIndex((column) => column.id === targetColumnId);
+  if (fromIndex >= 0 && toIndex >= 0) {
+    if (toIndex <= fromIndex) return;
+    const lastId = doneColumnId ?? columns.at(-1)?.id;
+    markCelebrate(taskId, targetColumnId === lastId ? "complete" : "progress");
+    return;
+  }
+  if (doneColumnId && targetColumnId === doneColumnId) {
+    markCelebrate(taskId, "complete");
+  }
 }
 
 function patchTaskInCaches(
@@ -564,13 +597,14 @@ export function useMoveTask() {
           ? ancestorsToComplete(moved, latestProjectTasks, doneColumnId)
           : [];
 
-      if (
-        doneColumnId &&
-        targetColumnId === doneColumnId &&
-        sourceColumnId !== doneColumnId
-      ) {
-        markCelebrate(taskId);
-      }
+      celebrateRightwardMove(
+        queryClient,
+        taskId,
+        sourceColumnId,
+        targetColumnId,
+        projectId,
+        doneColumnId,
+      );
 
       for (const ancestor of ancestors) {
         const fromKey = taskKeys.list({
