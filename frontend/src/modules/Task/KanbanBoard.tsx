@@ -292,15 +292,13 @@ function BoardCanvas({
   const boardScrollRef = useHorizontalOverflowScroll<HTMLDivElement>();
 
   return (
-    <CanvasDots className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip">
+    <CanvasDots className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-x-clip">
       <KanbanHeader
-        className="w-full"
         clauses={clauses}
         columns={columns}
         completedCount={completedCount}
         hrefForView={hrefForView}
         projectId={project.id}
-        projectName={project.name}
         totalCount={allTasks.length}
         view={view}
         onClausesChange={setClauses}
@@ -480,7 +478,7 @@ function ColumnDropShadow({
       style={{ width, height }}
     >
       <div
-        className="box-border h-full rounded-xl border border-dashed border-zinc-500 bg-[#181b24]/50"
+        className="glass box-border h-full rounded-xl border border-dashed border-zinc-500"
         style={{ width }}
       />
     </div>

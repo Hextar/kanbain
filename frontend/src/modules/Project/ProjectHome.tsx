@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Columns3 } from "lucide-react";
+import { HeaderSlot } from "@uiKit/AppHeader";
 import CanvasDots from "@uiKit/CanvasDots";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import { showToast } from "@libraries/toast";
@@ -15,7 +15,6 @@ import { retryProjectPlanAction } from "./actions/retryPlan";
 import { projectKeys } from "./api/projectKeys";
 import { reviveProject } from "./helpers/projectJson";
 import { useProjects } from "./hooks/useProjects";
-import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
 import { useRequirePlannerKey } from "@modules/Settings/hooks/useRequirePlannerKey";
 import type { Project } from "./types/Project";
 
@@ -32,8 +31,6 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const hasProjects = projects.length > 0;
-  const projectCountLabel =
-    projects.length === 1 ? "1 project" : `${projects.length} projects`;
 
   function remember(project: Project) {
     const next = reviveProject(project);
@@ -80,23 +77,11 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
   }
 
   return (
-    <div className="flex min-h-dvh w-full flex-col">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15 text-purple-300">
-            <Columns3 aria-hidden size={16} />
-          </div>
-          <h1 className="text-sm font-semibold text-white">KanbAIn</h1>
-          <p className="truncate text-xs text-zinc-500">
-            {hasProjects ? projectCountLabel : "Your projects"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasProjects ? <NewProjectForm onCreated={remember} /> : null}
-          <SettingsButton size="xs" />
-        </div>
-      </header>
-      <CanvasDots className="flex min-h-dvh w-full flex-col">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      <HeaderSlot>
+        {hasProjects ? <NewProjectForm onCreated={remember} /> : null}
+      </HeaderSlot>
+      <CanvasDots className="flex min-h-0 w-full flex-1 flex-col">
         {hasProjects ? (
           <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (

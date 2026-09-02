@@ -98,8 +98,8 @@ export default function ProjectWorkspace({
 
   if (current.planStatus === "failed") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
-        <h1 className="text-2xl font-semibold text-white">{current.name}</h1>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-2xl font-semibold text-white">{current.name}</p>
         <p className="max-w-md text-red-400">
           {current.planError ?? "Planning failed."}
         </p>
@@ -116,8 +116,8 @@ export default function ProjectWorkspace({
   const board: ProjectBoard | undefined = boardQuery.data;
   if (current.planStatus === "ready" && boardQuery.isError && !board) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
-        <h1 className="text-2xl font-semibold text-white">{current.name}</h1>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-2xl font-semibold text-white">{current.name}</p>
         <p className="max-w-md text-zinc-400">Couldn't load the board.</p>
         <Button
           disabled={boardQuery.isFetching}
@@ -138,7 +138,6 @@ export default function ProjectWorkspace({
     return (
       <KanbanBoardSkeleton
         label={opening ? "Loading board…" : live.message}
-        projectName={current.name}
         progress={opening ? undefined : live.progress}
         statusText={opening ? undefined : live.message}
       />

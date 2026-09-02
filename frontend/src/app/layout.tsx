@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { SettingsProvider } from "@modules/Settings/components/SettingsProvider";
+import AppShell from "./AppShell";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -18,9 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-dvh w-full min-w-0 overflow-x-clip">
         <Providers>
           <SettingsProvider>
-            <div className="flex min-h-dvh w-full min-w-0 flex-col">
-              {children}
-            </div>
+            <AppShell>{children}</AppShell>
           </SettingsProvider>
         </Providers>
       </body>

@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
+import { HeaderSlot } from "@uiKit/AppHeader";
 import { useAssignees, useMilestones, useTags } from "../hooks/useCatalog";
 import type { FilterClause } from "../helpers/boardFilter";
 import type { BoardView } from "../helpers/boardView";
@@ -12,9 +10,7 @@ import MilestoneMenu from "./MilestoneMenu";
 import ViewTabs from "./ViewTabs";
 
 type HeaderProps = {
-  className?: string;
   projectId: string;
-  projectName: string;
   columns: Column[];
   clauses: FilterClause[];
   completedCount: number;
@@ -25,9 +21,7 @@ type HeaderProps = {
 };
 
 export default function Header({
-  className,
   projectId,
-  projectName,
   columns,
   clauses,
   completedCount,
@@ -41,43 +35,25 @@ export default function Header({
   const { data: milestones = [] } = useMilestones(projectId);
 
   return (
-    <div
-      className={`relative z-40 grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-white/5 bg-[#12141c] px-4 ${className}`}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <Link
-          className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-white"
-          href="/"
+    <HeaderSlot center={<ViewTabs hrefFor={hrefForView} view={view} />}>
+      <BoardFilter
+        catalog={{ assignees, milestones, tags, columns }}
+        clauses={clauses}
+        onChange={onClausesChange}
+      />
+      {totalCount > 0 ? (
+        <span
+          aria-label={`${completedCount} of ${totalCount} completed`}
+          className="inline-flex shrink-0 items-center gap-1.5 text-xs text-zinc-400"
         >
-          Projects
-        </Link>
-        <ChevronRight size={14} className="shrink-0 text-zinc-600" />
-        <h1 className="truncate rounded-full bg-zinc-800/80 px-3 py-1 text-sm font-semibold text-white ring-1 ring-white/8">
-          {projectName}
-        </h1>
-      </div>
-      <ViewTabs hrefFor={hrefForView} view={view} />
-      <div className="flex min-w-0 items-center justify-end gap-2">
-        <BoardFilter
-          catalog={{ assignees, milestones, tags, columns }}
-          clauses={clauses}
-          onChange={onClausesChange}
-        />
-        {totalCount > 0 ? (
-          <span
-            aria-label={`${completedCount} of ${totalCount} completed`}
-            className="inline-flex shrink-0 items-center gap-1.5 text-xs text-zinc-400"
-          >
-            <ProgressRing completed={completedCount} total={totalCount} />
-            <span className="hidden tabular-nums sm:inline">
-              {completedCount}/{totalCount} completed
-            </span>
+          <ProgressRing completed={completedCount} total={totalCount} />
+          <span className="hidden tabular-nums sm:inline">
+            {completedCount}/{totalCount} completed
           </span>
-        ) : null}
-        <MilestoneMenu projectId={projectId} />
-        <SettingsButton size="xs" />
-      </div>
-    </div>
+        </span>
+      ) : null}
+      <MilestoneMenu projectId={projectId} />
+    </HeaderSlot>
   );
 }
 

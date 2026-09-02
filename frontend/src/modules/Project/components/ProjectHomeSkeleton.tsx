@@ -1,26 +1,19 @@
-import { Columns3 } from "lucide-react";
-import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
+import { HeaderSlot } from "@uiKit/AppHeader";
 import Skeleton from "@uiKit/Skeleton";
 
 const CARD_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
 export default function ProjectHomeSkeleton() {
   return (
-    <div aria-busy className="flex min-h-dvh w-full flex-col" role="status">
+    <div
+      aria-busy
+      className="flex min-h-0 w-full flex-1 flex-col"
+      role="status"
+    >
       <span className="sr-only">Loading projects…</span>
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-white/5 px-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15 text-purple-300">
-            <Columns3 aria-hidden size={16} />
-          </div>
-          <h1 className="text-sm font-semibold text-white">KanbAIn</h1>
-          <Skeleton className="h-3 w-20" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-48 rounded-md" />
-          <SettingsButton size="xs" />
-        </div>
-      </header>
+      <HeaderSlot>
+        <Skeleton className="h-9 w-48 rounded-md" />
+      </HeaderSlot>
       <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
         {CARD_KEYS.map((key) => (
           <li key={key} className="min-w-0">
