@@ -41,17 +41,32 @@ function useProjectIdFromPath() {
 function useCachedProjectName(projectId: string | undefined) {
   const queryClient = useQueryClient();
   return useSyncExternalStore(
-    (onChange) =>
-      queryClient.getQueryCache().subscribe((event) => {
+    (onChange) => {
+      let cancelled = false;
+      let scheduled = false;
+      const notify = () => {
+        if (cancelled || scheduled) return;
+        scheduled = true;
+        queueMicrotask(() => {
+          scheduled = false;
+          if (!cancelled) onChange();
+        });
+      };
+      const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
         if (!projectId) return;
         const key = event.query.queryKey;
         if (
           keysEqual(key, projectKeys.detail(projectId)) ||
           keysEqual(key, projectKeys.list())
         ) {
-          onChange();
+          notify();
         }
-      }),
+      });
+      return () => {
+        cancelled = true;
+        unsubscribe();
+      };
+    },
     () => readProjectName(queryClient, projectId),
     () => readProjectName(queryClient, projectId),
   );

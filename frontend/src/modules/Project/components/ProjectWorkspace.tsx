@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Button from "@uiKit/Button";
 import EmptyState from "@uiKit/EmptyState";
 import { showToast } from "@libraries/toast";
@@ -46,19 +46,22 @@ export default function ProjectWorkspace({
     const cached = queryClient.getQueryData<Project>(
       projectKeys.detail(revived.id),
     );
-    const next =
-      cached && PLAN_RANK[cached.planStatus] > PLAN_RANK[revived.planStatus]
-        ? cached
-        : revived;
-    queryClient.setQueryData(projectKeys.detail(revived.id), next);
-    if (next.planStatus === "ready" && initialTasks) {
-      seedProjectBoard(queryClient, revived.id, {
+    return cached && PLAN_RANK[cached.planStatus] > PLAN_RANK[revived.planStatus]
+      ? cached
+      : revived;
+  });
+  const didSeed = useRef(false);
+  useLayoutEffect(() => {
+    if (didSeed.current) return;
+    didSeed.current = true;
+    queryClient.setQueryData(projectKeys.detail(initial.id), initial);
+    if (initial.planStatus === "ready" && initialTasks) {
+      seedProjectBoard(queryClient, initial.id, {
         columns: initialColumns,
         tasks: initialTasks,
       });
     }
-    return next;
-  });
+  }, [queryClient, initial, initialColumns, initialTasks]);
   const { data } = useProject(initial);
   const requirePlannerKey = useRequirePlannerKey();
   const [isRetrying, setIsRetrying] = useState(false);
