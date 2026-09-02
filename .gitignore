@@ -34,6 +34,7 @@ coverage/
 *.tsbuildinfo
 .vite/
 .next/
+storybook-static/
 
 # Logs
 logs/
