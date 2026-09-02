@@ -45,7 +45,7 @@ export default function RadioButton({
       <input
         {...props}
         type="radio"
-        name="day-select"
+        name={props.name}
         className="peer pointer-events-none sr-only h-0 w-0"
         checked={selected}
         readOnly
