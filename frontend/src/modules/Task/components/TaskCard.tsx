@@ -6,8 +6,10 @@ import { twMerge } from "tailwind-merge";
 import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
 import type { DropPlaceholder } from "@libraries/dnd/html5DnD";
 import {
+  consumeCelebrate,
   consumeSpawn,
   isSpawnPending,
+  releaseCelebrate,
   releaseSpawn,
 } from "@libraries/particles";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
@@ -69,7 +71,11 @@ export default function TaskCard({
   useLayoutEffect(() => {
     const node = rootRef.current;
     consumeSpawn(task.id, node);
-    return () => releaseSpawn(node);
+    consumeCelebrate(task.id, node);
+    return () => {
+      releaseSpawn(node);
+      releaseCelebrate(node);
+    };
   }, [task.id]);
 
   const { isDragging, dragProps } = useHtml5Drag<TaskDragPayload>({

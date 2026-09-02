@@ -11,7 +11,7 @@ import AppHeader, { HeaderProvider } from "@uiKit/AppHeader";
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <HeaderProvider>
-      <div className="flex min-h-dvh w-full min-w-0 flex-col">
+      <div className="flex h-dvh w-full min-w-0 flex-col overflow-hidden">
         <AppHeaderHost />
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
           {children}

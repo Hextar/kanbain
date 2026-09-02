@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from ..extensions import db
 from ..http import error_response
 from ..lookups import UnknownEntityError, get_member, get_project
-from ..models import Project, ProjectMember, new_id
+from ..models import Project, ProjectMember, new_id, task_progress_by_project
 from ..planner.effort import DEFAULT_THOUGHT_EFFORT
 from ..queue import enqueue_plan
 from ..seed import add_default_columns
@@ -86,12 +86,20 @@ def _member_from_payload(project_id: str, payload: dict) -> ProjectMember:
 
 @projects_bp.get("/api/projects")
 def list_projects():
-    projects = db.session.execute(
-        db.select(Project)
-        .options(selectinload(Project.members))
-        .order_by(Project.created_at.desc())
-    ).scalars()
-    return jsonify([project.to_dict() for project in projects])
+    projects = list(
+        db.session.execute(
+            db.select(Project)
+            .options(selectinload(Project.members))
+            .order_by(Project.created_at.desc())
+        ).scalars()
+    )
+    progress = task_progress_by_project([project.id for project in projects])
+    return jsonify(
+        [
+            project.to_dict(progress=progress.get(project.id, (0, 0)))
+            for project in projects
+        ]
+    )
 
 
 @projects_bp.post("/api/projects")

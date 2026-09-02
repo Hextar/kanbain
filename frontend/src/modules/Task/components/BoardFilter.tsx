@@ -31,7 +31,7 @@ type BoardFilterProps = {
 };
 
 const menuClassName =
-  "light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-[22rem] overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40";
+  "glass-overlay light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-[22rem] overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/50";
 
 export default function BoardFilter({
   catalog,

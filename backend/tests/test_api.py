@@ -16,6 +16,8 @@ def test_lists_seeded_project_and_columns(client):
     assert project["members"] == []
     assert project["planStatus"] == "ready"
     assert project["thoughtEffort"] == "medium"
+    assert project["taskCount"] == 0
+    assert project["completedCount"] == 0
     assert "planPhase" not in project
 
     response = client.get("/api/columns")
@@ -67,6 +69,23 @@ def test_create_and_filter_tasks(client):
     filtered = client.get(f"/api/tasks?columnId={todo_id}&priority=high")
     assert filtered.status_code == 200
     assert [item["title"] for item in filtered.get_json()] == ["Write API"]
+
+
+def test_project_completion_counts_done_column(client):
+    columns = client.get("/api/columns").get_json()
+    todo_id = columns[0]["id"]
+    done_id = columns[-1]["id"]
+    client.post("/api/tasks", json={"title": "Backlog", "columnId": todo_id})
+    client.post("/api/tasks", json={"title": "Shipped", "columnId": done_id})
+    client.post("/api/tasks", json={"title": "Also shipped", "columnId": done_id})
+
+    project = default_project(client)
+    assert project["taskCount"] == 3
+    assert project["completedCount"] == 2
+    fetched = client.get(f"/api/projects/{project['id']}")
+    assert fetched.status_code == 200
+    assert fetched.get_json()["taskCount"] == 3
+    assert fetched.get_json()["completedCount"] == 2
 
 
 def test_list_tasks_by_column_when_multiple_projects_exist(client):

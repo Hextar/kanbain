@@ -337,7 +337,7 @@ function BoardCanvas({
                   width={placeholder.width ?? placeholder.height}
                 />
               ) : null}
-              <FlipItem className="h-full min-h-0 w-[280px] shrink-0">
+              <FlipItem className="flex h-full min-h-0 w-[280px] shrink-0 flex-col">
                 <TaskColumn
                   accentIndex={index}
                   allTasks={allTasks}
@@ -478,7 +478,7 @@ function ColumnDropShadow({
       style={{ width, height }}
     >
       <div
-        className="glass box-border h-full rounded-xl border border-dashed border-zinc-500"
+        className="relative box-border h-full rounded-xl border border-dashed border-zinc-500"
         style={{ width }}
       />
     </div>

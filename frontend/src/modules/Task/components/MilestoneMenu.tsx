@@ -150,7 +150,7 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
       </Tooltip>
       {open ? (
         <div
-          className="light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/8 bg-[#181b24] shadow-xl shadow-black/40"
+          className="glass-overlay light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/50"
           data-light-edge=""
           role="dialog"
           aria-label="Milestones"

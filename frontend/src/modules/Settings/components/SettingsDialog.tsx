@@ -110,7 +110,7 @@ export default function SettingsDialog({
                 ? "flex items-start gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-300"
                 : status.tone === "warn"
                   ? "flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200"
-                  : "flex items-start gap-2.5 rounded-xl border border-white/6 bg-[#14161e]/90 px-3 py-2.5 text-sm text-zinc-400"
+                  : "flex items-start gap-2.5 rounded-xl border border-white/8 bg-[#14161e]/55 px-3 py-2.5 text-sm text-zinc-400 backdrop-blur-sm"
             }
             role={status.tone === "ok" ? "status" : "alert"}
           >

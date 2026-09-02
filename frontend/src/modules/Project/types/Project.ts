@@ -48,6 +48,8 @@ export type Project = {
   createdAt?: Date;
   updatedAt?: Date;
   members: ProjectMember[];
+  taskCount: number;
+  completedCount: number;
 };
 
 export type CreateProjectInput = {

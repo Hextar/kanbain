@@ -4,8 +4,10 @@ import { columnKeys } from "@modules/Task/api/columnKeys";
 import { getTasks } from "@modules/Task/api/tasks";
 import { taskKeys } from "@modules/Task/api/taskKeys";
 import { groupTasksByColumn } from "@modules/Task/helpers/groupTasksByColumn";
+import { lastColumnId } from "@modules/Task/helpers/visibleColumnCards";
 import type { Column } from "@modules/Task/types/Column";
 import type { Task } from "@modules/Task/types/Task";
+import type { Project } from "../types/Project";
 import { projectKeys } from "../api/projectKeys";
 
 export type ProjectBoard = {
@@ -36,6 +38,38 @@ export function seedProjectBoard(
   for (const [columnId, tasks] of grouped) {
     queryClient.setQueryData(taskKeys.list({ columnId, projectId }), tasks);
   }
+  patchProjectTaskProgress(queryClient, projectId, board);
+}
+
+function patchProjectTaskProgress(
+  queryClient: QueryClient,
+  projectId: string,
+  board: ProjectBoard,
+) {
+  const doneId = lastColumnId(board.columns);
+  const taskCount = board.tasks.length;
+  let completedCount = 0;
+  if (doneId) {
+    for (const task of board.tasks) {
+      if (task.columnId === doneId) completedCount += 1;
+    }
+  }
+
+  function patch(project: Project | undefined) {
+    if (!project || project.id !== projectId) return project;
+    if (
+      project.taskCount === taskCount &&
+      project.completedCount === completedCount
+    ) {
+      return project;
+    }
+    return { ...project, taskCount, completedCount };
+  }
+
+  queryClient.setQueryData(projectKeys.detail(projectId), patch);
+  queryClient.setQueryData<Project[]>(projectKeys.list(), (list) =>
+    list?.map((item) => (item.id === projectId ? (patch(item) ?? item) : item)),
+  );
 }
 
 export async function warmupProjectBoard(

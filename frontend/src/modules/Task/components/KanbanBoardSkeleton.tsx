@@ -98,7 +98,8 @@ function ColumnSkeleton({
   titleWidths: readonly string[];
 }) {
   return (
-    <section className="glass relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/8">
+    <section className="relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/8">
+      <div aria-hidden className="glass pointer-events-none absolute inset-0 rounded-xl" />
       <div className="h-[3px] w-full shrink-0 bg-white/10" />
       <header className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
         <span className="flex h-7 w-4 shrink-0 items-center justify-center">

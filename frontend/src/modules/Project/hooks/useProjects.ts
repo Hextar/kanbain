@@ -26,6 +26,7 @@ export function useProjects(initialProjects: Project[]) {
     queryKey: projectKeys.list(),
     queryFn: getProjects,
     initialData: initialProjects,
+    staleTime: 0,
     structuralSharing: (current, incoming) =>
       keepProjectListOrder(
         current as Project[] | undefined,

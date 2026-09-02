@@ -66,6 +66,38 @@ function MetaPill({ children }: { children: string }) {
   );
 }
 
+function CardProgressBar({
+  barClassName,
+  label,
+  percent,
+  trackClassName,
+}: {
+  barClassName: string;
+  label: string;
+  percent: number;
+  trackClassName: string;
+}) {
+  return (
+    <div
+      aria-label={label}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={percent}
+      className="absolute inset-x-0 top-0 h-1 overflow-hidden"
+      role="progressbar"
+    >
+      <div aria-hidden className={twMerge("absolute inset-0", trackClassName)} />
+      <div
+        className={twMerge(
+          "relative h-full motion-safe:transition-[width] motion-safe:duration-700",
+          barClassName,
+        )}
+        style={{ width: `${percent}%` }}
+      />
+    </div>
+  );
+}
+
 export default function ProjectCard({
   project,
   onRetry,
@@ -88,6 +120,10 @@ export default function ProjectCard({
   const progressPercent = Math.round(
     Math.min(1, Math.max(0, live.progress)) * 100,
   );
+  const taskCount = Math.max(0, project.taskCount);
+  const completedCount = Math.min(taskCount, Math.max(0, project.completedCount));
+  const completionPercent =
+    taskCount === 0 ? 0 : Math.round((completedCount / taskCount) * 100);
   const summary = (project.goal ?? project.description ?? "").trim();
   const errorMessage = project.planError ?? "Planning failed.";
   const members = project.members ?? [];
@@ -109,21 +145,23 @@ export default function ProjectCard({
   const body = (
     <>
       {isPlanning && !isOpening ? (
-        <div
-          aria-label="Planning progress"
-          aria-valuemax={100}
-          aria-valuemin={0}
-          aria-valuenow={progressPercent}
-          className="absolute inset-x-0 top-0 h-0.5 overflow-hidden bg-purple-950"
-          role="progressbar"
-        >
-          <div
-            className="h-full bg-gradient-to-r from-violet-400 to-purple-600 motion-safe:transition-[width] motion-safe:duration-700"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+        <CardProgressBar
+          barClassName="bg-gradient-to-r from-violet-400 to-purple-600"
+          label="Planning progress"
+          percent={progressPercent}
+          trackClassName="bg-purple-950"
+        />
       ) : (
-        <div className={twMerge("absolute inset-x-0 top-0 h-0.5", accent.bar)} />
+        <CardProgressBar
+          barClassName={accent.bar}
+          label={
+            taskCount === 0
+              ? "No tasks yet"
+              : `${completedCount} of ${taskCount} tasks completed`
+          }
+          percent={completionPercent}
+          trackClassName={twMerge(accent.bar, "opacity-20")}
+        />
       )}
       <div
         aria-hidden

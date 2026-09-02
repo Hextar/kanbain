@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
 import HoverPreview from "@uiKit/HoverPreview";
+import {
+  consumeCelebrate,
+  releaseCelebrate,
+} from "@libraries/particles";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useAssignees } from "../hooks/useCatalog";
 import { compactTaskKey } from "../helpers/taskKey";
@@ -35,6 +39,7 @@ export default function NestedTaskRow({
   onDelete,
 }: NestedTaskRowProps) {
   const skipClickRef = useRef(false);
+  const rootRef = useRef<HTMLElement>(null);
   const { data: assignees = [] } = useAssignees();
 
   const handleDragStart = useCallback(() => {
@@ -46,6 +51,12 @@ export default function NestedTaskRow({
       skipClickRef.current = false;
     }, 0);
   }, []);
+
+  useLayoutEffect(() => {
+    const node = rootRef.current;
+    consumeCelebrate(task.id, node);
+    return () => releaseCelebrate(node);
+  }, [task.id]);
 
   const { isDragging, dragProps } = useHtml5Drag<TaskDragPayload>({
     mimeType: TASK_DRAG_MIME,
@@ -75,6 +86,7 @@ export default function NestedTaskRow({
     >
       <article
         {...dragProps}
+        ref={rootRef}
         data-dnd-item=""
         data-dnd-nested-row=""
         data-task-id={task.id}

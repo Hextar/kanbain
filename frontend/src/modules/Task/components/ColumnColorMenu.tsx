@@ -61,7 +61,7 @@ export default function ColumnColorMenu({
       {open ? (
         <div
           aria-label="Column color"
-          className="light-edge light-edge-card isolate absolute top-full left-0 z-50 mt-1.5 w-40 overflow-hidden rounded-xl border border-white/8 bg-[#181b24] p-2 shadow-xl shadow-black/40"
+          className="glass-overlay light-edge light-edge-card isolate absolute top-full left-0 z-50 mt-1.5 w-40 overflow-hidden rounded-xl border border-white/10 p-2 shadow-xl shadow-black/50"
           data-light-edge=""
           role="listbox"
         >

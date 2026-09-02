@@ -87,6 +87,22 @@ export function listProjects() {
   });
 }
 
+function projectPayload(project: Project): ProjectJson {
+  const projectTasks = tasks.filter((task) => task.projectId === project.id);
+  const doneId = lastColumnId(project.id);
+  let completedCount = 0;
+  if (doneId) {
+    for (const task of projectTasks) {
+      if (task.columnId === doneId) completedCount += 1;
+    }
+  }
+  return projectToJson({
+    ...project,
+    taskCount: projectTasks.length,
+    completedCount,
+  });
+}
+
 export function findProject(id: string) {
   return projects.find((project) => project.id === id) ?? null;
 }
@@ -629,11 +645,11 @@ export async function handleMock(request: Request, apiPath: string) {
   }
 
   if (request.method === "GET" && apiPath === "/api/projects") {
-    return respond(() => projects.map(projectToJson));
+    return respond(() => projects.map(projectPayload));
   }
   if (request.method === "POST" && apiPath === "/api/projects") {
     const input = (await request.json()) as CreateProjectInput;
-    return respond(() => projectToJson(insertProject(input)), 201);
+    return respond(() => projectPayload(insertProject(input)), 201);
   }
   if (
     segments[0] === "api" &&
@@ -645,12 +661,12 @@ export async function handleMock(request: Request, apiPath: string) {
       return respond(() => {
         const project = findProject(id);
         if (!project) throw new MockApiError(`Project ${id} not found`, 404);
-        return projectToJson(project);
+        return projectPayload(project);
       });
     }
     if (request.method === "PUT") {
       const payload = (await request.json()) as Pick<ProjectJson, "name">;
-      return respond(() => projectToJson(updateProject(id, payload)));
+      return respond(() => projectPayload(updateProject(id, payload)));
     }
     if (request.method === "DELETE") {
       deleteProject(id);
@@ -665,7 +681,7 @@ export async function handleMock(request: Request, apiPath: string) {
     segments.length === 4 &&
     request.method === "POST"
   ) {
-    return respond(() => projectToJson(enqueuePlan(segments[2])), 202);
+    return respond(() => projectPayload(enqueuePlan(segments[2])), 202);
   }
 
   if (request.method === "GET" && apiPath === "/api/columns") {

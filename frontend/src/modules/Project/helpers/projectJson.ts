@@ -1,5 +1,12 @@
 import type { Project } from "../types/Project";
 
+function asCount(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+  return Math.floor(value);
+}
+
 export type ProjectJson = {
   id: string;
   name: string;
@@ -20,6 +27,8 @@ export type ProjectJson = {
   createdAt?: string;
   updatedAt?: string;
   members?: Project["members"];
+  taskCount?: number;
+  completedCount?: number;
 };
 
 export function reviveProject(project: Project): Project {
@@ -52,6 +61,8 @@ export function projectFromJson(json: ProjectJson): Project {
     createdAt: json.createdAt ? new Date(json.createdAt) : undefined,
     updatedAt: json.updatedAt ? new Date(json.updatedAt) : undefined,
     members: json.members ?? [],
+    taskCount: asCount(json.taskCount),
+    completedCount: asCount(json.completedCount),
   };
 }
 
@@ -76,5 +87,7 @@ export function projectToJson(project: Project): ProjectJson {
     createdAt: project.createdAt?.toISOString(),
     updatedAt: project.updatedAt?.toISOString(),
     members: project.members,
+    taskCount: project.taskCount,
+    completedCount: project.completedCount,
   };
 }

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-dvh w-full min-w-0 overflow-x-clip">
+      <body className="h-dvh w-full min-w-0 overflow-hidden">
         <Providers>
           <SettingsProvider>
             <AppShell>{children}</AppShell>

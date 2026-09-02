@@ -27,7 +27,7 @@ export default function ToastHost() {
       {toasts.map((toast) => (
         <p
           key={toast.id}
-          className="pointer-events-auto w-full rounded-xl border border-white/8 bg-[#181b24] px-4 py-2.5 text-center text-sm text-zinc-100 shadow-xl shadow-black/40"
+          className="glass-overlay pointer-events-auto w-full rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-zinc-100 shadow-xl shadow-black/50"
           role="status"
         >
           {toast.message}

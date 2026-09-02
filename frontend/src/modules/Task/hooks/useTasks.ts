@@ -22,6 +22,7 @@ import {
   unnestWorkKind,
 } from "../helpers/nesting";
 import { showToast } from "@libraries/toast";
+import { markCelebrate } from "@libraries/particles";
 import type {
   CreateTaskInput,
   Task,
@@ -562,6 +563,14 @@ export function useMoveTask() {
         doneColumnId && projectId
           ? ancestorsToComplete(moved, latestProjectTasks, doneColumnId)
           : [];
+
+      if (
+        doneColumnId &&
+        targetColumnId === doneColumnId &&
+        sourceColumnId !== doneColumnId
+      ) {
+        markCelebrate(taskId);
+      }
 
       for (const ancestor of ancestors) {
         const fromKey = taskKeys.list({

@@ -22,7 +22,7 @@ const GUTTER = 8;
 const SUBMENU_GAP = 4;
 
 const PANEL_CLASS =
-  "fixed z-[90] min-w-44 rounded-xl border border-white/8 bg-[#181b24] p-1 shadow-xl shadow-black/40";
+  "glass-overlay light-edge light-edge-card fixed z-[90] min-w-44 rounded-xl border border-white/10 p-1 shadow-xl shadow-black/50";
 
 const ITEM_CLASS =
   "flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left text-sm text-zinc-200 outline-none hover:bg-white/8 focus:bg-white/8 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent";
@@ -478,6 +478,7 @@ export default function ContextMenu({
                 ref={panelRef}
                 aria-label={label}
                 className={twMerge(PANEL_CLASS, !coords && "opacity-0")}
+                data-light-edge=""
                 role="menu"
                 style={
                   coords
@@ -518,6 +519,7 @@ export default function ContextMenu({
                       ref={submenuRef}
                       aria-label={submenuItem.label}
                       className={twMerge(PANEL_CLASS, !submenuCoords && "opacity-0")}
+                      data-light-edge=""
                       role="menu"
                       style={
                         submenuCoords

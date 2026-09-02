@@ -53,6 +53,7 @@ export function applyRealtimeMessage(
   }
   if (message.event === "board.updated") {
     invalidateBoard(queryClient, message.projectId);
+    invalidateProject(queryClient, message.projectId);
   }
 }
 
@@ -79,7 +80,13 @@ function applyPlanUpdated(queryClient: QueryClient, message: RealtimeMessage) {
   );
   if (planStatus === "ready") {
     invalidateBoard(queryClient, message.projectId);
+    invalidateProject(queryClient, message.projectId);
   }
+}
+
+function invalidateProject(queryClient: QueryClient, projectId: string) {
+  void queryClient.invalidateQueries({ queryKey: projectKeys.list() });
+  void queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
 }
 
 function invalidateBoard(queryClient: QueryClient, projectId: string) {

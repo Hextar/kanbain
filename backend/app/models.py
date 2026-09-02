@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -81,7 +81,17 @@ class Project(db.Model):
         back_populates="project", cascade="all, delete-orphan"
     )
 
-    def to_dict(self, *, include_members: bool = True) -> dict:
+    def to_dict(
+        self,
+        *,
+        include_members: bool = True,
+        progress: tuple[int, int] | None = None,
+    ) -> dict:
+        task_count, completed_count = (
+            progress
+            if progress is not None
+            else task_progress_by_project([self.id]).get(self.id, (0, 0))
+        )
         payload = {
             "id": self.id,
             "name": self.name,
@@ -91,6 +101,8 @@ class Project(db.Model):
             "riskTolerance": self.risk_tolerance,
             "planStatus": self.plan_status,
             "thoughtEffort": self.thought_effort,
+            "taskCount": task_count,
+            "completedCount": completed_count,
         }
         optional = {
             "goal": self.goal,
@@ -336,3 +348,44 @@ class TaskDependency(db.Model):
 
     task: Mapped[Task] = relationship(foreign_keys=[task_id], back_populates="dependencies")
     depends_on: Mapped[Task] = relationship(foreign_keys=[depends_on_id])
+
+
+def task_progress_by_project(project_ids: list[str]) -> dict[str, tuple[int, int]]:
+    if not project_ids:
+        return {}
+
+    last_column: dict[str, tuple[int, str]] = {}
+    for project_id, column_id, order in db.session.execute(
+        db.select(BoardColumn.project_id, BoardColumn.id, BoardColumn.order).where(
+            BoardColumn.project_id.in_(project_ids)
+        )
+    ):
+        current = last_column.get(project_id)
+        if current is None or order > current[0] or (order == current[0] and column_id > current[1]):
+            last_column[project_id] = (order, column_id)
+
+    totals = {
+        project_id: int(count)
+        for project_id, count in db.session.execute(
+            db.select(Task.project_id, func.count(Task.id))
+            .where(Task.project_id.in_(project_ids))
+            .group_by(Task.project_id)
+        )
+    }
+    done_ids = [column_id for _, column_id in last_column.values()]
+    completed = (
+        {
+            project_id: int(count)
+            for project_id, count in db.session.execute(
+                db.select(Task.project_id, func.count(Task.id))
+                .where(Task.column_id.in_(done_ids))
+                .group_by(Task.project_id)
+            )
+        }
+        if done_ids
+        else {}
+    )
+    return {
+        project_id: (totals.get(project_id, 0), completed.get(project_id, 0))
+        for project_id in project_ids
+    }

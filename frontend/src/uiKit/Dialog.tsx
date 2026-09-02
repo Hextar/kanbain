@@ -123,7 +123,10 @@ export default function Dialog({
       ref={dialogRef}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className={twMerge("app-dialog light-edge light-edge-card", className)}
+      className={twMerge(
+        "app-dialog glass-overlay light-edge light-edge-card",
+        className,
+      )}
       data-light-edge=""
       onCancel={(event) => {
         event.preventDefault();
@@ -195,7 +198,7 @@ export function DialogPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-xl border border-white/6 bg-[#14161e]/90 p-3">
+    <section className="min-w-0 rounded-xl border border-white/8 bg-[#14161e]/55 p-3 backdrop-blur-sm">
       {title ? (
         <h3 className="mb-2.5 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
           {title}

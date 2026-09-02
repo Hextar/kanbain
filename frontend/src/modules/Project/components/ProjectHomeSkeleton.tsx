@@ -28,7 +28,7 @@ export default function ProjectHomeSkeleton() {
 function ProjectCardSkeleton() {
   return (
     <article className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24] p-5 pt-4">
-      <div className="absolute inset-x-0 top-0 h-0.5 bg-white/10" />
+      <div className="absolute inset-x-0 top-0 h-1 bg-white/10" />
       <Skeleton className="absolute top-4 right-4 size-7 rounded-md" />
       <div className="flex items-start gap-3">
         <Skeleton className="size-12 shrink-0 rounded-2xl" />
