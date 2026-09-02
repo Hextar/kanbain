@@ -1,5 +1,6 @@
 import { GripVertical } from "lucide-react";
-import { HeaderSlot } from "@uiKit/AppHeader";
+import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
+import AppHeader from "@uiKit/AppHeader";
 import CanvasDots from "@uiKit/CanvasDots";
 import Skeleton from "@uiKit/Skeleton";
 import PlanningStatus from "@modules/Project/components/PlanningStatus";
@@ -16,12 +17,14 @@ const COLUMNS = [
 ] as const;
 
 type KanbanBoardSkeletonProps = {
+  projectName?: string;
   label?: string;
   statusText?: string;
   progress?: number;
 };
 
 export default function KanbanBoardSkeleton({
+  projectName,
   label = "Loading board…",
   statusText,
   progress,
@@ -30,11 +33,14 @@ export default function KanbanBoardSkeleton({
   return (
     <CanvasDots
       aria-busy
-      className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-x-clip"
+      className="flex h-dvh w-full max-w-full min-w-0 flex-col overflow-x-clip"
       role="status"
     >
       <span className="sr-only">{label}</span>
-      <HeaderSlot center={<ViewTabsSkeleton />}>
+      <AppHeader
+        center={<ViewTabsSkeleton />}
+        projectName={projectName ?? <Skeleton className="h-3 w-24" />}
+      >
         {statusText ? (
           <span className="hidden truncate text-xs text-zinc-500 sm:inline">
             {showProgress ? "Planning" : statusText}
@@ -47,25 +53,26 @@ export default function KanbanBoardSkeleton({
           </>
         )}
         <Skeleton className="size-7 rounded-md" />
-      </HeaderSlot>
+        <SettingsButton size="xs" />
+      </AppHeader>
       <div className="relative min-h-0 min-w-0 flex-1">
         {showProgress ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center px-4">
-            <div className="glass-overlay w-full max-w-md rounded-xl border border-white/10 p-4 shadow-lg shadow-black/50">
+            <div className="w-full max-w-md rounded-xl border border-white/8 bg-[#12141c]/92 p-4 shadow-lg shadow-black/40 backdrop-blur-sm">
               <PlanningStatus message={statusText ?? ""} progress={progress} />
             </div>
           </div>
         ) : null}
         <div className="board-x-scroll relative z-0 flex h-full min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3">
-          {COLUMNS.map((column, index) => (
-            <ColumnSkeleton
-              key={index}
-              cardCount={column.cards}
-              titleWidth={column.titleWidth}
-              titleWidths={column.widths}
-            />
-          ))}
-          <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
+        {COLUMNS.map((column, index) => (
+          <ColumnSkeleton
+            key={index}
+            cardCount={column.cards}
+            titleWidth={column.titleWidth}
+            titleWidths={column.widths}
+          />
+        ))}
+        <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
         </div>
       </div>
     </CanvasDots>
@@ -98,8 +105,7 @@ function ColumnSkeleton({
   titleWidths: readonly string[];
 }) {
   return (
-    <section className="relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/8">
-      <div aria-hidden className="glass pointer-events-none absolute inset-0 rounded-xl" />
+    <section className="relative isolate flex h-full min-h-0 w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-white/6 bg-[#181b24]">
       <div className="h-[3px] w-full shrink-0 bg-white/10" />
       <header className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
         <span className="flex h-7 w-4 shrink-0 items-center justify-center">

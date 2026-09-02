@@ -374,7 +374,7 @@ export default function TaskColumn({
         data-dnd-accent-fill={COLUMN_COLOR_FILL[accent.id]}
         data-spawning={isSpawnPending(column.id) ? "" : undefined}
         className={twMerge(
-          "group/column relative isolate flex h-full min-h-0 w-full min-w-0 flex-1 flex-col rounded-xl border border-white/8",
+          "group/column relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col rounded-xl border border-white/8",
           isOver && "border-zinc-400",
           (column.isSaving || isDragging) && "opacity-50",
           className,
@@ -384,7 +384,7 @@ export default function TaskColumn({
           aria-hidden
           className="glass pointer-events-none absolute inset-0 rounded-xl"
         />
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+        <div className="relative z-10 isolate flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
           <div className={twMerge("h-[3px] w-full shrink-0", accent.bar)} />
         <div
           aria-hidden
