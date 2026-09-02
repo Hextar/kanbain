@@ -343,29 +343,34 @@ export default function TaskDetailDialog({
     <>
       <Dialog
         accent={accent}
-        eyebrow="Card details"
         open={open}
         subtitle={
-          <>
-            {task.workKind ? (
-              <span
-                className={twMerge(
-                  PILL_CLASS_NAME,
-                  "px-2 py-0.5 capitalize ring-1 ring-white/6",
-                  WORK_KIND_STYLES[task.workKind],
-                )}
-              >
-                {task.workKind}
-              </span>
-            ) : null}
-            {currentParent ? (
-              <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] text-zinc-400 ring-1 ring-white/6">
-                Child of {parentOptionLabel(currentParent)}
-              </span>
-            ) : null}
-          </>
+          task.workKind || currentParent ? (
+            <>
+              {task.workKind ? (
+                <span
+                  className={twMerge(
+                    PILL_CLASS_NAME,
+                    "capitalize ring-1 ring-white/6",
+                    WORK_KIND_STYLES[task.workKind],
+                  )}
+                >
+                  {task.workKind}
+                </span>
+              ) : null}
+              {currentParent ? (
+                <span
+                  className="max-w-44 truncate rounded-full bg-zinc-800/80 px-1.5 py-px text-[10px] text-zinc-400 ring-1 ring-white/6"
+                  title={parentOptionLabel(currentParent)}
+                >
+                  Child of {parentOptionLabel(currentParent)}
+                </span>
+              ) : null}
+            </>
+          ) : undefined
         }
         title={isNew ? "New card" : (keyLabel ?? "Untitled")}
+        titleTranslate={isNew || !keyLabel ? undefined : "no"}
         onClose={onClose}
         footer={
           <div
