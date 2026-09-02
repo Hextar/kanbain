@@ -2,8 +2,8 @@
 
 import type { ReactElement } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import ColorSwatch from "@uiKit/ColorSwatch";
 import ContextMenu, { type ContextMenuEntry } from "@uiKit/ContextMenu";
-import { twMerge } from "tailwind-merge";
 import {
   COLUMN_COLOR_OPTIONS,
   type ColumnColorId,
@@ -33,29 +33,15 @@ function ColorSwatches({
       className="grid w-40 grid-cols-5 gap-1.5 p-1.5"
       role="listbox"
     >
-      {COLUMN_COLOR_OPTIONS.map((option) => {
-        const isSelected = option.id === selected;
-        return (
-          <button
-            key={option.id}
-            aria-label={option.label}
-            aria-selected={isSelected}
-            className="flex size-6 cursor-pointer items-center justify-center rounded-full hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-            role="option"
-            type="button"
-            onClick={() => onChange(option.id)}
-          >
-            <span
-              className={twMerge(
-                "size-3.5 rounded-full",
-                option.dot,
-                isSelected &&
-                  "ring-2 ring-white ring-offset-2 ring-offset-[#181b24]",
-              )}
-            />
-          </button>
-        );
-      })}
+      {COLUMN_COLOR_OPTIONS.map((option) => (
+        <ColorSwatch
+          key={option.id}
+          colorClassName={option.dot}
+          label={option.label}
+          selected={option.id === selected}
+          onClick={() => onChange(option.id)}
+        />
+      ))}
     </div>
   );
 }

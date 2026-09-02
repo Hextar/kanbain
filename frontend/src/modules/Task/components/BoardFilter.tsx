@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-import { ListFilter, X } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import { ListFilter } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import Badge from "@uiKit/Badge";
 import Button from "@uiKit/Button";
-import IconButton from "@uiKit/IconButton";
+import Chip from "@uiKit/Chip";
 import Input from "@uiKit/Input";
-import LightOrb from "@uiKit/LightOrb";
+import PopoverPanel, { Popover } from "@uiKit/PopoverPanel";
 import {
   cycleClauseOperator,
   clauseKey,
@@ -30,9 +38,6 @@ type BoardFilterProps = {
   onChange: (clauses: FilterClause[]) => void;
 };
 
-const menuClassName =
-  "glass-overlay light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-[22rem] overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/50";
-
 export default function BoardFilter({
   catalog,
   clauses,
@@ -42,7 +47,6 @@ export default function BoardFilter({
   const [query, setQuery] = useState("");
   const [drillField, setDrillField] = useState<FilterField | undefined>();
   const [activeIndex, setActiveIndex] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
   const suggestions = suggestFilters(query, catalog, clauses, drillField);
@@ -55,30 +59,17 @@ export default function BoardFilter({
     ? `${listId}-${activeSuggestion.id}`
     : undefined;
 
-  useEffect(() => {
-    if (!open) return;
-    inputRef.current?.focus();
-  }, [open, drillField]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(event: PointerEvent) {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
-      setQuery("");
-      setDrillField(undefined);
-      setActiveIndex(0);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
-
-  function close() {
+  const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setDrillField(undefined);
     setActiveIndex(0);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+  }, [open, drillField]);
 
   function applySuggestion(suggestion: FilterSuggestion) {
     if (suggestion.drillField) {
@@ -171,7 +162,12 @@ export default function BoardFilter({
           </Button>
         </div>
       ) : null}
-      <div ref={rootRef} className="relative shrink-0">
+      <Popover
+        className="shrink-0"
+        dismissOnEscape={false}
+        open={open}
+        onClose={close}
+      >
         <Button
           aria-expanded={open}
           aria-haspopup="listbox"
@@ -197,15 +193,14 @@ export default function BoardFilter({
             <ListFilter aria-hidden size={14} />
             Filter
             {clauses.length > 0 ? (
-              <span className="rounded-full bg-purple-500/20 px-1.5 text-[11px] font-medium text-purple-200 tabular-nums">
+              <Badge className="bg-purple-500/20 px-1.5 text-[11px] font-medium text-purple-200 tabular-nums">
                 {clauses.length}
-              </span>
+              </Badge>
             ) : null}
           </span>
         </Button>
         {open ? (
-          <div className={menuClassName} data-light-edge="">
-            <LightOrb />
+          <PopoverPanel className="w-[22rem]">
             <div className="relative border-b border-zinc-700 p-2">
               <Input
                 ref={inputRef}
@@ -275,9 +270,9 @@ export default function BoardFilter({
                 })
               )}
             </ul>
-          </div>
+          </PopoverPanel>
         ) : null}
-      </div>
+      </Popover>
       {clauses.length > 0 ? (
         <span className="sr-only" aria-live="polite">
           {clauses.length === 1
@@ -309,34 +304,25 @@ function FilterChip({
           .join(" or ");
 
   return (
-    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-zinc-800/80 py-0.5 pr-0.5 pl-2 text-xs text-zinc-200 ring-1 ring-white/8">
-      <span className="flex min-w-0 items-center gap-1">
-        <span className="shrink-0">{fieldLabel(clause.field)}</span>
-        {canCycle ? (
-          <button
-            className="shrink-0 cursor-pointer rounded-sm text-zinc-400 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-            type="button"
-            onClick={onCycle}
-          >
-            {operatorLabel(clause.operator)}
-          </button>
-        ) : (
-          <span className="shrink-0 text-zinc-400">
-            {operatorLabel(clause.operator)}
-          </span>
-        )}
-        {values ? <span className="min-w-0 truncate">{values}</span> : null}
-      </span>
-      <IconButton
-        aria-label={`Remove ${clauseLabel(clause, catalog)}`}
-        className="size-5 text-zinc-400"
-        size="xs"
-        type="button"
-        variant="secondary"
-        onClick={onRemove}
-      >
-        <X size={12} />
-      </IconButton>
-    </span>
+    <Chip
+      removeLabel={`Remove ${clauseLabel(clause, catalog)}`}
+      onRemove={onRemove}
+    >
+      <span className="shrink-0">{fieldLabel(clause.field)}</span>
+      {canCycle ? (
+        <button
+          className="shrink-0 cursor-pointer rounded-sm text-zinc-400 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+          type="button"
+          onClick={onCycle}
+        >
+          {operatorLabel(clause.operator)}
+        </button>
+      ) : (
+        <span className="shrink-0 text-zinc-400">
+          {operatorLabel(clause.operator)}
+        </span>
+      )}
+      {values ? <span className="min-w-0 truncate">{values}</span> : null}
+    </Chip>
   );
 }

@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { GripVertical, Plus, Trash } from "lucide-react";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
+import Badge from "@uiKit/Badge";
 import { twMerge } from "tailwind-merge";
 import IconButton from "@uiKit/IconButton";
 import Tooltip from "@uiKit/Tooltip";
@@ -384,165 +385,166 @@ export default function TaskColumn({
           aria-hidden
           className="glass pointer-events-none absolute inset-0 rounded-xl"
         />
-        <div className="relative z-10 isolate flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+        <div className="relative isolate z-10 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
           <div className={twMerge("h-[3px] w-full shrink-0", accent.bar)} />
-        <div
-          aria-hidden
-          className={twMerge(
-            "light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl",
-            accent.glow,
-          )}
-        />
-        <div className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
           <div
-            {...dragProps}
-            aria-label={`Reorder ${column.title}`}
+            aria-hidden
             className={twMerge(
-              "flex h-7 w-4 shrink-0 items-center justify-center",
-              column.isSaving || isEditingTitle
-                ? "cursor-default"
-                : isDragging
-                  ? "cursor-grabbing"
-                  : "cursor-grab",
+              "light-orb pointer-events-none absolute -top-16 -right-8 size-44 rounded-full bg-gradient-to-br to-transparent opacity-40 blur-2xl",
+              accent.glow,
             )}
-          >
-            <GripVertical
-              aria-hidden
-              className="block text-zinc-600"
-              size={14}
-            />
-          </div>
-          <ColumnColorMenu
-            accent={accent}
-            columnTitle={column.title}
-            disabled={column.isSaving}
-            onChange={(color) => persist({ color })}
           />
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            {isEditingTitle ? (
-              <input
-                aria-label="Column name"
-                autoFocus
-                className="h-7 min-w-0 flex-1 rounded bg-zinc-900 px-1.5 text-[11px] leading-none font-semibold text-zinc-200 ring-1 ring-white/15 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-purple-500"
-                placeholder="Column name"
-                value={draftTitle}
-                onBlur={(event) => {
-                  const next = event.relatedTarget;
-                  if (next instanceof Node && rootRef.current?.contains(next)) {
-                    return;
-                  }
-                  commitTitle();
-                }}
-                onChange={(event) => setDraftTitle(event.target.value)}
-                onFocus={(event) => event.currentTarget.select()}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitTitle();
-                  }
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    cancelTitle();
-                  }
-                }}
-              />
-            ) : (
-              <h2 className="min-w-0">
-                <button
-                  className="block h-7 max-w-full cursor-pointer truncate text-left text-[11px] leading-7 font-semibold tracking-[0.14em] text-zinc-300 uppercase hover:text-white focus-visible:rounded focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-                  disabled={column.isSaving}
-                  type="button"
-                  onClick={startEditTitle}
-                >
-                  {column.title}
-                </button>
-              </h2>
-            )}
-            <span
+          <div className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
+            <div
+              {...dragProps}
+              aria-label={`Reorder ${column.title}`}
               className={twMerge(
-                "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] leading-none font-medium tabular-nums select-none",
-
-                accent.badge,
+                "flex h-7 w-4 shrink-0 items-center justify-center",
+                column.isSaving || isEditingTitle
+                  ? "cursor-default"
+                  : isDragging
+                    ? "cursor-grabbing"
+                    : "cursor-grab",
               )}
             >
-              {cardCount}
-            </span>
-          </div>
-          <Tooltip
-            align="end"
-            content={isNew ? "Discard column" : "Delete column"}
-            wrapperClassName="shrink-0"
-          >
-            <IconButton
-              aria-label={isNew ? "Discard column" : `Delete ${column.title}`}
-              className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
-              size="xs"
-              variant="secondary"
-              onClick={requestDelete}
+              <GripVertical
+                aria-hidden
+                className="block text-zinc-600"
+                size={14}
+              />
+            </div>
+            <ColumnColorMenu
+              accent={accent}
+              columnTitle={column.title}
+              disabled={column.isSaving}
+              onChange={(color) => persist({ color })}
+            />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              {isEditingTitle ? (
+                <input
+                  aria-label="Column name"
+                  autoFocus
+                  className="h-7 min-w-0 flex-1 rounded bg-zinc-900 px-1.5 text-[11px] leading-none font-semibold text-zinc-200 ring-1 ring-white/15 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-purple-500"
+                  placeholder="Column name"
+                  value={draftTitle}
+                  onBlur={(event) => {
+                    const next = event.relatedTarget;
+                    if (
+                      next instanceof Node &&
+                      rootRef.current?.contains(next)
+                    ) {
+                      return;
+                    }
+                    commitTitle();
+                  }}
+                  onChange={(event) => setDraftTitle(event.target.value)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      commitTitle();
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      cancelTitle();
+                    }
+                  }}
+                />
+              ) : (
+                <h2 className="min-w-0">
+                  <button
+                    className="block h-7 max-w-full cursor-pointer truncate text-left text-[11px] leading-7 font-semibold tracking-[0.14em] text-zinc-300 uppercase hover:text-white focus-visible:rounded focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+                    disabled={column.isSaving}
+                    type="button"
+                    onClick={startEditTitle}
+                  >
+                    {column.title}
+                  </button>
+                </h2>
+              )}
+              <Badge className={accent.badge} tone="count">
+                {cardCount}
+              </Badge>
+            </div>
+            <Tooltip
+              align="end"
+              content={isNew ? "Discard column" : "Delete column"}
+              wrapperClassName="shrink-0"
             >
-              <Trash size={14} />
-            </IconButton>
-          </Tooltip>
-          {isNew ? null : (
-            <Tooltip align="end" content="Add card" wrapperClassName="shrink-0">
               <IconButton
-                aria-label={`Add card to ${column.title}`}
+                aria-label={isNew ? "Discard column" : `Delete ${column.title}`}
                 className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
                 size="xs"
                 variant="secondary"
-                onClick={onAddCard}
+                onClick={requestDelete}
               >
-                <Plus size={14} />
+                <Trash size={14} />
               </IconButton>
             </Tooltip>
-          )}
-        </div>
-        <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
-          {visible.length === 0 && gapPlaceholder ? (
-            <DropLine className="inset-x-3" atStart />
-          ) : null}
-          {visible.map((card, liveIndex) => (
-            <FlipItem
-              key={card.task.id}
-              className="relative w-full min-w-0 hover:z-10"
-            >
-              <div className="relative min-w-0">
-                {gapPlaceholder?.index === liveIndex ? (
-                  <DropLine atStart={liveIndex === 0} />
-                ) : null}
-                {gapPlaceholder?.index === visible.length &&
-                liveIndex === lastIndex ? (
-                  <DropLine atEnd />
-                ) : null}
-                <TaskCard
-                  accentBar={accent.bar}
-                  childCount={card.childCount}
-                  doneColumnId={doneColumnId}
-                  doneCount={card.doneCount}
-                  nestActive={
-                    isOver &&
-                    (nestTargetId === card.task.id ||
-                      nestedOver?.parentId === card.task.id)
-                  }
-                  nested={card.nested.map(
-                    (child) => byId.get(child.id) ?? child,
-                  )}
-                  nestedPlaceholder={
-                    isOver && nestedOver?.parentId === card.task.id
-                      ? nestedOver.placeholder
-                      : null
-                  }
-                  projectId={projectId}
-                  selectedTaskId={selectedTaskId}
-                  task={byId.get(card.task.id) ?? card.task}
-                  onDelete={onDeleteTask}
-                  onOpen={onOpenTask}
-                  onUpdate={onUpdateTask}
-                />
-              </div>
-            </FlipItem>
-          ))}
-        </div>
+            {isNew ? null : (
+              <Tooltip
+                align="end"
+                content="Add card"
+                wrapperClassName="shrink-0"
+              >
+                <IconButton
+                  aria-label={`Add card to ${column.title}`}
+                  className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
+                  size="xs"
+                  variant="secondary"
+                  onClick={onAddCard}
+                >
+                  <Plus size={14} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </div>
+          <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-3">
+            {visible.length === 0 && gapPlaceholder ? (
+              <DropLine className="inset-x-3" atStart />
+            ) : null}
+            {visible.map((card, liveIndex) => (
+              <FlipItem
+                key={card.task.id}
+                className="relative w-full min-w-0 hover:z-10"
+              >
+                <div className="relative min-w-0">
+                  {gapPlaceholder?.index === liveIndex ? (
+                    <DropLine atStart={liveIndex === 0} />
+                  ) : null}
+                  {gapPlaceholder?.index === visible.length &&
+                  liveIndex === lastIndex ? (
+                    <DropLine atEnd />
+                  ) : null}
+                  <TaskCard
+                    accentBar={accent.bar}
+                    childCount={card.childCount}
+                    doneColumnId={doneColumnId}
+                    doneCount={card.doneCount}
+                    nestActive={
+                      isOver &&
+                      (nestTargetId === card.task.id ||
+                        nestedOver?.parentId === card.task.id)
+                    }
+                    nested={card.nested.map(
+                      (child) => byId.get(child.id) ?? child,
+                    )}
+                    nestedPlaceholder={
+                      isOver && nestedOver?.parentId === card.task.id
+                        ? nestedOver.placeholder
+                        : null
+                    }
+                    projectId={projectId}
+                    selectedTaskId={selectedTaskId}
+                    task={byId.get(card.task.id) ?? card.task}
+                    onDelete={onDeleteTask}
+                    onOpen={onOpenTask}
+                    onUpdate={onUpdateTask}
+                  />
+                </div>
+              </FlipItem>
+            ))}
+          </div>
         </div>
         <ConfirmDialog
           open={isDeleteConfirmOpen}

@@ -14,12 +14,12 @@ import {
 } from "@libraries/particles";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import type { Task, TaskItem } from "../types/Task";
-import CollapsibleSlot from "./CollapsibleSlot";
+import CollapsibleSlot from "@uiKit/CollapsibleSlot";
 import FlipItem from "./FlipItem";
 import DropLine from "./DropLine";
 import NestedTaskRow from "./NestedTaskRow";
 import TaskCardBody from "./TaskCardBody";
-import TaskCardFrame from "./TaskCardFrame";
+import Card from "@uiKit/Card";
 import TaskContextMenu from "./TaskContextMenu";
 
 type TaskCardProps = {
@@ -114,7 +114,7 @@ export default function TaskCard({
           }, 0);
         }}
       >
-        <TaskCardFrame
+        <Card
           className={twMerge(
             "relative flex min-h-2 flex-col transition-colors hover:border-zinc-500/70",
             task.isSaving && "opacity-70",
@@ -214,7 +214,7 @@ export default function TaskCard({
               </div>
             </div>
           </CollapsibleSlot>
-        </TaskCardFrame>
+        </Card>
       </article>
     </TaskContextMenu>
   );

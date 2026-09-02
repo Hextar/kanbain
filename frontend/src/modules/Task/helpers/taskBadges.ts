@@ -1,8 +1,5 @@
 import type { TaskPriority, WorkKind } from "../types/Catalog";
 
-export const PILL_CLASS_NAME =
-  "rounded-full px-1.5 py-px text-[10px] font-medium tracking-wide";
-
 export const PRIORITY_STYLES: Record<TaskPriority, string> = {
   low: "bg-sky-500/15 text-sky-300",
   medium: "bg-amber-500/15 text-amber-300",

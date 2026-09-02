@@ -1,9 +1,8 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
 import Link from "next/link";
 import { ChartColumn, Columns3 } from "lucide-react";
-import { twMerge } from "tailwind-merge";
+import ButtonGroup, { buttonGroupItemClassName } from "@uiKit/ButtonGroup";
 import type { BoardView } from "../helpers/boardView";
 
 const VIEWS = [
@@ -19,15 +18,7 @@ type ViewTabsProps = {
 
 export default function ViewTabs({ view, hrefFor, className }: ViewTabsProps) {
   return (
-    <div
-      aria-label="Board view"
-      className={twMerge(
-        "flex h-7 items-center rounded-md bg-[#181b24] p-0.5 ring-1 ring-white/8",
-        className,
-      )}
-      role="tablist"
-      onKeyDown={onTabListKeyDown}
-    >
+    <ButtonGroup aria-label="Board view" className={className} role="tablist">
       {VIEWS.map((item) => {
         const selected = item.id === view;
         const Icon = item.icon;
@@ -37,12 +28,7 @@ export default function ViewTabs({ view, hrefFor, className }: ViewTabsProps) {
             aria-controls={`view-panel-${item.id}`}
             aria-label={item.label}
             aria-selected={selected}
-            className={twMerge(
-              "inline-flex h-6 touch-manipulation items-center justify-center gap-1.5 rounded px-2 text-xs font-medium tracking-wide focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
-              selected
-                ? "bg-zinc-700/90 text-white"
-                : "text-zinc-500 hover:text-zinc-300",
-            )}
+            className={buttonGroupItemClassName({ selected })}
             href={hrefFor(item.id)}
             id={`view-tab-${item.id}`}
             role="tab"
@@ -54,23 +40,6 @@ export default function ViewTabs({ view, hrefFor, className }: ViewTabsProps) {
           </Link>
         );
       })}
-    </div>
+    </ButtonGroup>
   );
-}
-
-function onTabListKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-  const current = (event.target as HTMLElement).closest<HTMLElement>(
-    '[role="tab"]',
-  );
-  if (!current) return;
-  const tabs = [
-    ...event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'),
-  ];
-  const index = tabs.indexOf(current);
-  if (index < 0 || tabs.length === 0) return;
-  event.preventDefault();
-  const delta = event.key === "ArrowRight" ? 1 : -1;
-  const next = tabs[(index + delta + tabs.length) % tabs.length];
-  next?.focus();
 }

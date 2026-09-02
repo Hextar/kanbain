@@ -1,20 +1,17 @@
 "use client";
 
-import {
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useState, type FormEvent } from "react";
 import { Link2, Plus } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import Badge from "@uiKit/Badge";
 import Button from "@uiKit/Button";
+import ButtonGroup, { ButtonGroupItem } from "@uiKit/ButtonGroup";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
+import Field from "@uiKit/Field";
 import Input from "@uiKit/Input";
 import Select from "@uiKit/Select";
+import Textarea from "@uiKit/Textarea";
 import { shatterByAttr } from "@libraries/particles";
 import {
   useAssignees,
@@ -35,7 +32,6 @@ import {
 } from "../helpers/columnAccent";
 import {
   ESTIMATE_STYLE,
-  PILL_CLASS_NAME,
   PRIORITY_ACCENT,
   PRIORITY_STYLES,
   WORK_KIND_STYLES,
@@ -70,17 +66,6 @@ type ChoiceOption<T extends string> = {
   className: string;
 };
 
-function FieldRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-[5.75rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
-      <span className="text-[11px] font-medium tracking-wide text-zinc-500">
-        {label}
-      </span>
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
-}
-
 function SegmentedChoice<T extends string>({
   value,
   options,
@@ -91,67 +76,30 @@ function SegmentedChoice<T extends string>({
   onChange: (value: T | "") => void;
 }) {
   return (
-    <div className="flex h-8 min-w-0 rounded-md bg-[#12141c] p-0.5 ring-1 ring-white/8">
-      <button
-        aria-pressed={value === ""}
-        className={twMerge(
-          "h-full shrink-0 cursor-pointer rounded px-2 text-[10px] font-medium tracking-wide text-zinc-500 uppercase focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
-          value === "" ? "bg-zinc-700/90 text-zinc-100" : "hover:text-zinc-300",
-        )}
-        type="button"
+    <ButtonGroup size="sm">
+      <ButtonGroupItem
+        className="px-2 uppercase"
+        grow={false}
+        selected={value === ""}
         onClick={() => onChange("")}
       >
         None
-      </button>
+      </ButtonGroupItem>
       {options.map((option) => {
         const selected = option.value === value;
         return (
-          <button
+          <ButtonGroupItem
             key={option.value}
-            aria-pressed={selected}
-            className={twMerge(
-              "h-full min-w-0 flex-1 cursor-pointer rounded px-1 text-[10px] font-medium tracking-wide uppercase focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
-              selected ? option.className : "text-zinc-500 hover:text-zinc-300",
-            )}
-            type="button"
+            className="uppercase"
+            selected={selected}
+            selectedClassName={option.className}
             onClick={() => onChange(option.value)}
           >
             {option.label}
-          </button>
+          </ButtonGroupItem>
         );
       })}
-    </div>
-  );
-}
-
-function AutoGrowTextarea({
-  value,
-  onChange,
-  className,
-  ...props
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  className?: string;
-} & Omit<ComponentProps<"textarea">, "value" | "onChange" | "children">) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    node.style.height = "auto";
-    node.style.height = `${node.scrollHeight}px`;
-  }, [value]);
-
-  return (
-    <textarea
-      {...props}
-      ref={ref}
-      className={className}
-      rows={1}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
+    </ButtonGroup>
   );
 }
 
@@ -348,23 +296,22 @@ export default function TaskDetailDialog({
           task.workKind || currentParent ? (
             <>
               {task.workKind ? (
-                <span
+                <Badge
                   className={twMerge(
-                    PILL_CLASS_NAME,
                     "capitalize ring-1 ring-white/6",
                     WORK_KIND_STYLES[task.workKind],
                   )}
                 >
                   {task.workKind}
-                </span>
+                </Badge>
               ) : null}
               {currentParent ? (
-                <span
-                  className="max-w-44 truncate rounded-full bg-zinc-800/80 px-1.5 py-px text-[10px] text-zinc-400 ring-1 ring-white/6"
+                <Badge
+                  className="max-w-44 truncate bg-zinc-800/80 text-zinc-400 ring-1 ring-white/6"
                   title={parentOptionLabel(currentParent)}
                 >
                   Child of {parentOptionLabel(currentParent)}
-                </span>
+                </Badge>
               ) : null}
             </>
           ) : undefined
@@ -426,18 +373,20 @@ export default function TaskDetailDialog({
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
-            <AutoGrowTextarea
+            <Textarea
               aria-label="Description"
-              className="min-h-5 w-full resize-none overflow-hidden border-0 bg-transparent px-0 py-0 text-sm leading-5 text-zinc-400 placeholder:text-zinc-600 focus-visible:ring-0 focus-visible:outline-none"
+              autoGrow
+              className="min-h-5 w-full rounded-none border-0 bg-transparent px-0 py-0 text-sm leading-5 text-zinc-400 placeholder:text-zinc-600 focus-visible:ring-0"
               placeholder="Add a description…"
+              rows={1}
               value={description}
-              onChange={setDescription}
+              onChange={(event) => setDescription(event.target.value)}
             />
           </div>
 
           <DialogPanel title="Properties">
             <div className="flex flex-col gap-2.5">
-              <FieldRow label="Priority">
+              <Field label="Priority">
                 <SegmentedChoice
                   options={PRIORITIES.map((value) => ({
                     value,
@@ -447,8 +396,8 @@ export default function TaskDetailDialog({
                   value={priority}
                   onChange={setPriority}
                 />
-              </FieldRow>
-              <FieldRow label="Estimate">
+              </Field>
+              <Field label="Estimate">
                 <SegmentedChoice
                   options={TSHIRTS.map((value) => ({
                     value,
@@ -458,8 +407,8 @@ export default function TaskDetailDialog({
                   value={estimateTshirt}
                   onChange={setEstimateTshirt}
                 />
-              </FieldRow>
-              <FieldRow label="Parent">
+              </Field>
+              <Field label="Parent">
                 <Select
                   value={parentId}
                   onChange={(event) => setParentId(event.target.value)}
@@ -471,8 +420,8 @@ export default function TaskDetailDialog({
                     </option>
                   ))}
                 </Select>
-              </FieldRow>
-              <FieldRow label="Milestone">
+              </Field>
+              <Field label="Milestone">
                 <Select
                   value={milestoneId}
                   onChange={(event) => setMilestoneId(event.target.value)}
@@ -484,13 +433,13 @@ export default function TaskDetailDialog({
                     </option>
                   ))}
                 </Select>
-              </FieldRow>
+              </Field>
             </div>
           </DialogPanel>
 
           <DialogPanel title="People">
             <div className="flex flex-col gap-2.5">
-              <FieldRow label="Assignee">
+              <Field label="Assignee">
                 <Select
                   value={assigneeId}
                   onChange={(event) => setAssigneeId(event.target.value)}
@@ -502,8 +451,8 @@ export default function TaskDetailDialog({
                     </option>
                   ))}
                 </Select>
-              </FieldRow>
-              <FieldRow label="Role">
+              </Field>
+              <Field label="Role">
                 <InlineAdd
                   disabled={!newAssigneeName.trim() || createAssignee.isPending}
                   placeholder="New role"
@@ -511,7 +460,7 @@ export default function TaskDetailDialog({
                   onAdd={() => void handleCreateAssignee()}
                   onChange={setNewAssigneeName}
                 />
-              </FieldRow>
+              </Field>
             </div>
           </DialogPanel>
 

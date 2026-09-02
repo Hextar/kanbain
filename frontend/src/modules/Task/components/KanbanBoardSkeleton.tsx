@@ -1,5 +1,8 @@
 import { GripVertical } from "lucide-react";
 import { HeaderSlot } from "@uiKit/AppHeader";
+import ButtonGroup from "@uiKit/ButtonGroup";
+import { buttonGroupItemClassName } from "@uiKit/buttonGroupStyles";
+import Card from "@uiKit/Card";
 import CanvasDots from "@uiKit/CanvasDots";
 import Skeleton from "@uiKit/Skeleton";
 import PlanningStatus from "@modules/Project/components/PlanningStatus";
@@ -57,15 +60,15 @@ export default function KanbanBoardSkeleton({
           </div>
         ) : null}
         <div className="board-x-scroll relative z-0 flex h-full min-h-0 w-full min-w-0 flex-1 flex-row items-stretch justify-start gap-3 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 py-3">
-        {COLUMNS.map((column, index) => (
-          <ColumnSkeleton
-            key={index}
-            cardCount={column.cards}
-            titleWidth={column.titleWidth}
-            titleWidths={column.widths}
-          />
-        ))}
-        <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
+          {COLUMNS.map((column, index) => (
+            <ColumnSkeleton
+              key={index}
+              cardCount={column.cards}
+              titleWidth={column.titleWidth}
+              titleWidths={column.widths}
+            />
+          ))}
+          <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12" />
         </div>
       </div>
     </CanvasDots>
@@ -74,17 +77,12 @@ export default function KanbanBoardSkeleton({
 
 function ViewTabsSkeleton() {
   return (
-    <div
-      aria-hidden
-      className="flex h-7 items-center rounded-md bg-[#181b24] p-0.5 ring-1 ring-white/8"
-    >
-      <span className="inline-flex h-6 items-center rounded bg-zinc-700/90 px-2 text-xs font-medium text-white">
+    <ButtonGroup aria-hidden>
+      <span className={buttonGroupItemClassName({ selected: true })}>
         Board
       </span>
-      <span className="inline-flex h-6 items-center rounded px-2 text-xs font-medium text-zinc-500">
-        Flow
-      </span>
-    </div>
+      <span className={buttonGroupItemClassName()}>Flow</span>
+    </ButtonGroup>
   );
 }
 
@@ -121,15 +119,17 @@ function ColumnSkeleton({
 
 function CardSkeleton({ titleWidth }: { titleWidth: string }) {
   return (
-    <article className="relative min-w-0 rounded-lg border border-white/8 bg-[#14161e] p-3 shadow-sm shadow-black/25">
-      <div className="flex flex-col gap-1.5">
-        <Skeleton className="h-3 w-10" />
-        <Skeleton className={`h-4 ${titleWidth}`} />
-        <div className="flex items-center gap-1">
-          <Skeleton className="h-4 w-10 rounded-full" />
-          <Skeleton className="h-4 w-8 rounded-full" />
+    <article>
+      <Card className="relative min-w-0" size="sm">
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className={`h-4 ${titleWidth}`} />
+          <div className="flex items-center gap-1">
+            <Skeleton className="h-4 w-10 rounded-full" />
+            <Skeleton className="h-4 w-8 rounded-full" />
+          </div>
         </div>
-      </div>
+      </Card>
     </article>
   );
 }

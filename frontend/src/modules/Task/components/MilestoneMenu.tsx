@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Flag, Plus } from "lucide-react";
 import Button from "@uiKit/Button";
 import IconButton from "@uiKit/IconButton";
 import Input from "@uiKit/Input";
-import LightOrb from "@uiKit/LightOrb";
+import PopoverPanel, { Popover } from "@uiKit/PopoverPanel";
 import Tooltip from "@uiKit/Tooltip";
 import {
   useCreateMilestone,
@@ -100,26 +106,9 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
   const updateMilestone = useUpdateMilestone(projectId);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const trimmedTitle = title.trim();
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(event: PointerEvent) {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,7 +119,7 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
   }
 
   return (
-    <div ref={rootRef} className="relative shrink-0">
+    <Popover className="shrink-0" open={open} onClose={close}>
       <Tooltip content="Milestones" align="end">
         <IconButton
           aria-expanded={open}
@@ -149,13 +138,7 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
         </IconButton>
       </Tooltip>
       {open ? (
-        <div
-          className="glass-overlay light-edge light-edge-card isolate absolute top-full right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/50"
-          data-light-edge=""
-          role="dialog"
-          aria-label="Milestones"
-        >
-          <LightOrb />
+        <PopoverPanel aria-label="Milestones" className="w-72" role="dialog">
           <div className="relative max-h-56 overflow-y-auto p-1">
             {milestones.length === 0 ? (
               <p className="px-3 py-2 text-sm text-zinc-500">
@@ -170,12 +153,12 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
                       key={milestone.id}
                       label={key}
                       milestone={milestone}
-                      onSave={(nextTitle) =>
-                        updateMilestone.mutateAsync({
+                      onSave={async (nextTitle) => {
+                        await updateMilestone.mutateAsync({
                           id: milestone.id,
                           title: nextTitle,
-                        })
-                      }
+                        });
+                      }}
                     />
                   );
                 })}
@@ -205,8 +188,8 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
               <Plus size={14} />
             </Button>
           </form>
-        </div>
+        </PopoverPanel>
       ) : null}
-    </div>
+    </Popover>
   );
 }

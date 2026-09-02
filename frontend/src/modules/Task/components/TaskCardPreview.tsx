@@ -1,7 +1,7 @@
 import { twMerge } from "tailwind-merge";
+import Card from "@uiKit/Card";
 import type { TaskItem } from "../types/Task";
 import TaskCardBody from "./TaskCardBody";
-import TaskCardFrame from "./TaskCardFrame";
 
 type TaskCardPreviewProps = {
   task: TaskItem;
@@ -17,7 +17,7 @@ export default function TaskCardPreview({
   accentColor,
 }: TaskCardPreviewProps) {
   return (
-    <TaskCardFrame className="relative w-[260px] cursor-default shadow-xl shadow-black/50">
+    <Card className="relative w-[260px] cursor-default shadow-xl shadow-black/50">
       {accentBar || accentColor ? (
         <div
           aria-hidden
@@ -29,6 +29,6 @@ export default function TaskCardPreview({
         />
       ) : null}
       <TaskCardBody interactive={false} projectId={projectId} task={task} />
-    </TaskCardFrame>
+    </Card>
   );
 }
