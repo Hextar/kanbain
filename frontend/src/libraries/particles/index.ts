@@ -1,12 +1,29 @@
 const FX_ROOT_ID = "fx-root";
-const MATERIALIZE_MS = 320;
-const CRUSH_MS = 90;
-const BLAST_MS = 220;
-const BLAST_TAIL_MS = 640;
-const CELEBRATE_DELAY_MS = 220;
-const CELEBRATE_MS = 1500;
-const MAX_PARTICLES = 36;
-const MIN_PARTICLES = 10;
+const MATERIALIZE_MS = 180;
+const CRUSH_MS = 70;
+const BLAST_MS = 180;
+const BLAST_TAIL_MS = 380;
+const CELEBRATE_DELAY_MS = 60;
+const CELEBRATE_WAVE_MS = 90;
+const CARD_RADIUS = 8;
+
+export type CelebrateKind = "progress" | "complete";
+
+const CELEBRATE = {
+  progress: { scale: 0.42, motion: 0.72, waves: 1, ttl: 900 },
+  complete: { scale: 1, motion: 1, waves: 2, ttl: 1400 },
+} as const;
+
+const CELEBRATE_COLORS = [
+  "rgba(52, 211, 153, 0.95)",
+  "rgba(110, 231, 183, 0.88)",
+  "rgba(251, 191, 36, 0.95)",
+  "rgba(253, 224, 71, 0.9)",
+  "rgba(251, 146, 60, 0.88)",
+  "rgba(255, 255, 255, 0.92)",
+  "rgba(244, 114, 182, 0.78)",
+  "rgba(125, 211, 252, 0.82)",
+];
 
 type Rect = { left: number; top: number; width: number; height: number };
 
@@ -33,9 +50,6 @@ type SpawnJob = {
   id: string;
   el: HTMLElement;
   startAt: number;
-  emitted: number;
-  target: number;
-  palette: string[];
 };
 
 type BlastJob = {
@@ -46,40 +60,24 @@ type BlastJob = {
   burst: boolean;
 };
 
-type Shock = {
-  x: number;
-  y: number;
-  startAt: number;
-  ttl: number;
-  r0: number;
-  r1: number;
-};
-
-type Flash = {
-  x: number;
-  y: number;
-  startAt: number;
-  ttl: number;
-  radius: number;
-};
-
 type CelebrateJob = {
   el: HTMLElement | null;
   rect: Rect;
   startAt: number;
   ttl: number;
-  burst: boolean;
+  waves: number;
+  maxWaves: number;
+  scale: number;
+  motion: number;
   palette: string[];
 };
 
 const pendingSpawns = new Set<string>();
-const pendingCelebrates = new Set<string>();
+const pendingCelebrates = new Map<string, CelebrateKind>();
 const particles: Particle[] = [];
 const spawns: SpawnJob[] = [];
 const blasts: BlastJob[] = [];
 const celebrates: CelebrateJob[] = [];
-const shocks: Shock[] = [];
-const flashes: Flash[] = [];
 
 let overlay: HTMLElement | null = null;
 let cloneLayer: HTMLElement | null = null;
@@ -148,14 +146,6 @@ function samplePalette(el: HTMLElement): string[] {
   add("rgba(212, 212, 216, 0.85)");
   add("rgba(255, 255, 255, 0.7)");
   return colors;
-}
-
-function particleBudget(rect: Rect) {
-  return clamp(
-    Math.round((rect.width * rect.height) / 900),
-    MIN_PARTICLES,
-    MAX_PARTICLES,
-  );
 }
 
 function pickColor(palette: string[]) {
@@ -230,9 +220,7 @@ function busy() {
     particles.length > 0 ||
     spawns.length > 0 ||
     blasts.length > 0 ||
-    celebrates.length > 0 ||
-    shocks.length > 0 ||
-    flashes.length > 0
+    celebrates.length > 0
   );
 }
 
@@ -252,106 +240,77 @@ function stopLoop() {
 function emitBlast(rect: Rect, palette: string[]) {
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-  const count = clamp(Math.round((rect.width * rect.height) / 200), 36, 110);
-  const colors = [
-    ...palette,
-    "rgba(250, 250, 252, 0.78)",
-    "rgba(212, 212, 216, 0.7)",
-  ];
+  const count = clamp(Math.round((rect.width * rect.height) / 520), 12, 28);
+  const colors = [...palette.slice(0, 6), "rgba(212, 212, 216, 0.55)"];
   for (let i = 0; i < count; i++) {
-    const spark = Math.random() < 0.22;
     const x = rect.left + Math.random() * rect.width;
     const y = rect.top + Math.random() * rect.height;
-    const angle = Math.atan2(y - cy, x - cx) + rand(-0.35, 0.35);
-    const speed = spark ? rand(140, 320) : rand(90, 240);
+    const angle = Math.atan2(y - cy, x - cx) + rand(-0.25, 0.25);
+    const speed = rand(40, 120);
     particles.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - rand(20, 90),
+      vy: Math.sin(angle) * speed - rand(8, 36),
       rot: rand(0, Math.PI * 2),
-      vr: rand(-8, 8),
-      w: spark ? rand(1, 2.4) : rand(2.5, 7),
-      h: spark ? rand(1, 2) : rand(1.6, 4),
-      life: 0,
-      ttl: spark ? rand(0.18, 0.38) : rand(0.32, 0.7),
-      color: pickColor(colors),
-      wind: rand(-10, 10),
-      grav: spark ? 40 : 280,
-      shape: spark ? "circle" : "rect",
-      glow: spark,
-    });
-  }
-}
-
-function emitDust(
-  rect: Rect,
-  x0: number,
-  x1: number,
-  count: number,
-  palette: string[],
-) {
-  const left = Math.min(x0, x1);
-  const right = Math.max(x0, x1);
-  const band = Math.max(1, right - left);
-  for (let i = 0; i < count; i++) {
-    const x = left + Math.random() * band;
-    const y = rect.top + Math.random() * rect.height;
-    const speed = rand(28, 90);
-    particles.push({
-      x,
-      y,
-      vx: -speed + rand(-8, 16),
-      vy: rand(-28, 22),
-      rot: rand(0, Math.PI * 2),
-      vr: rand(-3, 3),
-      w: rand(1.4, 3.6),
-      h: rand(1.2, 3),
+      vr: rand(-4, 4),
+      w: rand(2, 5),
+      h: rand(1.4, 3),
       life: 0,
       ttl: rand(0.22, 0.48),
-      color: pickColor(palette),
-      wind: -6,
-      grav: 12,
+      color: pickColor(colors),
+      wind: rand(-6, 6),
+      grav: 160,
+      shape: "rect",
     });
   }
 }
 
-function emitCelebrate(rect: Rect, palette: string[]) {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height * 0.55;
-  const count = clamp(Math.round((rect.width * rect.height) / 280), 52, 110);
-  const colors = [
-    ...palette.slice(0, 5),
-    "rgba(52, 211, 153, 0.95)",
-    "rgba(110, 231, 183, 0.9)",
-    "rgba(251, 191, 36, 0.95)",
-    "rgba(253, 224, 71, 0.88)",
-    "rgba(255, 255, 255, 0.92)",
-    "rgba(244, 114, 182, 0.82)",
-    "rgba(196, 181, 253, 0.85)",
-  ];
+function emitCelebrate(
+  rect: Rect,
+  palette: string[],
+  countScale: number,
+  motion: number,
+) {
+  const count = Math.round(
+    clamp(Math.round((rect.width * rect.height) / 170), 42, 72) * countScale,
+  );
+  const colors = [...CELEBRATE_COLORS, ...palette.slice(0, 3)];
   for (let i = 0; i < count; i++) {
-    const x = rect.left + rect.width * rand(0.08, 0.92);
-    const y = rect.top + rect.height * rand(0.2, 0.9);
-    const outward = Math.atan2(y - cy, x - cx);
-    const angle = outward * 0.55 - (Math.PI / 2) * 0.45 + rand(-0.55, 0.55);
-    const confetti = Math.random() > 0.3;
-    const spark = !confetti;
-    const speed = spark ? rand(70, 170) : rand(100, 240);
+    const edge = i % 3;
+    let x = rect.left + rect.width / 2;
+    let y = rect.top + rect.height / 2;
+    let angle = -Math.PI / 2;
+    if (edge === 0) {
+      x = rect.left + rand(0, 8);
+      y = rect.top + rect.height * rand(0.12, 0.88);
+      angle = Math.PI + rand(-0.55, 0.35);
+    } else if (edge === 1) {
+      x = rect.left + rect.width - rand(0, 8);
+      y = rect.top + rect.height * rand(0.12, 0.88);
+      angle = rand(-0.35, 0.55);
+    } else {
+      x = rect.left + rect.width * rand(0.08, 0.92);
+      y = rect.top + rand(0, 6);
+      angle = -Math.PI / 2 + rand(-0.7, 0.7);
+    }
+    const spark = Math.random() < 0.3;
+    const speed = (spark ? rand(50, 130) : rand(80, 210)) * motion;
+    const lift = rand(70, 190) * motion;
     particles.push({
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - rand(50, 140),
+      vy: Math.sin(angle) * speed - lift,
       rot: rand(0, Math.PI * 2),
-      vr: confetti ? rand(-14, 14) : rand(-4, 4),
-      w: spark ? rand(1.4, 2.8) : rand(3.5, 8),
-      h: spark ? rand(1.2, 2.4) : rand(1.6, 3.2),
+      vr: (spark ? rand(-5, 5) : rand(-16, 16)) * motion,
+      w: (spark ? rand(1.4, 2.6) : rand(3.2, 7.5)) * motion,
+      h: (spark ? rand(1.2, 2.2) : rand(1.4, 2.8)) * motion,
       life: 0,
-      ttl: spark ? rand(0.45, 0.85) : rand(0.7, 1.35),
+      ttl: (spark ? rand(0.5, 0.9) : rand(0.75, 1.35)) * (0.82 + 0.18 * motion),
       color: pickColor(colors),
-      wind: rand(-18, 18),
-      grav: confetti ? 240 : 90,
+      wind: rand(-14, 14) * motion,
+      grav: spark ? 110 : 320,
       shape: spark ? "circle" : "rect",
       glow: spark,
       behind: true,
@@ -365,32 +324,10 @@ function advanceJobs(now: number, dt: number) {
     if (now < job.startAt) continue;
     const t = clamp((now - job.startAt) / MATERIALIZE_MS, 0, 1);
     const p = easeOutCubic(t);
-    if (job.el.isConnected) {
-      job.el.style.clipPath = `inset(0 ${((1 - p) * 100).toFixed(2)}% 0 0)`;
-      job.el.style.opacity = String(clamp(p * 2.4, 0, 1));
-    }
-    const shouldHave = Math.floor(p * job.target);
-    const extra = shouldHave - job.emitted;
-    if (extra > 0) {
-      const front = job.el.isConnected ? readRect(job.el) : null;
-      const rect = front ?? { left: 0, top: 0, width: 0, height: 0 };
-      if (rect.width > 0) {
-        const prev = (job.emitted / job.target) * rect.width;
-        const next = p * rect.width;
-        emitDust(
-          rect,
-          rect.left + prev + 8,
-          rect.left + next + 28,
-          extra,
-          job.palette,
-        );
-      }
-      job.emitted = shouldHave;
-    }
+    if (job.el.isConnected) job.el.style.opacity = String(p);
     if (t >= 1) {
       pendingSpawns.delete(job.id);
       if (job.el.isConnected) {
-        job.el.style.clipPath = "";
         job.el.style.opacity = "";
         job.el.removeAttribute("data-spawning");
       }
@@ -405,36 +342,17 @@ function advanceJobs(now: number, dt: number) {
     const crushing = elapsed < CRUSH_MS;
     if (crushing && job.clone) {
       const p = easeInCubic(elapsed / CRUSH_MS);
-      job.clone.style.transform = `scale(${(1 - 0.06 * p).toFixed(3)})`;
-      job.clone.style.filter = `brightness(${(1 + 0.55 * p).toFixed(2)})`;
+      job.clone.style.transform = `scale(${(1 - 0.04 * p).toFixed(3)})`;
+      job.clone.style.opacity = String(1 - 0.12 * p);
     }
     if (!job.burst && !crushing) {
       emitBlast(job.rect, job.palette);
-      const cx = job.rect.left + job.rect.width / 2;
-      const cy = job.rect.top + job.rect.height / 2;
-      const reach = Math.max(job.rect.width, job.rect.height);
-      flashes.push({
-        x: cx,
-        y: cy,
-        startAt: now,
-        ttl: 0.14,
-        radius: reach * 0.55,
-      });
-      shocks.push({
-        x: cx,
-        y: cy,
-        startAt: now,
-        ttl: 0.28,
-        r0: reach * 0.05,
-        r1: reach * 0.7,
-      });
       job.burst = true;
     }
     if (job.burst && job.clone) {
       const p = easeOutCubic(clamp((elapsed - CRUSH_MS) / BLAST_MS, 0, 1));
       job.clone.style.opacity = String(1 - p);
-      job.clone.style.transform = `scale(${(0.94 + 0.12 * p).toFixed(3)})`;
-      job.clone.style.filter = `brightness(${(1.4 * (1 - p)).toFixed(2)})`;
+      job.clone.style.transform = `scale(${(0.96 - 0.06 * p).toFixed(3)})`;
       if (p >= 1) {
         job.clone.remove();
         job.clone = null;
@@ -450,21 +368,20 @@ function advanceJobs(now: number, dt: number) {
     const job = celebrates[i];
     if (job.el?.isConnected) job.rect = readRect(job.el);
     if (now < job.startAt) continue;
-    if (!job.burst) {
-      emitCelebrate(job.rect, job.palette);
-      job.burst = true;
+    const elapsed = now - job.startAt;
+    if (job.waves < 1) {
+      emitCelebrate(job.rect, job.palette, job.scale, job.motion);
+      job.waves = 1;
     }
-    if (now - job.startAt > job.ttl) celebrates.splice(i, 1);
-  }
-
-  for (let i = shocks.length - 1; i >= 0; i--) {
-    if (now < shocks[i].startAt) continue;
-    if (now - shocks[i].startAt > shocks[i].ttl * 1000) shocks.splice(i, 1);
-  }
-
-  for (let i = flashes.length - 1; i >= 0; i--) {
-    if (now < flashes[i].startAt) continue;
-    if (now - flashes[i].startAt > flashes[i].ttl * 1000) flashes.splice(i, 1);
+    if (
+      job.maxWaves > 1 &&
+      job.waves < 2 &&
+      elapsed > CELEBRATE_WAVE_MS
+    ) {
+      emitCelebrate(job.rect, job.palette, job.scale * 0.55, job.motion);
+      job.waves = 2;
+    }
+    if (elapsed > job.ttl) celebrates.splice(i, 1);
   }
 
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -479,92 +396,31 @@ function advanceJobs(now: number, dt: number) {
   }
 }
 
+function punchCelebrateHoles() {
+  if (!ctx || celebrates.length === 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "#000";
+  for (const job of celebrates) {
+    ctx.beginPath();
+    ctx.roundRect(
+      job.rect.left,
+      job.rect.top,
+      job.rect.width,
+      job.rect.height,
+      CARD_RADIUS,
+    );
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function draw() {
   if (!ctx || !canvas) return;
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  const now = lastTs;
 
   drawParticles(true);
-
-  if (celebrates.length > 0) {
-    for (const job of celebrates) {
-      if (now < job.startAt) continue;
-      const t = clamp((now - job.startAt) / job.ttl, 0, 1);
-      const rise = t < 0.12 ? t / 0.12 : 1;
-      const fade = (1 - easeOutCubic(t)) * rise;
-      const cx = job.rect.left + job.rect.width / 2;
-      const cy = job.rect.top + job.rect.height / 2;
-      const radius = Math.max(job.rect.width, job.rect.height) * 0.95;
-      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      gradient.addColorStop(0, `rgba(52, 211, 153, ${(0.18 * fade).toFixed(3)})`);
-      gradient.addColorStop(
-        0.42,
-        `rgba(251, 191, 36, ${(0.1 * fade).toFixed(3)})`,
-      );
-      gradient.addColorStop(1, "rgba(52, 211, 153, 0)");
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "#000";
-    for (const job of celebrates) {
-      ctx.beginPath();
-      ctx.roundRect(
-        job.rect.left,
-        job.rect.top,
-        job.rect.width,
-        job.rect.height,
-        8,
-      );
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  for (const flash of flashes) {
-    if (now < flash.startAt) continue;
-    const t = clamp((now - flash.startAt) / (flash.ttl * 1000), 0, 1);
-    const p = easeOutCubic(t);
-    const radius = flash.radius * (0.4 + 0.6 * p);
-    const gradient = ctx.createRadialGradient(
-      flash.x,
-      flash.y,
-      0,
-      flash.x,
-      flash.y,
-      radius,
-    );
-    const fade = 1 - p;
-    gradient.addColorStop(0, `rgba(250, 250, 252, ${(0.28 * fade).toFixed(3)})`);
-    gradient.addColorStop(0.45, `rgba(212, 212, 216, ${(0.1 * fade).toFixed(3)})`);
-    gradient.addColorStop(1, "rgba(244, 244, 245, 0)");
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(flash.x, flash.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  for (const shock of shocks) {
-    if (now < shock.startAt) continue;
-    const t = clamp((now - shock.startAt) / (shock.ttl * 1000), 0, 1);
-    const p = easeOutCubic(t);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(shock.x, shock.y, shock.r0 + (shock.r1 - shock.r0) * p, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(244, 244, 245, ${(0.28 * (1 - p)).toFixed(3)})`;
-    ctx.lineWidth = Math.max(1, 3.5 * (1 - p));
-    ctx.stroke();
-    ctx.restore();
-  }
-
+  punchCelebrateHoles();
   drawParticles(false);
 }
 
@@ -625,17 +481,12 @@ export function consumeSpawn(id: string, el: HTMLElement | null) {
     el.removeAttribute("data-spawning");
     return;
   }
-  ensureOverlay();
   el.setAttribute("data-spawning", "");
   el.style.opacity = "0";
-  el.style.clipPath = "inset(0 100% 0 0)";
   spawns.push({
     id,
     el,
     startAt: performance.now(),
-    emitted: 0,
-    target: particleBudget(rect),
-    palette: samplePalette(el),
   });
   startLoop();
 }
@@ -645,29 +496,37 @@ export function releaseSpawn(el: HTMLElement | null) {
   const index = spawns.findIndex((job) => job.el === el);
   if (index < 0) return;
   spawns.splice(index, 1);
-  el.style.clipPath = "";
   el.style.opacity = "";
 }
 
-export function markCelebrate(id: string) {
+export function markCelebrate(id: string, kind: CelebrateKind = "complete") {
   if (prefersReducedMotion()) return;
-  pendingCelebrates.add(id);
+  const previous = pendingCelebrates.get(id);
+  pendingCelebrates.set(
+    id,
+    previous === "complete" || kind === "complete" ? "complete" : "progress",
+  );
   window.setTimeout(() => pendingCelebrates.delete(id), 2500);
 }
 
 export function consumeCelebrate(id: string, el: HTMLElement | null) {
   if (!el || !pendingCelebrates.has(id) || prefersReducedMotion()) return;
   if (celebrates.some((job) => job.el === el)) return;
+  const kind = pendingCelebrates.get(id) ?? "complete";
   pendingCelebrates.delete(id);
   const rect = readRect(el);
   if (rect.width < 2 || rect.height < 2) return;
+  const preset = CELEBRATE[kind];
   ensureOverlay();
   celebrates.push({
     el,
     rect,
     startAt: performance.now() + CELEBRATE_DELAY_MS,
-    ttl: CELEBRATE_MS,
-    burst: false,
+    ttl: preset.ttl,
+    waves: 0,
+    maxWaves: preset.waves,
+    scale: preset.scale,
+    motion: preset.motion,
     palette: samplePalette(el),
   });
   startLoop();

@@ -329,13 +329,11 @@ body {
 
 [data-spawning] {
   opacity: 0;
-  clip-path: inset(0 100% 0 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-spawning] {
     opacity: 1;
-    clip-path: none;
   }
 }
 
