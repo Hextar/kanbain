@@ -37,3 +37,6 @@ class PlannerResult:
     prompt: str
     raw: str
     plan: ParsedPlan
+    chunk_ids: list[str] = field(default_factory=list)
+    pending_urls: list[str] = field(default_factory=list)
+    domain_slug: str = ""

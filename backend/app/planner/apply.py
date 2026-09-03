@@ -12,7 +12,7 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
     _clear_board(project)
     actions: list[str] = []
     milestone_ids = _write_milestones(project, plan, actions)
-    assignee_ids = _write_assignees(plan, actions)
+    assignee_ids = _write_assignees(project, plan, actions)
     column = min(project.columns, key=lambda item: item.order)
     now = utcnow()
     created: list[Task] = []
@@ -62,6 +62,7 @@ def apply_plan(project: Project, plan: ParsedPlan, *, raw: str) -> list[str]:
     project.plan_markdown = raw
     project.plan_status = "ready"
     project.plan_error = None
+    project.plan_warning = None
     project.plan_phase = None
     project.updated_at = now
     db.session.commit()
@@ -107,17 +108,18 @@ def _write_milestones(project: Project, plan: ParsedPlan, actions: list[str]) ->
     return ids
 
 
-def _write_assignees(plan: ParsedPlan, actions: list[str]) -> dict[str, str]:
-    names = []
+def _write_assignees(project: Project, plan: ParsedPlan, actions: list[str]) -> dict[str, str]:
+    allowed = {_norm(member.name): member.name.strip() for member in project.members if member.name.strip()}
+    names: list[str] = []
     seen: set[str] = set()
     for task in plan.tasks:
         if not task.assignee:
             continue
         key = _norm(task.assignee)
-        if key in seen:
+        if key not in allowed or key in seen:
             continue
         seen.add(key)
-        names.append(task.assignee)
+        names.append(allowed[key])
 
     ids: dict[str, str] = {}
     for name in names:

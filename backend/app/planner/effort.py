@@ -3,10 +3,19 @@ from __future__ import annotations
 from typing import Literal
 
 ThoughtEffort = Literal["low", "medium", "high", "max"]
-PlanPhase = Literal["exploring", "decomposing", "generating", "reviewing", "revising"]
-EntryNode = Literal["explore", "decompose", "generate"]
+PlanPhase = Literal[
+    "classifying",
+    "retrieving",
+    "ingesting",
+    "exploring",
+    "decomposing",
+    "generating",
+    "reviewing",
+    "revising",
+]
+EntryNode = Literal["decompose", "generate"]
 AfterGenerate = Literal["critique", "end"]
-AfterCritique = Literal["revise", "explore", "end"]
+AfterCritique = Literal["revise", "ground", "end"]
 
 THOUGHT_EFFORTS = frozenset({"low", "medium", "high", "max"})
 DEFAULT_THOUGHT_EFFORT: ThoughtEffort = "medium"
@@ -38,9 +47,7 @@ def recursion_limit_for(effort: str) -> int:
 def entry_node(effort: str) -> EntryNode:
     if effort == "low":
         return "generate"
-    if effort == "medium":
-        return "decompose"
-    return "explore"
+    return "decompose"
 
 
 def after_generate(effort: str) -> AfterGenerate:
@@ -56,6 +63,10 @@ def after_critique(effort: str, *, complete: bool, iteration: int, nxt: str) -> 
         if iteration >= HIGH_MAX_REVISE_LOOPS:
             return "end"
         return "revise"
-    if nxt == "explore":
-        return "explore"
+    if nxt in {"explore", "ground"}:
+        return "ground"
     return "revise"
+
+
+def scrape_on_miss(effort: str) -> bool:
+    return effort in {"medium", "high", "max"}

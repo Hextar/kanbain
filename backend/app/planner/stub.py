@@ -19,7 +19,7 @@ class StubPlanner:
 
 
 def _render(project: Project) -> str:
-    assignee = project.members[0].name if project.members else "Unassigned"
+    assignee = project.members[0].name if project.members else None
     extra = project.members[1].name if len(project.members) > 1 else assignee
     goal = project.goal or f"Deliver {project.name}"
     milestone_line = _milestone_line(project.deadline_at)
@@ -37,7 +37,7 @@ def _render(project: Project) -> str:
 
 - Kind: epic
 - Priority: high
-- Assignee: {assignee}
+- Assignee: {assignee or ""}
 - Description: {goal}
 
 #### Foundation
@@ -45,7 +45,7 @@ def _render(project: Project) -> str:
 - Kind: story
 - Estimate: M | 3 | 4h
 - Priority: high
-- Assignee: {assignee}
+- Assignee: {assignee or ""}
 - Milestone: Launch
 - Description: Stand up the {cadence} {quality} board
 
@@ -54,7 +54,7 @@ def _render(project: Project) -> str:
 - Kind: task
 - Estimate: S | 1 | 2h
 - Priority: high
-- Assignee: {assignee}
+- Assignee: {assignee or ""}
 {due_line}- Milestone: Launch
 - Acceptance:
   - Goal, team, and deadline are reflected on cards
@@ -64,7 +64,7 @@ def _render(project: Project) -> str:
 - Kind: task
 - Estimate: S | 2 | 3h
 - Priority: medium
-- Assignee: {extra}
+- Assignee: {extra or ""}
 - Milestone: Launch
 - Depends: Capture constraints
 - Acceptance:
@@ -75,7 +75,7 @@ def _render(project: Project) -> str:
 - Kind: story
 - Estimate: L | 5 | 8h
 - Priority: medium
-- Assignee: {extra}
+- Assignee: {extra or ""}
 - Milestone: Launch
 
 ##### Break down remaining work
@@ -83,7 +83,7 @@ def _render(project: Project) -> str:
 - Kind: task
 - Estimate: M | 3 | 4h
 - Priority: medium
-- Assignee: {assignee}
+- Assignee: {assignee or ""}
 - Milestone: Launch
 - Depends: Seed the backlog
 
@@ -92,7 +92,7 @@ def _render(project: Project) -> str:
 - Kind: task
 - Estimate: S | 1 | 2h
 - Priority: high
-- Assignee: {extra}
+- Assignee: {extra or ""}
 - Milestone: Launch
 - Acceptance:
   - Load is checked against the deadline

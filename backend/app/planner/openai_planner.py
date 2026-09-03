@@ -5,7 +5,7 @@ from openai import OpenAI
 
 from ..models import Project
 from .keys import get_openai_api_key
-from .llm_schema import OPENAI_RESPONSE_FORMAT, plan_from_llm_json
+from .llm_schema import plan_from_llm_json, plan_response_format
 from .prompt import compose_messages, format_prompt_for_log
 from .schema import PlannerResult
 
@@ -38,12 +38,18 @@ class OpenAIPlanner:
         )
         prompt = format_prompt_for_log(messages)
         client = self._client or OpenAI(api_key=api_key)
+        team = [member.name for member in project.members if member.name.strip()]
 
         try:
             response = client.chat.completions.create(
                 model=current_app.config.get("OPENAI_MODEL") or "gpt-4o",
                 messages=messages,
-                response_format=OPENAI_RESPONSE_FORMAT,
+                response_format=plan_response_format(team),
+                temperature=0,
+                seed=int(current_app.config.get("OPENAI_SEED") or 7),
+                max_tokens=int(
+                    current_app.config.get("OPENAI_MAX_COMPLETION_TOKENS") or 16384
+                ),
             )
         except Exception as exc:
             raise RuntimeError(f"OpenAI request failed: {exc}") from exc

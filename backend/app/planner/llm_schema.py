@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import re
 from typing import Any
@@ -22,65 +23,95 @@ _TSHIRT = {
     ]
 }
 
-_ITEM_FIELDS = {
-    "title": {"type": "string"},
-    "description": _NULLABLE_STRING,
-    "priority": _PRIORITY,
-    "assignee": _NULLABLE_STRING,
-    "milestone": _NULLABLE_STRING,
-    "estimateTshirt": _TSHIRT,
-    "estimatePoints": _NULLABLE_INT,
-    "estimateHours": _NULLABLE_NUMBER,
-    "due": _NULLABLE_STRING,
-    "dependsOn": {"type": "array", "items": {"type": "string"}},
-    "acceptance": {"type": "array", "items": {"type": "string"}},
-}
+MILESTONE_MIN = 2
+MILESTONE_MAX = 4
+EPIC_MIN = 2
+EPIC_MAX = 4
+STORY_MIN = 2
+STORY_MAX = 4
+LEAF_MIN = 2
+LEAF_MAX = 5
 
-_TASK_REQUIRED = list(_ITEM_FIELDS)
-_STORY_REQUIRED = [*_TASK_REQUIRED, "tasks"]
-_EPIC_REQUIRED = [*_TASK_REQUIRED, "stories"]
 
-PLAN_JSON_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["title", "milestones", "epics"],
-    "properties": {
+def _item_fields(assignee: dict[str, Any]) -> dict[str, Any]:
+    return {
         "title": {"type": "string"},
-        "milestones": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["title", "due"],
-                "properties": {
-                    "title": {"type": "string"},
-                    "due": _NULLABLE_STRING,
+        "description": _NULLABLE_STRING,
+        "priority": _PRIORITY,
+        "assignee": assignee,
+        "milestone": _NULLABLE_STRING,
+        "estimateTshirt": _TSHIRT,
+        "estimatePoints": _NULLABLE_INT,
+        "estimateHours": _NULLABLE_NUMBER,
+        "due": _NULLABLE_STRING,
+        "dependsOn": {"type": "array", "items": {"type": "string"}},
+        "acceptance": {"type": "array", "items": {"type": "string"}},
+    }
+
+
+def _assignee_schema(team_names: list[str]) -> dict[str, Any]:
+    names = [name.strip() for name in team_names if name.strip()]
+    if not names:
+        return {"type": "null"}
+    return {"anyOf": [{"type": "string", "enum": names}, {"type": "null"}]}
+
+
+def build_plan_schema(team_names: list[str] | None = None) -> dict[str, Any]:
+    assignee = _assignee_schema(team_names or [])
+    fields = _item_fields(assignee)
+    task_required = list(fields)
+    story_required = [*task_required, "tasks"]
+    epic_required = [*task_required, "stories"]
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["title", "milestones", "epics"],
+        "properties": {
+            "title": {"type": "string"},
+            "milestones": {
+                "type": "array",
+                "minItems": MILESTONE_MIN,
+                "maxItems": MILESTONE_MAX,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["title", "due"],
+                    "properties": {
+                        "title": {"type": "string"},
+                        "due": _NULLABLE_STRING,
+                    },
                 },
             },
-        },
-        "epics": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": _EPIC_REQUIRED,
-                "properties": {
-                    **_ITEM_FIELDS,
-                    "stories": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "required": _STORY_REQUIRED,
-                            "properties": {
-                                **_ITEM_FIELDS,
-                                "tasks": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "additionalProperties": False,
-                                        "required": _TASK_REQUIRED,
-                                        "properties": _ITEM_FIELDS,
+            "epics": {
+                "type": "array",
+                "minItems": EPIC_MIN,
+                "maxItems": EPIC_MAX,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": epic_required,
+                    "properties": {
+                        **fields,
+                        "stories": {
+                            "type": "array",
+                            "minItems": STORY_MIN,
+                            "maxItems": STORY_MAX,
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": story_required,
+                                "properties": {
+                                    **copy.deepcopy(fields),
+                                    "tasks": {
+                                        "type": "array",
+                                        "minItems": LEAF_MIN,
+                                        "maxItems": LEAF_MAX,
+                                        "items": {
+                                            "type": "object",
+                                            "additionalProperties": False,
+                                            "required": task_required,
+                                            "properties": copy.deepcopy(fields),
+                                        },
                                     },
                                 },
                             },
@@ -89,8 +120,10 @@ PLAN_JSON_SCHEMA: dict[str, Any] = {
                 },
             },
         },
-    },
-}
+    }
+
+
+PLAN_JSON_SCHEMA: dict[str, Any] = build_plan_schema()
 
 OPENAI_RESPONSE_FORMAT = {
     "type": "json_schema",
@@ -100,6 +133,17 @@ OPENAI_RESPONSE_FORMAT = {
         "schema": PLAN_JSON_SCHEMA,
     },
 }
+
+
+def plan_response_format(team_names: list[str]) -> dict[str, Any]:
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "kanban_plan",
+            "strict": True,
+            "schema": build_plan_schema(team_names),
+        },
+    }
 
 
 def plan_from_llm_json(raw: str) -> ParsedPlan:
