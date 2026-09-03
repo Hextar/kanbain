@@ -36,6 +36,9 @@ type MemberDraft = {
 type WizardDraft = {
   name: string;
   goal: string;
+  prdUrl: string;
+  designUrls: string;
+  repoUrl: string;
   members: MemberDraft[];
   deadlineKind: DeadlineKind;
   deadlineDate: string;
@@ -48,6 +51,9 @@ type WizardDraft = {
 const EMPTY_DRAFT: WizardDraft = {
   name: "",
   goal: "",
+  prdUrl: "",
+  designUrls: "",
+  repoUrl: "",
   members: [],
   deadlineKind: "ongoing",
   deadlineDate: "",
@@ -170,7 +176,7 @@ export default function NewProjectWizard({
           <div className="flex flex-col gap-2.5">
             <Field htmlFor="wizard-name" label="Title">
               <Input
-                autoFocus
+                autoFocus={open}
                 className={CONTROL}
                 id="wizard-name"
                 placeholder="KanbAIn"
@@ -186,6 +192,35 @@ export default function NewProjectWizard({
                 placeholder="What are you building? Constraints, outcomes, anything the planner should know…"
                 value={draft.goal}
                 onChange={(event) => update("goal", event.target.value)}
+              />
+            </Field>
+            <Field htmlFor="wizard-prd" label="PRD URL">
+              <Input
+                className={CONTROL}
+                id="wizard-prd"
+                inputMode="url"
+                placeholder="https://…"
+                value={draft.prdUrl}
+                onChange={(event) => update("prdUrl", event.target.value)}
+              />
+            </Field>
+            <Field htmlFor="wizard-designs" label="Design URLs">
+              <Input
+                className={CONTROL}
+                id="wizard-designs"
+                placeholder="Comma-separated links"
+                value={draft.designUrls}
+                onChange={(event) => update("designUrls", event.target.value)}
+              />
+            </Field>
+            <Field htmlFor="wizard-repo" label="Repo URL">
+              <Input
+                className={CONTROL}
+                id="wizard-repo"
+                inputMode="url"
+                placeholder="https://github.com/…"
+                value={draft.repoUrl}
+                onChange={(event) => update("repoUrl", event.target.value)}
               />
             </Field>
             <Field label="Effort">
@@ -508,9 +543,18 @@ function toCreateInput(
     return [next];
   });
   const goal = draft.goal.trim();
+  const prdUrl = draft.prdUrl.trim();
+  const repoUrl = draft.repoUrl.trim();
+  const designUrls = draft.designUrls
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
   return {
     name: draft.name.trim(),
     ...(goal ? { goal } : {}),
+    ...(prdUrl ? { prdUrl } : {}),
+    ...(designUrls.length ? { designUrls } : {}),
+    ...(repoUrl ? { repoUrl } : {}),
     deadlineKind: draft.deadlineKind,
     ...(draft.deadlineKind !== "ongoing" && draft.deadlineDate
       ? { deadlineAt: `${draft.deadlineDate}T00:00:00Z` }

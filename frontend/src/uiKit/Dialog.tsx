@@ -68,7 +68,12 @@ export default function Dialog({
     }
 
     if (!dialog.open) dialog.showModal();
-    dialog.querySelector<HTMLElement>("[autofocus]")?.focus();
+    const focusInitial = () => {
+      dialog
+        .querySelector<HTMLElement>("[autofocus], [data-autofocus]")
+        ?.focus();
+    };
+    focusInitial();
 
     const applyHeight = () => {
       const header = headerRef.current;
@@ -101,6 +106,7 @@ export default function Dialog({
 
     applyHeight();
     const frame = requestAnimationFrame(() => {
+      focusInitial();
       dialog.setAttribute("data-height-ready", "");
     });
 

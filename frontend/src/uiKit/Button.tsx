@@ -26,6 +26,7 @@ export default function Button({
   kind = "filled",
   onClick,
   className,
+  autoFocus,
   ...props
 }: ButtonProps) {
   let colorStyles: string;
@@ -100,6 +101,8 @@ export default function Button({
     <button
       {...props}
       ref={ref}
+      autoFocus={autoFocus}
+      data-autofocus={autoFocus ? true : undefined}
       className={twMerge(
         "inline-flex items-center justify-center gap-1.5 rounded-md focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none",
         sizeStyles,
