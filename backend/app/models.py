@@ -43,7 +43,8 @@ class Project(db.Model):
         ),
         CheckConstraint(
             "plan_phase IS NULL OR plan_phase IN "
-            "('exploring', 'decomposing', 'generating', 'reviewing', 'revising')",
+            "('classifying', 'retrieving', 'ingesting', 'exploring', "
+            "'decomposing', 'generating', 'reviewing', 'revising')",
             name="ck_projects_plan_phase",
         ),
     )
@@ -65,6 +66,7 @@ class Project(db.Model):
     plan_markdown: Mapped[str | None] = mapped_column(Text)
     thought_effort: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
     plan_phase: Mapped[str | None] = mapped_column(String(16))
+    plan_warning: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -112,6 +114,7 @@ class Project(db.Model):
             "repoUrl": self.repo_url,
             "deadlineAt": dump_datetime(self.deadline_at),
             "planError": self.plan_error,
+            "planWarning": self.plan_warning,
             "planPhase": self.plan_phase,
             "createdAt": dump_datetime(self.created_at),
             "updatedAt": dump_datetime(self.updated_at),
@@ -348,6 +351,45 @@ class TaskDependency(db.Model):
 
     task: Mapped[Task] = relationship(foreign_keys=[task_id], back_populates="dependencies")
     depends_on: Mapped[Task] = relationship(foreign_keys=[depends_on_id])
+
+
+class WikiSource(db.Model):
+    __tablename__ = "wiki_sources"
+    __table_args__ = (
+        UniqueConstraint("origin", "locator", name="uq_wiki_sources_origin_locator"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    domain_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    origin: Mapped[str] = mapped_column(String(16), nullable=False)
+    locator: Mapped[str] = mapped_column(String(2048), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    license: Mapped[str | None] = mapped_column(String(255))
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    promoted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    chunks: Mapped[list["WikiChunk"]] = relationship(
+        back_populates="source", cascade="all, delete-orphan"
+    )
+
+
+class WikiChunk(db.Model):
+    __tablename__ = "wiki_chunks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    source_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("wiki_sources.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    domain_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    heading: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_text: Mapped[str] = mapped_column(Text, nullable=False)
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    embedding: Mapped[list | None] = mapped_column(JSON)
+    tsv: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    source: Mapped[WikiSource] = relationship(back_populates="chunks")
 
 
 def task_progress_by_project(project_ids: list[str]) -> dict[str, tuple[int, int]]:
