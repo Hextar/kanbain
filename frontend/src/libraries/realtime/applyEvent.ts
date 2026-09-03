@@ -6,6 +6,9 @@ import { taskKeys } from "@modules/Task/api/taskKeys";
 
 const PLAN_STATUSES = new Set<string>(["planning", "ready", "failed"]);
 const PLAN_PHASES = new Set<string>([
+  "classifying",
+  "retrieving",
+  "ingesting",
   "exploring",
   "decomposing",
   "generating",
@@ -63,6 +66,8 @@ function applyPlanUpdated(queryClient: QueryClient, message: RealtimeMessage) {
   const planPhase = asPlanPhase(payload.planPhase);
   const planError =
     typeof payload.planError === "string" ? payload.planError : undefined;
+  const planWarning =
+    typeof payload.planWarning === "string" ? payload.planWarning : undefined;
 
   function patch(project: Project | undefined) {
     if (!project) return project;
@@ -71,6 +76,7 @@ function applyPlanUpdated(queryClient: QueryClient, message: RealtimeMessage) {
       planStatus: planStatus ?? project.planStatus,
       planPhase,
       planError,
+      planWarning,
     };
   }
 

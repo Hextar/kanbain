@@ -24,6 +24,7 @@ export type ProjectJson = {
   planStatus?: Project["planStatus"];
   planPhase?: Project["planPhase"];
   planError?: string;
+  planWarning?: string;
   createdAt?: string;
   updatedAt?: string;
   members?: Project["members"];
@@ -58,6 +59,7 @@ export function projectFromJson(json: ProjectJson): Project {
     planStatus: json.planStatus ?? "ready",
     planPhase: json.planPhase,
     planError: json.planError,
+    planWarning: json.planWarning,
     createdAt: json.createdAt ? new Date(json.createdAt) : undefined,
     updatedAt: json.updatedAt ? new Date(json.updatedAt) : undefined,
     members: json.members ?? [],
@@ -84,6 +86,7 @@ export function projectToJson(project: Project): ProjectJson {
     planStatus: project.planStatus,
     planPhase: project.planPhase,
     planError: project.planError,
+    planWarning: project.planWarning,
     createdAt: project.createdAt?.toISOString(),
     updatedAt: project.updatedAt?.toISOString(),
     members: project.members,

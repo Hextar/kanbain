@@ -6,10 +6,23 @@ const PHASE_MESSAGES: Record<PlanPhase | "planning", string[]> = {
     "Shuffling the deck…",
     "Getting a feel for the brief…",
   ],
+  classifying: [
+    "Naming the domain so retrieval stays on-topic…",
+    "Turning the brief into search queries…",
+    "Figuring out which playbook to open…",
+  ],
+  retrieving: [
+    "Pulling cited notes from the wiki…",
+    "Mixing keyword hits with similar passages…",
+    "Keeping the research budget tight…",
+  ],
+  ingesting: [
+    "Reading the PRD and designs you attached…",
+    "Chunking your docs so the planner can cite them…",
+  ],
   exploring: [
-    "Reading the brief like it owes us a sprint…",
+    "Fetching a few public sources for this domain…",
     "Sniffing out hidden constraints…",
-    "Asking what done actually means…",
     "Looking for the landmines in the goal…",
   ],
   decomposing: [
@@ -39,11 +52,14 @@ const PHASE_MESSAGES: Record<PlanPhase | "planning", string[]> = {
 };
 
 const PHASE_PROGRESS: Record<PlanPhase | "planning", [number, number]> = {
-  planning: [0.04, 0.16],
-  exploring: [0.16, 0.34],
-  decomposing: [0.34, 0.52],
-  generating: [0.52, 0.72],
-  reviewing: [0.72, 0.86],
+  planning: [0.04, 0.12],
+  classifying: [0.12, 0.2],
+  retrieving: [0.2, 0.32],
+  ingesting: [0.32, 0.38],
+  exploring: [0.32, 0.42],
+  decomposing: [0.42, 0.56],
+  generating: [0.56, 0.74],
+  reviewing: [0.74, 0.86],
   revising: [0.86, 0.96],
 };
 

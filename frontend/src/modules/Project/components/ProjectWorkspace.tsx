@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
 import Button from "@uiKit/Button";
+import Callout from "@uiKit/Callout";
 import EmptyState from "@uiKit/EmptyState";
 import { showToast } from "@libraries/toast";
 import KanbanBoard from "@modules/Task/KanbanBoard";
@@ -161,10 +162,17 @@ export default function ProjectWorkspace({
   }
 
   return (
-    <KanbanBoard
-      initialColumns={board.columns}
-      initialTasks={board.tasks}
-      project={current}
-    />
+    <>
+      {current.planWarning ? (
+        <div className="mb-3">
+          <Callout tone="warn" body={current.planWarning} />
+        </div>
+      ) : null}
+      <KanbanBoard
+        initialColumns={board.columns}
+        initialTasks={board.tasks}
+        project={current}
+      />
+    </>
   );
 }

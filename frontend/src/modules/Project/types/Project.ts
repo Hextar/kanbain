@@ -4,6 +4,9 @@ export type QualityBar = "mvp" | "production_grade";
 export type RiskTolerance = "low" | "medium" | "high";
 export type ThoughtEffort = "low" | "medium" | "high" | "max";
 export type PlanPhase =
+  | "classifying"
+  | "retrieving"
+  | "ingesting"
   | "exploring"
   | "decomposing"
   | "generating"
@@ -45,6 +48,7 @@ export type Project = {
   planStatus: PlanStatus;
   planPhase?: PlanPhase;
   planError?: string;
+  planWarning?: string;
   createdAt?: Date;
   updatedAt?: Date;
   members: ProjectMember[];

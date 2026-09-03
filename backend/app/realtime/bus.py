@@ -14,6 +14,7 @@ def plan_payload(project) -> dict[str, Any]:
         "planStatus": project.plan_status,
         "planPhase": project.plan_phase,
         "planError": project.plan_error if project.plan_status == "failed" else None,
+        "planWarning": project.plan_warning,
     }
 
 
