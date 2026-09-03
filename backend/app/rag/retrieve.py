@@ -29,7 +29,7 @@ def retrieve(
     extra_chunks: list[RetrievedChunk] | None = None,
 ) -> RetrievalResult:
     ensure_wiki_seeded(embed=not current_app.config.get("TESTING"))
-    embed_missing_chunks()
+    embed_missing_chunks(limit=0)
     slugs = retrieve_slugs(domain_slug)
     rows = (
         db.session.execute(db.select(WikiChunk).where(WikiChunk.domain_slug.in_(slugs)))

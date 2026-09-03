@@ -26,12 +26,13 @@ def ensure_wiki_seeded(*, embed: bool = False) -> int:
 
 
 def embed_missing_chunks(limit: int = 64) -> int:
+    query = db.select(WikiChunk).where(
+        (WikiChunk.embedding.is_(None)) | (WikiChunk.embedding == [])
+    )
+    if limit > 0:
+        query = query.limit(limit)
     pending = (
-        db.session.execute(
-            db.select(WikiChunk).where(
-                (WikiChunk.embedding.is_(None)) | (WikiChunk.embedding == [])
-            ).limit(limit)
-        )
+        db.session.execute(query)
         .scalars()
         .all()
     )
