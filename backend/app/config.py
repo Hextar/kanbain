@@ -28,6 +28,16 @@ class Config:
     PLANNER_DELAY_SECONDS = float(os.environ.get("PLANNER_DELAY_SECONDS", "2"))
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+    OPENAI_ROUTING_MODEL = os.environ.get("OPENAI_ROUTING_MODEL", "gpt-4o-mini")
+    OPENAI_EMBEDDING_MODEL = os.environ.get(
+        "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
+    )
+    OPENAI_SEED = int(os.environ.get("OPENAI_SEED", "7"))
+    OPENAI_MAX_COMPLETION_TOKENS = int(
+        os.environ.get("OPENAI_MAX_COMPLETION_TOKENS", "16384")
+    )
+    RAG_RESEARCH_TOKEN_BUDGET = int(os.environ.get("RAG_RESEARCH_TOKEN_BUDGET", "2500"))
+    RAG_SCRAPE_SECONDS = float(os.environ.get("RAG_SCRAPE_SECONDS", "10"))
 
 
 class TestConfig(Config):
