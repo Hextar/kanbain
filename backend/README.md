@@ -35,6 +35,8 @@ flask seed
 flask run --host 127.0.0.1 --port 3000
 ```
 
+`flask seed` loads the default board **and** the planner wiki under `app/rag/corpus/`. Compose Postgres is `pgvector/pgvector:pg15`; recreate the `postgres_data` volume if you previously ran stock Postgres 15 (`docker compose down -v`). Optional: `OPENAI_ROUTING_MODEL=gpt-4o-mini` for classify/query rewrite (generate still uses `OPENAI_MODEL`).
+
 In another terminal, start the planner worker:
 
 ```bash
@@ -78,6 +80,6 @@ When a single project exists (the seeded default), `GET/POST /api/columns` and `
 | PUT | `/api/tasks/<id>` | Full update; 404 if missing |
 | DELETE | `/api/tasks/<id>` | 204 even if the task is already gone |
 
-Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`. Projects expose `planStatus` (`planning` \| `ready` \| `failed`), `thoughtEffort` (`low` \| `medium` \| `high` \| `max`), and `planPhase` while planning. `PLANNER=openai` runs a LangGraph pipeline whose depth follows `thoughtEffort`. Set `PLANNER=stub` to skip the model. Save an API key in Settings or `OPENAI_API_KEY`. After changing `SECRET_KEY`, run `flask rotate-encryption-key` or paste the OpenAI key again. To wipe stored keys, `flask invalidate-openai-keys --yes`.
+Task planning fields the wizard/planner will fill in: `workKind` (`epic` \| `story` \| `task`), `parentId`, `acceptanceCriteria`, `estimateTshirt` / `estimatePoints` / `estimateHours`, `assigneeId`, `milestoneId`, `dependsOn`. Projects expose `planStatus` (`planning` \| `ready` \| `failed`), `thoughtEffort` (`low` \| `medium` \| `high` \| `max`), and `planPhase` while planning. `PLANNER=openai` runs a LangGraph pipeline: an always-on **ground** step (domain classify + hybrid retrieve from the wiki, optional user PRD/design/repo URLs, time-boxed scrape on a wiki miss) then decompose/generate as `thoughtEffort` allows. Generate uses `temperature=0` and a seed. Routing/classify uses `OPENAI_ROUTING_MODEL` (`gpt-4o-mini` by default). Set `PLANNER=stub` to skip the model. Save an API key in Settings or `OPENAI_API_KEY`. After changing `SECRET_KEY`, run `flask rotate-encryption-key` or paste the OpenAI key again. To wipe stored keys, `flask invalidate-openai-keys --yes`.
 
 On first boot the database is seeded with an **Untitled project** and columns **To Do**, **In Progress**, and **Done**.

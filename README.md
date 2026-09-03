@@ -92,6 +92,19 @@ Skip the frontend container. Run Postgres, Redis, Flask, and the planner worker 
 
 ```bash
 docker compose up -d --build database backend worker
+docker compose exec backend flask db upgrade
+docker compose exec backend flask seed
+```
+
+`flask db upgrade` applies the wiki tables (pgvector). `flask seed` loads the default project **and** the planner’s markdown wiki (PM playbook + software-product pack). The planner retrieves from that wiki on every generate.
+
+Postgres is `pgvector/pgvector:pg15`. If this machine already had a volume from stock `postgres:15`, recreate it or `CREATE EXTENSION vector` will fail:
+
+```bash
+docker compose down -v
+docker compose up -d --build database backend worker
+docker compose exec backend flask db upgrade
+docker compose exec backend flask seed
 ```
 
 In another terminal:

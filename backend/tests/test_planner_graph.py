@@ -11,8 +11,8 @@ from tests.plan_fixtures import SAMPLE_LLM_PLAN
 def test_entry_node_matches_effort():
     assert entry_node("low") == "generate"
     assert entry_node("medium") == "decompose"
-    assert entry_node("high") == "explore"
-    assert entry_node("max") == "explore"
+    assert entry_node("high") == "decompose"
+    assert entry_node("max") == "decompose"
 
 
 def test_after_generate_skips_critique_for_low_and_medium():
@@ -30,14 +30,15 @@ def test_high_critique_stops_after_two_revise_loops():
 
 
 def test_max_critique_follows_next_until_complete():
-    assert after_critique("max", complete=False, iteration=9, nxt="explore") == "explore"
+    assert after_critique("max", complete=False, iteration=9, nxt="explore") == "ground"
+    assert after_critique("max", complete=False, iteration=9, nxt="ground") == "ground"
     assert after_critique("max", complete=False, iteration=9, nxt="revise") == "revise"
     assert after_critique("max", complete=True, iteration=9, nxt="explore") == "end"
 
 
-def _patch_nodes(monkeypatch, *, explore=None, decompose=None, generate=None, critique=None, revise=None):
-    if explore is not None:
-        monkeypatch.setattr("app.planner.nodes.explore", explore)
+def _patch_nodes(monkeypatch, *, ground=None, decompose=None, generate=None, critique=None, revise=None):
+    if ground is not None:
+        monkeypatch.setattr("app.planner.nodes.ground", ground)
     if decompose is not None:
         monkeypatch.setattr("app.planner.nodes.decompose", decompose)
     if generate is not None:
@@ -56,13 +57,9 @@ def _draft_generate(calls):
     return generate
 
 
-def test_low_effort_never_invokes_explore_or_critique(client, app, monkeypatch):
+def test_low_effort_never_invokes_critique(client, app, monkeypatch):
     app.config["PLANNER"] = "openai"
     calls: list[str] = []
-
-    def explore(_state):
-        calls.append("explore")
-        return {"research": "should not run"}
 
     def critique(_state):
         calls.append("critique")
@@ -70,7 +67,6 @@ def test_low_effort_never_invokes_explore_or_critique(client, app, monkeypatch):
 
     _patch_nodes(
         monkeypatch,
-        explore=explore,
         generate=_draft_generate(calls),
         critique=critique,
     )
@@ -97,8 +93,8 @@ def test_high_effort_stops_after_two_revise_loops(client, app, monkeypatch):
     app.config["PLANNER"] = "openai"
     calls: list[str] = []
 
-    def explore(_state):
-        calls.append("explore")
+    def ground(_state):
+        calls.append("ground")
         return {"research": "notes"}
 
     def decompose(_state):
@@ -121,7 +117,7 @@ def test_high_effort_stops_after_two_revise_loops(client, app, monkeypatch):
 
     _patch_nodes(
         monkeypatch,
-        explore=explore,
+        ground=ground,
         decompose=decompose,
         generate=_draft_generate(calls),
         critique=critique,
@@ -141,7 +137,7 @@ def test_high_effort_stops_after_two_revise_loops(client, app, monkeypatch):
         plan_project(created["id"])
 
     assert calls == [
-        "explore",
+        "ground",
         "decompose",
         "generate",
         "critique",
@@ -159,8 +155,8 @@ def test_max_effort_continues_until_critique_completes(client, app, monkeypatch)
     calls: list[str] = []
     critiques = {"n": 0}
 
-    def explore(_state):
-        calls.append("explore")
+    def ground(_state):
+        calls.append("ground")
         return {"research": "notes"}
 
     def decompose(_state):
@@ -188,7 +184,7 @@ def test_max_effort_continues_until_critique_completes(client, app, monkeypatch)
 
     _patch_nodes(
         monkeypatch,
-        explore=explore,
+        ground=ground,
         decompose=decompose,
         generate=_draft_generate(calls),
         critique=critique,
@@ -209,7 +205,7 @@ def test_max_effort_continues_until_critique_completes(client, app, monkeypatch)
 
     assert critiques["n"] == 3
     assert calls == [
-        "explore",
+        "ground",
         "decompose",
         "generate",
         "critique",

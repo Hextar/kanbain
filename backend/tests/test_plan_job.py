@@ -83,7 +83,8 @@ def test_openai_planner_populates_the_board(client, app, monkeypatch):
         },
     ).get_json()
     project_id = created["id"]
-    client_stub = fake_openai_client(json.dumps(SAMPLE_LLM_PLAN))
+    calls: list[dict] = []
+    client_stub = fake_openai_client(json.dumps(SAMPLE_LLM_PLAN), calls)
     monkeypatch.setattr(
         "app.planner.job.get_planner",
         lambda: LangGraphPlanner(client=client_stub),
@@ -95,6 +96,9 @@ def test_openai_planner_populates_the_board(client, app, monkeypatch):
 
     ready = client.get(f"/api/projects/{project_id}").get_json()
     assert ready["planStatus"] == "ready"
+    assert calls
+    assert calls[0]["temperature"] == 0
+    assert "seed" in calls[0]
     tasks = client.get(f"/api/tasks?projectId={project_id}").get_json()
     titles = {task["title"] for task in tasks}
     assert "Capture constraints" in titles

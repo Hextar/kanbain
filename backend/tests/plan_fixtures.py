@@ -64,13 +64,14 @@ SAMPLE_LLM_PLAN = {
 }
 
 
-def fake_openai_client(content: str):
-    return SimpleNamespace(
-        chat=SimpleNamespace(
-            completions=SimpleNamespace(
-                create=lambda **_kwargs: SimpleNamespace(
-                    choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
-                )
-            )
+def fake_openai_client(content: str, calls=None):
+    def create(**kwargs):
+        if calls is not None:
+            calls.append(kwargs)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
         )
+
+    return SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=create))
     )
