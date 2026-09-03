@@ -8,7 +8,9 @@ from flask import current_app, has_app_context
 
 from ..extensions import db
 from ..lookups import UnknownEntityError, get_project
-from ..models import Project
+from ..models import Project, WikiSource
+from ..rag.load import evaluate_load
+from ..rag.scrape import promote_sources
 from ..serialize import utcnow
 from .apply import apply_plan
 from .effort import PLAN_TIMEOUT_MESSAGE
@@ -60,13 +62,27 @@ def _run_plan(project_id: str) -> None:
             _log_block("composed prompt", result.prompt)
             _log_block("LLM output", result.raw)
             project = get_project(project_id)
+            warning = evaluate_load(project, result.plan)
             actions = apply_plan(project, result.plan, raw=result.raw)
+            project = get_project(project_id)
+            project.plan_warning = warning
+            db.session.commit()
+            if result.chunk_ids:
+                promote_sources(
+                    db.session.execute(db.select(WikiSource)).scalars().all(),
+                    cited_ids=set(result.chunk_ids),
+                )
+            if result.pending_urls and result.domain_slug:
+                from ..queue import enqueue_wiki_warm
+
+                enqueue_wiki_warm(result.domain_slug, result.pending_urls)
             _log_block("taken actions", "\n".join(f"  {line}" for line in actions))
         except Exception as exc:
             project = get_project(project_id)
             project.plan_status = "failed"
             project.plan_error = _plan_error_message(exc)
             project.plan_phase = None
+            project.plan_warning = None
             project.updated_at = utcnow()
             db.session.commit()
     finally:

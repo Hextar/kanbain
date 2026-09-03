@@ -29,6 +29,12 @@ class PlanState(TypedDict, total=False):
     critique: dict[str, Any]
     iteration: int
     prompt_log: str
+    domain_slug: str
+    queries: list[str]
+    extra_queries: list[str]
+    chunk_ids: list[str]
+    pending_urls: list[str]
+    coverage_ok: bool
 
 
 class LangGraphPlanner:
@@ -52,6 +58,10 @@ class LangGraphPlanner:
                     "critique": {"complete": True, "issues": [], "next": "revise"},
                     "iteration": 0,
                     "prompt_log": "",
+                    "extra_queries": [],
+                    "chunk_ids": [],
+                    "pending_urls": [],
+                    "coverage_ok": True,
                 },
                 {"recursion_limit": recursion_limit_for(effort)},
             )
@@ -67,22 +77,25 @@ class LangGraphPlanner:
             prompt=final.get("prompt_log") or "",
             raw=raw,
             plan=plan_from_llm_json(raw),
+            chunk_ids=list(final.get("chunk_ids") or []),
+            pending_urls=list(final.get("pending_urls") or []),
+            domain_slug=str(final.get("domain_slug") or ""),
         )
 
 
 def build_planner_graph():
     graph = StateGraph(PlanState)
-    graph.add_node("explore", nodes.explore)
+    graph.add_node("ground", nodes.ground)
     graph.add_node("decompose", nodes.decompose)
     graph.add_node("generate", nodes.generate)
     graph.add_node("critique", nodes.critique)
     graph.add_node("revise", nodes.revise)
+    graph.add_edge(START, "ground")
     graph.add_conditional_edges(
-        START,
-        route_entry,
-        {"explore": "explore", "decompose": "decompose", "generate": "generate"},
+        "ground",
+        route_after_ground,
+        {"decompose": "decompose", "generate": "generate"},
     )
-    graph.add_edge("explore", "decompose")
     graph.add_edge("decompose", "generate")
     graph.add_conditional_edges(
         "generate",
@@ -92,13 +105,13 @@ def build_planner_graph():
     graph.add_conditional_edges(
         "critique",
         route_after_critique,
-        {"revise": "revise", "explore": "explore", "end": END},
+        {"revise": "revise", "ground": "ground", "end": END},
     )
     graph.add_edge("revise", "critique")
     return graph.compile()
 
 
-def route_entry(state: PlanState) -> Literal["explore", "decompose", "generate"]:
+def route_after_ground(state: PlanState) -> Literal["decompose", "generate"]:
     return entry_node(state.get("effort") or "medium")
 
 
@@ -106,7 +119,7 @@ def route_after_generate(state: PlanState) -> Literal["critique", "end"]:
     return after_generate(state.get("effort") or "medium")
 
 
-def route_after_critique(state: PlanState) -> Literal["revise", "explore", "end"]:
+def route_after_critique(state: PlanState) -> Literal["revise", "ground", "end"]:
     critique = state.get("critique") or {}
     return after_critique(
         state.get("effort") or "medium",

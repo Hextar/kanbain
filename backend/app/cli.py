@@ -8,8 +8,10 @@ def register_cli(app: Flask) -> None:
     @with_appcontext
     def seed_command() -> None:
         from .seed import seed_defaults
+        from .rag.seed import ensure_wiki_seeded
 
         seed_defaults()
+        ensure_wiki_seeded()
         click.echo("Database seeded.")
 
     @app.cli.command("rotate-encryption-key")

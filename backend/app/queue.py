@@ -32,3 +32,31 @@ def enqueue_plan(project_id: str) -> None:
         project.plan_phase = None
         project.updated_at = utcnow()
         db.session.commit()
+
+
+def enqueue_wiki_warm(domain_slug: str, urls: list[str]) -> None:
+    if current_app.config.get("TESTING") or not urls:
+        return
+    try:
+        get_queue().enqueue(warm_wiki, domain_slug, urls, job_timeout=180)
+    except Exception:
+        pass
+
+
+def warm_wiki(domain_slug: str, urls: list[str]) -> None:
+    from flask import has_app_context
+
+    from . import create_app
+    from .rag.scrape import scrape_urls
+
+    def _run() -> None:
+        import time
+
+        scrape_urls(urls, domain_slug=domain_slug, deadline=time.monotonic() + 60)
+
+    if has_app_context():
+        _run()
+        return
+    app = create_app()
+    with app.app_context():
+        _run()

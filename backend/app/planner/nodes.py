@@ -1,41 +1,95 @@
 from __future__ import annotations
 
 import json
+import time
 from contextvars import ContextVar
 from typing import Any
 
+from flask import current_app
 from openai import OpenAI
 
 from ..extensions import db
 from ..lookups import get_project
+from ..rag.classify import classify_brief, propose_source_urls
+from ..rag.ingest import ingest_project_urls
+from ..rag.retrieve import retrieve
+from ..rag.scrape import scrape_urls
 from ..serialize import utcnow
+from .effort import scrape_on_miss
 from .llm import complete_json
 from .openai_planner import OpenAIPlanner
 from .prompt import compose_user_prompt
 
 _generate_client: ContextVar[OpenAI | None] = ContextVar("generate_client", default=None)
 
-EXPLORE_SYSTEM = """\
-You are a staff engineer and product lead. Study the project brief deeply.
-Do not fetch URLs; treat attached URL strings as labels only.
-Return JSON: {"research": "markdown notes covering domain, risks, missing \
-info, and a suggested approach"}."""
-
 DECOMPOSE_SYSTEM = """\
 You are a project manager. Turn the brief and research into a lean work \
-breakdown. Return JSON:
-{"milestones": [{"title": "string", "due": "string or null"}], \
-"epics": [{"title": "string", "description": "string", \
-"stories": [{"title": "string"}]}]}
-Honor 2-4 milestones, 2-4 epics, 2-4 stories per epic."""
+breakdown. Honor 2-4 milestones, 2-4 epics, 2-4 stories per epic."""
+
+DECOMPOSE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["milestones", "epics"],
+    "properties": {
+        "milestones": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["title", "due"],
+                "properties": {
+                    "title": {"type": "string"},
+                    "due": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                },
+            },
+        },
+        "epics": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["title", "description", "stories"],
+                "properties": {
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "stories": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["title"],
+                            "properties": {"title": {"type": "string"}},
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
 
 CRITIQUE_SYSTEM = """\
-You are a demanding tech lead reviewing a kanban plan JSON against the brief.
-Return JSON: {"complete": true or false, "issues": ["string"], \
-"next": "revise" or "explore"}
+You are a demanding tech lead reviewing a kanban plan JSON against the brief \
+and cited research. Flag cards that ignore or contradict citations.
 Set complete true only if coverage, estimates, assignees, milestones, and \
 acceptance criteria are load-bearing and consistent.
-Use next=explore when the brief itself needs more analysis; otherwise revise."""
+Use next=ground when retrieval must widen; otherwise revise."""
+
+CRITIQUE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["complete", "issues", "next"],
+    "properties": {
+        "complete": {"type": "boolean"},
+        "issues": {"type": "array", "items": {"type": "string"}},
+        "next": {"type": "string", "enum": ["revise", "ground"]},
+    },
+}
 
 
 def set_generate_client(client: OpenAI | None):
@@ -53,15 +107,49 @@ def set_plan_phase(project_id: str, phase: str | None) -> None:
     db.session.commit()
 
 
-def explore(state: dict[str, Any]) -> dict[str, Any]:
-    set_plan_phase(state["project_id"], "exploring")
+def ground(state: dict[str, Any]) -> dict[str, Any]:
+    set_plan_phase(state["project_id"], "classifying")
     project = get_project(state["project_id"])
-    user = compose_user_prompt(project)
-    data = complete_json(EXPLORE_SYSTEM, user)
-    research = _text(data.get("research")) or json.dumps(data)
+    extra = [item.strip() for item in state.get("extra_queries") or [] if isinstance(item, str)]
+    classified = classify_brief(_brief(project))
+    queries = list(classified["queries"])
+    queries.extend(extra)
+    set_plan_phase(state["project_id"], "retrieving")
+    result = retrieve(domain_slug=str(classified["domain_slug"]), queries=queries)
+    set_plan_phase(state["project_id"], "ingesting")
+    user_chunks = ingest_project_urls(project)
+    if user_chunks:
+        result = retrieve(
+            domain_slug=str(classified["domain_slug"]),
+            queries=queries,
+            extra_chunks=user_chunks,
+        )
+    pending_urls: list[str] = []
+    if (
+        not result.coverage_ok
+        and scrape_on_miss(state.get("effort") or "medium")
+        and not current_app.config.get("TESTING")
+    ):
+        set_plan_phase(state["project_id"], "exploring")
+        pending_urls = propose_source_urls(_brief(project), str(classified["domain_slug"]))
+        deadline = time.monotonic() + float(
+            current_app.config.get("RAG_SCRAPE_SECONDS") or 10
+        )
+        scrape_urls(pending_urls, domain_slug=str(classified["domain_slug"]), deadline=deadline)
+        result = retrieve(
+            domain_slug=str(classified["domain_slug"]),
+            queries=queries,
+            extra_chunks=user_chunks,
+        )
+    research = result.notes
     return {
         "research": research,
-        "prompt_log": _append(state, "explore", f"{EXPLORE_SYSTEM}\n\n{user}\n\n{research}"),
+        "domain_slug": classified["domain_slug"],
+        "queries": queries,
+        "chunk_ids": [item.chunk_id for item in result.chunks],
+        "pending_urls": pending_urls,
+        "coverage_ok": result.coverage_ok,
+        "prompt_log": _append(state, "ground", research or "(no wiki hits)"),
     }
 
 
@@ -69,7 +157,7 @@ def decompose(state: dict[str, Any]) -> dict[str, Any]:
     set_plan_phase(state["project_id"], "decomposing")
     project = get_project(state["project_id"])
     user = compose_user_prompt(project, research=state.get("research") or "")
-    data = complete_json(DECOMPOSE_SYSTEM, user)
+    data = complete_json(DECOMPOSE_SYSTEM, user, schema=DECOMPOSE_SCHEMA, schema_name="decompose")
     outline = json.dumps(data, indent=2)
     return {
         "outline": outline,
@@ -100,7 +188,7 @@ def critique(state: dict[str, Any]) -> dict[str, Any]:
         outline=state.get("outline") or "",
         draft=state.get("draft") or "",
     )
-    data = complete_json(CRITIQUE_SYSTEM, user)
+    data = complete_json(CRITIQUE_SYSTEM, user, schema=CRITIQUE_SCHEMA, schema_name="critique")
     issues = data.get("issues")
     nxt = data.get("next")
     critique_payload = {
@@ -108,11 +196,15 @@ def critique(state: dict[str, Any]) -> dict[str, Any]:
         "issues": [item.strip() for item in issues if isinstance(item, str) and item.strip()]
         if isinstance(issues, list)
         else [],
-        "next": nxt if nxt in {"revise", "explore"} else "revise",
+        "next": nxt if nxt in {"revise", "ground"} else "revise",
     }
+    extra_queries = list(critique_payload["issues"][:3]) if critique_payload["next"] == "ground" else []
     return {
         "critique": critique_payload,
-        "prompt_log": _append(state, "critique", f"{CRITIQUE_SYSTEM}\n\n{user}\n\n{json.dumps(critique_payload)}"),
+        "extra_queries": extra_queries,
+        "prompt_log": _append(
+            state, "critique", f"{CRITIQUE_SYSTEM}\n\n{user}\n\n{json.dumps(critique_payload)}"
+        ),
     }
 
 
@@ -134,11 +226,11 @@ def revise(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _brief(project) -> str:
+    return compose_user_prompt(project)
+
+
 def _append(state: dict[str, Any], label: str, body: str) -> str:
     previous = state.get("prompt_log") or ""
     block = f"===== {label} =====\n{body}"
     return f"{previous}\n\n{block}" if previous else block
-
-
-def _text(value: object) -> str:
-    return value.strip() if isinstance(value, str) else ""
