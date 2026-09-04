@@ -27,6 +27,7 @@ def test_envelope_shape():
 
 
 def test_subscribe_sends_plan_snapshot(app, client):
+    me = client.get("/api/auth/me").get_json()
     project_id = client.get("/api/projects").get_json()[0]["id"]
 
     class FakeSocket:
@@ -44,7 +45,7 @@ def test_subscribe_sends_plan_snapshot(app, client):
 
     fake = FakeSocket()
     with app.app_context():
-        handle_socket(fake)
+        handle_socket(fake, organization_id=me["organization"]["id"])
 
     assert len(fake.sent) == 1
     payload = json.loads(fake.sent[0])

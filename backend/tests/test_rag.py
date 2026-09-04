@@ -4,7 +4,7 @@ from app.planner.schema import ParsedMilestone, ParsedPlan, ParsedTask
 from app.rag.classify import classify_brief
 from app.rag.domains import heuristic_classify, normalize_slug
 from app.rag.retrieve import retrieve
-from app.rag.seed import ensure_wiki_seeded
+from app.rag.seed import embed_missing_chunks, ensure_wiki_seeded
 
 
 def test_heuristic_maps_it_to_software():
@@ -29,6 +29,12 @@ def test_retrieve_returns_playbook_notes(app):
         )
     assert result.chunks
     assert "Work breakdown" in result.notes or "Acceptance" in result.notes
+
+
+def test_embed_missing_chunks_query_is_valid(app):
+    with app.app_context():
+        ensure_wiki_seeded()
+        assert embed_missing_chunks(limit=0) == 0
 
 
 def test_apply_plan_drops_invented_assignees(client, app):

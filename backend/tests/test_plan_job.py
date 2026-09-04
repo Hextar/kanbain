@@ -69,6 +69,27 @@ def test_plan_job_failure_is_recorded(client, app, monkeypatch):
     assert retry.get_json()["planStatus"] == "planning"
 
 
+def test_plan_job_records_failure_after_db_error(client, app, monkeypatch):
+    created = client.post("/api/projects", json={"name": "Broken"}).get_json()
+    project_id = created["id"]
+
+    class BoomPlanner:
+        def generate(self, _project):
+            from sqlalchemy import text
+
+            from app.extensions import db
+
+            db.session.execute(text("SELECT 1 FROM definitely_missing_table"))
+
+    monkeypatch.setattr("app.planner.job.get_planner", BoomPlanner)
+    with app.app_context():
+        plan_project(project_id)
+
+    failed = client.get(f"/api/projects/{project_id}").get_json()
+    assert failed["planStatus"] == "failed"
+    assert failed.get("planError")
+
+
 def test_openai_planner_populates_the_board(client, app, monkeypatch):
     app.config["PLANNER"] = "openai"
     created = client.post(
