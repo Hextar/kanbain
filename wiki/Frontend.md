@@ -161,4 +161,4 @@ KanbAIn ships a small, bespoke design system:
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_WS_URL` | WebSocket server URL (auto-detects port 3000 if unset); set to `"off"` to disable |
-| `MOCK_API` | Set to `1` to run with an in-memory mock API (no backend needed) |
+| `MOCK_API` | In-memory board API for UI experiments (no auth) |

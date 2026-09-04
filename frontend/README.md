@@ -16,14 +16,12 @@ Next.js App Router UI for the Flask Kanban API. The project list is a Server Com
 
 ### Mock API (no Docker)
 
-In-memory projects/columns/tasks. Refresh keeps data until you restart Next.
+In-memory projects/columns/tasks for Storybook and board UI experiments. It does **not** include login. Use the real API below to sign in.
 
 ```bash
 npm install
 npm run dev:mock
 ```
-
-Open the URL Next prints (http://localhost:5173). Sign up (or continue with Google in mock mode), then **Create new project**. The list starts empty; the new card stays on the home page and fills in after the stub planner finishes.
 
 ### Real API
 

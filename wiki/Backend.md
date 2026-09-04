@@ -83,7 +83,7 @@ All responses use **camelCase JSON**. All mutating endpoints publish a `board.up
 | `GET` | `/api/auth/google` | Start Google OAuth (browser redirect) |
 | `GET` | `/api/auth/google/callback` | Google OAuth callback; sets session and redirects home |
 
-Google sign-in marks the email verified and links to an existing account when the email already exists. `MAIL_PROVIDER` is `console` (logs the message, default), `smtp`, or `resend`.
+Google sign-in marks the email verified and **merges into an existing email+password account** with the same address (password login still works). Register, login, forgot-password, resend-activation, and Google OAuth are rate-limited per client IP (`429` when exceeded). `MAIL_PROVIDER` is `console` (logs the message, default), `smtp`, or `resend`. Failed activation mail on register rolls the account back.
 
 ### Settings
 

@@ -74,7 +74,7 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `NEXT_PUBLIC_WS_URL` | — | `ws://localhost:3000/ws` | WebSocket URL; set to `off` to disable |
-| `MOCK_API` | — | — | Set to `1` to use in-memory mock API (no backend needed) |
+| `MOCK_API` | — | — | In-memory board API for UI experiments. Does not include login. |
 
 ---
 
@@ -82,14 +82,13 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 
 ### Frontend Only (with mock API)
 
+The mock API no longer includes accounts. Use Docker/backend for signup and Google sign-in.
+
 ```bash
 cd frontend
 npm install
 MOCK_API=1 npm run dev
-# Open http://localhost:8080
 ```
-
-No backend or Docker needed. Uses an in-memory mock API with pre-seeded data.
 
 ### Backend Only
 
@@ -167,7 +166,7 @@ PLANNER=stub
 PLANNER_DELAY_SECONDS=3  # simulate planning time
 ```
 
-**Mock API** — no backend at all:
+**Mock API** — in-memory board data only, no login:
 ```bash
 # frontend
 MOCK_API=1 npm run dev
