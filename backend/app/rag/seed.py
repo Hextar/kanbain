@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 
 from flask import current_app
+from sqlalchemy import Text, cast, or_
 
 from ..extensions import db
 from ..models import WikiChunk, WikiSource
@@ -21,13 +22,17 @@ def ensure_wiki_seeded(*, embed: bool = False) -> int:
         for path in sorted(domain_dir.glob("*.md")):
             added += _upsert_seed_file(domain_dir.name, path)
     if embed:
-        embed_missing_chunks()
+        embed_missing_chunks(limit=0)
     return added
 
 
 def embed_missing_chunks(limit: int = 64) -> int:
+    # Postgres json has no equality operator, so compare empty arrays via text.
     query = db.select(WikiChunk).where(
-        (WikiChunk.embedding.is_(None)) | (WikiChunk.embedding == [])
+        or_(
+            WikiChunk.embedding.is_(None),
+            cast(WikiChunk.embedding, Text) == "[]",
+        )
     )
     if limit > 0:
         query = query.limit(limit)

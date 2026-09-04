@@ -30,6 +30,16 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
       OPENAI_ROUTING_MODEL: ${OPENAI_ROUTING_MODEL:-gpt-4o-mini}
       PORT: 3000
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8080}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     depends_on:
       database:
         condition: service_healthy

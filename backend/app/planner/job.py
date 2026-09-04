@@ -78,6 +78,7 @@ def _run_plan(project_id: str) -> None:
                 enqueue_wiki_warm(result.domain_slug, result.pending_urls)
             _log_block("taken actions", "\n".join(f"  {line}" for line in actions))
         except Exception as exc:
+            db.session.rollback()
             project = get_project(project_id)
             project.plan_status = "failed"
             project.plan_error = _plan_error_message(exc)

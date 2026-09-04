@@ -23,6 +23,16 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+    PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "http://localhost:5173")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    MAIL_PROVIDER = os.environ.get("MAIL_PROVIDER", "console")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "")
+    SMTP_HOST = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT") or "587")
+    SMTP_USER = os.environ.get("SMTP_USER", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     PLANNER = os.environ.get("PLANNER", "openai")
     PLANNER_DELAY_SECONDS = float(os.environ.get("PLANNER_DELAY_SECONDS", "2"))
@@ -51,6 +61,7 @@ class TestConfig(Config):
     PLANNER = "stub"
     PLANNER_DELAY_SECONDS = 0
     OPENAI_API_KEY = ""
+    MAIL_PROVIDER = "console"
 
 
 def require_secret_key(app: Flask) -> None:

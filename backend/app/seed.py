@@ -14,13 +14,21 @@ def add_default_columns(project_id: str) -> None:
         )
 
 
-def seed_defaults() -> None:
-    existing = db.session.scalar(db.select(db.func.count()).select_from(Project))
+def seed_defaults(organization_id: str | None = None) -> None:
+    if not organization_id:
+        return
+
+    existing = db.session.scalar(
+        db.select(db.func.count())
+        .select_from(Project)
+        .where(Project.organization_id == organization_id)
+    )
     if existing:
         return
 
     project = Project(
         name=DEFAULT_PROJECT_NAME,
+        organization_id=organization_id,
         deadline_kind="ongoing",
         methodology="kanban",
         quality_bar="mvp",

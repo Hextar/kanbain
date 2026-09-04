@@ -4,11 +4,12 @@ import json
 import queue
 import threading
 
-from flask import current_app
+from flask import current_app, request
 from flask_sock import Sock
 from redis import Redis
 from simple_websocket import ConnectionClosed
 
+from ..identity import Identity, bind_identity, verify_ws_ticket
 from ..lookups import UnknownEntityError, get_project
 from .bus import envelope, plan_payload
 from .rooms import project_id_from_channel, room_pattern
@@ -19,10 +20,18 @@ RECEIVE_TIMEOUT = 0.25
 def register_sock(sock: Sock) -> None:
     @sock.route("/ws")
     def websocket(ws) -> None:
+        identity = verify_ws_ticket(request.args.get("ticket"))
+        if identity is None:
+            ws.send(json.dumps({"v": 1, "event": "error", "message": "unauthorized"}))
+            return
+        bind_identity(identity)
         handle_socket(ws)
 
 
-def handle_socket(ws) -> None:
+def handle_socket(ws, *, organization_id: str | None = None) -> None:
+    if organization_id is not None:
+        bind_identity(Identity(user_id="ws", organization_id=organization_id))
+
     wanted: set[str] = set()
     lock = threading.Lock()
     outgoing: queue.Queue[str] = queue.Queue()
@@ -87,6 +96,13 @@ def _handle_frame(ws, incoming: str, wanted: set[str], lock: threading.Lock) -> 
     if not isinstance(project_id, str) or not project_id:
         return
     if kind == "subscribe":
+        try:
+            get_project(project_id)
+        except UnknownEntityError:
+            ws.send(
+                json.dumps(envelope("error", project_id, {"message": "unknown project"}))
+            )
+            return
         with lock:
             wanted.add(project_id)
         _send_snapshot(ws, project_id)

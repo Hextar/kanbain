@@ -123,9 +123,14 @@ def _write_assignees(project: Project, plan: ParsedPlan, actions: list[str]) -> 
 
     ids: dict[str, str] = {}
     for name in names:
-        existing = db.session.scalar(db.select(Assignee).where(Assignee.name == name))
+        existing = db.session.scalar(
+            db.select(Assignee).where(
+                Assignee.organization_id == project.organization_id,
+                Assignee.name == name,
+            )
+        )
         if existing is None:
-            existing = Assignee(name=name)
+            existing = Assignee(name=name, organization_id=project.organization_id)
             db.session.add(existing)
             db.session.flush()
             actions.append(f"create_assignee name={name}")

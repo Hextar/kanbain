@@ -3,6 +3,7 @@ from sqlalchemy.orm import selectinload
 
 from ..extensions import db
 from ..http import error_response
+from ..identity import request_organization_id
 from ..lookups import UnknownEntityError, get_member, get_project
 from ..models import Project, ProjectMember, new_id, task_progress_by_project
 from ..planner.effort import DEFAULT_THOUGHT_EFFORT
@@ -86,12 +87,12 @@ def _member_from_payload(project_id: str, payload: dict) -> ProjectMember:
 
 @projects_bp.get("/api/projects")
 def list_projects():
+    org_id = request_organization_id()
+    statement = db.select(Project).options(selectinload(Project.members))
+    if org_id is not None:
+        statement = statement.where(Project.organization_id == org_id)
     projects = list(
-        db.session.execute(
-            db.select(Project)
-            .options(selectinload(Project.members))
-            .order_by(Project.created_at.desc())
-        ).scalars()
+        db.session.execute(statement.order_by(Project.created_at.desc())).scalars()
     )
     progress = task_progress_by_project([project.id for project in projects])
     return jsonify(
@@ -113,11 +114,16 @@ def create_project():
     except ValueError as exc:
         return json_error(exc)
 
+    org_id = request_organization_id()
+    if not org_id:
+        return error_response("Unauthorized", 401)
+
     if project_id and db.session.get(Project, project_id):
         return error_response(f"Project {project_id} already exists", 409)
 
     project = Project(
         created_at=utcnow(),
+        organization_id=org_id,
         deadline_kind="ongoing",
         methodology="kanban",
         quality_bar="mvp",

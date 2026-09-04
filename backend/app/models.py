@@ -14,6 +14,78 @@ def new_id() -> str:
     return str(uuid4())
 
 
+class User(db.Model):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    memberships: Mapped[list["Membership"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+    def to_dict(self) -> dict:
+        payload = {
+            "id": self.id,
+            "email": self.email,
+            "name": self.name,
+            "emailVerified": self.email_verified_at is not None,
+        }
+        if self.created_at is not None:
+            payload["createdAt"] = dump_datetime(self.created_at)
+        return payload
+
+
+class Organization(db.Model):
+    __tablename__ = "organizations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    memberships: Mapped[list["Membership"]] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
+    )
+    projects: Mapped[list["Project"]] = relationship(back_populates="organization")
+    assignees: Mapped[list["Assignee"]] = relationship(back_populates="organization")
+    tags: Mapped[list["Tag"]] = relationship(back_populates="organization")
+
+    def to_dict(self) -> dict:
+        payload = {"id": self.id, "name": self.name}
+        if self.created_at is not None:
+            payload["createdAt"] = dump_datetime(self.created_at)
+        return payload
+
+
+class Membership(db.Model):
+    __tablename__ = "memberships"
+    __table_args__ = (
+        UniqueConstraint("user_id", "organization_id", name="uq_memberships_user_org"),
+        CheckConstraint("role IN ('owner')", name="ck_memberships_role"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="owner")
+
+    user: Mapped[User] = relationship(back_populates="memberships")
+    organization: Mapped[Organization] = relationship(back_populates="memberships")
+
+
 class Project(db.Model):
     __tablename__ = "projects"
     __table_args__ = (
@@ -50,6 +122,12 @@ class Project(db.Model):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     goal: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
@@ -70,6 +148,7 @@ class Project(db.Model):
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    organization: Mapped[Organization] = relationship(back_populates="projects")
     members: Mapped[list["ProjectMember"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
@@ -153,13 +232,23 @@ class ProjectMember(db.Model):
 
 
 class Assignee(db.Model):
-    """Global role-style assignee shared across projects (e.g. Frontend Developer)."""
+    """Org-scoped role-style assignee shared across that org's projects."""
 
     __tablename__ = "assignees"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_assignees_org_name"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    organization: Mapped[Organization] = relationship(back_populates="assignees")
     tasks: Mapped[list["Task"]] = relationship(back_populates="assignee")
 
     def to_dict(self) -> dict:
@@ -167,12 +256,23 @@ class Assignee(db.Model):
 
 
 class Tag(db.Model):
-    """Global tag catalog shared across projects."""
+    """Org-scoped tag catalog."""
 
     __tablename__ = "tags"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_tags_org_name"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    organization_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    organization: Mapped[Organization] = relationship(back_populates="tags")
 
     def to_dict(self) -> dict:
         return {"id": self.id, "name": self.name}

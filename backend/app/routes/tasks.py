@@ -436,10 +436,12 @@ def update_task(task_id: str):
 
 @tasks_bp.delete("/api/tasks/<task_id>")
 def delete_task(task_id: str):
-    task = db.session.get(Task, task_id)
-    if task is not None:
-        _delete_task_tree(task)
-        db.session.commit()
+    try:
+        task = get_task(task_id)
+    except UnknownEntityError:
+        return ("", 204)
+    _delete_task_tree(task)
+    db.session.commit()
     return ("", 204)
 
 

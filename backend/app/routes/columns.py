@@ -102,10 +102,12 @@ def update_column(column_id: str):
 
 @columns_bp.delete("/api/columns/<column_id>")
 def delete_column(column_id: str):
-    column = db.session.get(BoardColumn, column_id)
-    if column is not None:
-        db.session.delete(column)
-        db.session.commit()
+    try:
+        column = get_column(column_id)
+    except UnknownEntityError:
+        return ("", 204)
+    db.session.delete(column)
+    db.session.commit()
     return ("", 204)
 
 
