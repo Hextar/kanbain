@@ -7,16 +7,15 @@ All application data lives in **PostgreSQL 15** with the `pgvector` extension. T
 ## Entity Relationship Overview
 
 ```
-Project
-  ├── ProjectMember[]
-  ├── Milestone[]
-  ├── BoardColumn[]
-  │     └── Task[]  (tasks belong to a column)
-  └── Task[]        (all tasks for quick project-level queries)
-        ├── parent Task?         (self-referential: epic → story → task)
-        ├── children Task[]
-        ├── Milestone?
-        └── TaskDependency[]     (depends_on → Task)
+User ──< Membership >── Organization
+                            ├── Project
+                            │     ├── ProjectMember[]
+                            │     ├── Milestone[]
+                            │     ├── BoardColumn[]
+                            │     │     └── Task[]
+                            │     └── Task[]
+                            ├── Assignee[]
+                            └── Tag[]
 
 WikiSource
   └── WikiChunk[]
@@ -24,13 +23,55 @@ WikiSource
 
 ---
 
-## Project
+## User
 
-The top-level entity. Everything hangs off a project.
+A login account. Password hash is nullable so Google-only users can exist. Email/password signups stay unverified until the user opens the activation link; Google sign-in is treated as verified.
 
 | Column | Type | Description |
 |---|---|---|
 | `id` | UUID | Primary key |
+| `email` | str | Unique, stored lowercased |
+| `password_hash` | str? | Argon2id hash; null for Google-only accounts |
+| `name` | str | Display name |
+| `google_sub` | str? | Unique Google subject; used to link OAuth |
+| `email_verified_at` | datetime? | Set when the user confirms email or signs in with Google |
+| `created_at` | datetime | |
+
+---
+
+## Organization
+
+The tenant. Signup creates a personal org (for example `Ada's workspace`). Projects and catalogs belong to an org. Invites and org switching are not in this cut.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `name` | str | Workspace name |
+| `created_at` | datetime | |
+
+---
+
+## Membership
+
+Join table between users and organizations. The only role today is `owner`.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `user_id` | FK → User | |
+| `organization_id` | FK → Organization | |
+| `role` | enum | `owner` |
+
+---
+
+## Project
+
+The board aggregate. Everything hangs off a project, which itself belongs to an organization.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `organization_id` | FK → Organization | Tenant |
 | `name` | str | Project name |
 | `goal` | str | One-sentence goal / elevator pitch |
 | `description` | text | Longer project description |
@@ -196,6 +237,7 @@ Migrations live in `backend/migrations/versions/` and are numbered sequentially:
 001_initial.py         — core tables (Project, Task, Column, Member, Milestone)
 ...
 010_wiki_rag.py        — WikiSource, WikiChunk, pgvector extension
+011_auth_tenancy.py    — User, Organization, Membership; org-scope projects/catalogs
 ```
 
 Run all migrations:

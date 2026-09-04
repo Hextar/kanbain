@@ -23,7 +23,7 @@ npm install
 npm run dev:mock
 ```
 
-Open the URL Next prints (http://localhost:3000). The list starts empty; **Create new project** opens a wizard. The new card stays on the home page and fills in after the stub planner finishes.
+Open the URL Next prints (http://localhost:5173). Sign up (or continue with Google in mock mode), then **Create new project**. The list starts empty; the new card stays on the home page and fills in after the stub planner finishes.
 
 ### Real API
 
@@ -53,6 +53,8 @@ Open the URL Next prints. Flask already uses port 3000, so Next will typically c
 | Path | What it is |
 |------|------------|
 | `/` | Project list (RSC) |
+| `/login` `/signup` | Sign in / create account |
+| `/forgot-password` `/reset-password` `/activate` | Password reset and email confirmation |
 | `/project/[projectId]` | Kanban board for that project |
 
 ## Project structure

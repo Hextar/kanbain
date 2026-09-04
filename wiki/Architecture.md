@@ -24,9 +24,11 @@ All services are declared in `compose.yaml` at the repo root.
 
 The Next.js frontend makes JSON API calls to Flask:
 
-- **Server Components** call Flask directly (server-to-server, same Docker network).
-- **Client Components** go through a Next.js API proxy at `/api/*`, which forwards requests to Flask and injects auth headers.
+- **Server Components** call Flask directly (server-to-server, same Docker network), forwarding the `kanbain_session` cookie.
+- **Client Components** go through a Next.js API proxy at `/api/*`, which forwards `Cookie`, `Set-Cookie`, and OAuth `Location` redirects (with `redirect: "manual"` so the browser follows Google 302s).
 - All API responses use **camelCase** JSON.
+- Flask authenticates with an httpOnly signed cookie (`kanbain_session`) holding `user_id` and `organization_id`. Email/password signup sends an activation mail (`MAIL_PROVIDER`: console, SMTP, or Resend) before a session is created. Google OAuth is treated as already verified. Every project, assignee, and tag is scoped to the session org.
+- The browser WebSocket talks to Flask `:3000/ws` on a different origin, so it authenticates with a short-lived `?ticket=` issued by `GET /api/auth/ws-ticket`.
 
 ### 2. Async Planning (RQ)
 

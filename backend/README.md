@@ -1,6 +1,6 @@
 # Flask API
 
-REST backend for the Kanban board. **Project** is the aggregate: wizard constraints, team, and the board (columns + work items) all hang off it.
+REST backend. Flask owns identity (email/password + Google, httpOnly cookie sessions, activation and password-reset mail) and **organizations** as the tenant. **Project** is the board aggregate under an organization: wizard constraints, team roster, and the board (columns + work items).
 
 ```
 Project
@@ -35,7 +35,7 @@ flask seed
 flask run --host 127.0.0.1 --port 3000
 ```
 
-`flask seed` loads the default board **and** the planner wiki under `app/rag/corpus/`. Compose Postgres is `pgvector/pgvector:pg15`; recreate the `postgres_data` volume if you previously ran stock Postgres 15 (`docker compose down -v`). Optional: `OPENAI_ROUTING_MODEL=gpt-4o-mini` for classify/query rewrite (generate still uses `OPENAI_MODEL`).
+`flask seed` loads the planner wiki under `app/rag/corpus/`. Compose Postgres is `pgvector/pgvector:pg15`; recreate the `postgres_data` volume if you previously ran stock Postgres 15 (`docker compose down -v`). Optional: `OPENAI_ROUTING_MODEL=gpt-4o-mini` for classify/query rewrite (generate still uses `OPENAI_MODEL`).
 
 In another terminal, start the planner worker:
 

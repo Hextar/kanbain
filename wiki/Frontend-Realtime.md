@@ -14,7 +14,7 @@ Flask backend
      │  publishes to Redis pub/sub
      │  channel: kanbain:room:project:{id}
      ▼
-Flask WebSocket server (ws://host:3000/ws)
+Flask WebSocket server (ws://host:3000/ws?ticket=…)
      │
      │  broadcasts JSON event envelope
      ▼
@@ -111,13 +111,13 @@ Other tabs (which have different UUIDs) apply the event normally.
 
 ## Subscribing to a Project Room
 
-When a user opens a project workspace, the `RealtimeProvider` sends a subscription message over the WebSocket:
+When a user opens a project workspace, `RealtimeProvider` fetches `GET /api/auth/ws-ticket` and connects to `ws://host:3000/ws?ticket=…`. It then sends:
 
 ```json
-{ "action": "subscribe", "room": "kanbain:room:project:abc-123" }
+{ "type": "subscribe", "projectId": "abc-123" }
 ```
 
-The Flask WS server maps this tab's connection to that room. All subsequent `publish_project_event(project_id, ...)` calls from the backend reach only the tabs subscribed to that project.
+The Flask WS server validates the ticket, binds the connection to that organization, and only allows subscribe for projects in that org.
 
 ---
 

@@ -15,7 +15,8 @@ The backend is a **Flask** (Python) application that serves the REST API, manage
 | Realtime | Custom WebSocket + Redis pub/sub | `backend/app/realtime/bus.py` |
 | AI | OpenAI Python SDK + LangGraph | Planner pipeline |
 | Embeddings | OpenAI `text-embedding-*` | Stored as JSON in `WikiChunk.embedding` |
-| Security | Fernet (cryptography) | API key encryption at rest |
+| Security | Fernet (cryptography), argon2id, Authlib | OpenAI key encryption, passwords, Google OAuth |
+| Mail | Console / SMTP / Resend | Account activation and password reset |
 
 ---
 
@@ -25,6 +26,7 @@ The backend is a **Flask** (Python) application that serves the REST API, manage
 backend/app/
 ├── __init__.py          # Application factory (create_app)
 ├── config.py            # Config from environment variables
+├── mail.py              # Email providers (console, SMTP, Resend)
 ├── models.py            # SQLAlchemy models
 ├── cli.py               # Flask CLI commands (seed, rotate-key, etc.)
 ├── queue.py             # RQ job enqueueing helpers
@@ -62,6 +64,26 @@ backend/app/
 ## REST API
 
 All responses use **camelCase JSON**. All mutating endpoints publish a `board.updated` or `plan.updated` WebSocket event after committing to the database.
+
+`GET /api/health` and `/api/auth/*` are public (except `GET /api/auth/me` and `GET /api/auth/ws-ticket`, which require a session). Every other `/api/*` route requires the `kanbain_session` cookie. Missing or invalid sessions return `401 { "message": "Unauthorized" }`. Cross-tenant reads return `404` so existence is not leaked.
+
+### Auth
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Email/password signup; creates a personal organization; sends activation email (no session until activated) |
+| `POST` | `/api/auth/login` | Email/password login (403 `unverified` until the account is activated) |
+| `POST` | `/api/auth/activate` | Confirm email from the signed token; sets session |
+| `POST` | `/api/auth/resend-activation` | Re-send the activation email (always a generic 200) |
+| `POST` | `/api/auth/forgot-password` | Send a reset (or activation) email (always a generic 200) |
+| `POST` | `/api/auth/reset-password` | Set a new password from the signed token; sets session |
+| `POST` | `/api/auth/logout` | Clear session cookie |
+| `GET` | `/api/auth/me` | Current user + organization |
+| `GET` | `/api/auth/ws-ticket` | Short-lived WebSocket ticket (~60s) |
+| `GET` | `/api/auth/google` | Start Google OAuth (browser redirect) |
+| `GET` | `/api/auth/google/callback` | Google OAuth callback; sets session and redirects home |
+
+Google sign-in marks the email verified and links to an existing account when the email already exists. `MAIL_PROVIDER` is `console` (logs the message, default), `smtp`, or `resend`.
 
 ### Settings
 
@@ -104,7 +126,7 @@ All responses use **camelCase JSON**. All mutating endpoints publish a `board.up
 
 | Path | Description |
 |---|---|
-| `ws://host:3000/ws` | Persistent WebSocket. Send `{"action":"subscribe","room":"kanbain:room:project:{id}"}` to receive project events |
+| `ws://host:3000/ws?ticket=` | Persistent WebSocket. Connect with a ticket from `GET /api/auth/ws-ticket`. Send `{"type":"subscribe","projectId":"..."}` for projects in the ticket's organization. |
 
 ---
 

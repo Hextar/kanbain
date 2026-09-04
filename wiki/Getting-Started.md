@@ -37,7 +37,7 @@ docker compose exec backend flask seed
 open http://localhost:8080
 ```
 
-On first open, go to **Settings** and enter your OpenAI API key. The key is encrypted and stored server-side.
+On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must open the activation link before they can sign in. Then go to **Settings** and enter your OpenAI API key. The key is encrypted and stored server-side.
 
 ---
 
@@ -56,6 +56,18 @@ On first open, go to **Settings** and enter your OpenAI API key. The key is encr
 | `OPENAI_ROUTING_MODEL` | — | `gpt-4o-mini` | Classification/critique model |
 | `PLANNER_DELAY_SECONDS` | — | `0` | Artificial delay for stub mode (useful for testing progress UI) |
 | `RAG_RESEARCH_TOKEN_BUDGET` | — | `2500` | Max tokens of RAG context per planning run |
+| `PUBLIC_APP_URL` | — | `http://localhost:5173` | Public frontend origin. Used as the Google OAuth redirect base (`{PUBLIC_APP_URL}/api/auth/google/callback`) |
+| `GOOGLE_CLIENT_ID` | — | — | Google OAuth client id. Leave empty to disable Google sign-in |
+| `GOOGLE_CLIENT_SECRET` | — | — | Google OAuth client secret |
+| `MAIL_PROVIDER` | — | `console` | `console` logs messages (local/dev), `smtp` uses SMTP, `resend` uses the Resend HTTP API |
+| `MAIL_FROM` | — | — | From address for SMTP/Resend (for example `KanbAIn <noreply@example.com>`) |
+| `SMTP_HOST` | — | — | Required when `MAIL_PROVIDER=smtp` |
+| `SMTP_PORT` | — | `587` | `587` uses STARTTLS; `465` uses SSL |
+| `SMTP_USER` | — | — | SMTP username |
+| `SMTP_PASSWORD` | — | — | SMTP password |
+| `RESEND_API_KEY` | — | — | Required when `MAIL_PROVIDER=resend` |
+
+On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must activate from the emailed link (`console` provider prints it in the backend log). Existing boards from before auth were backfilled into a `Migrated` org that no login can see — wipe the Postgres volume if you do not need them. Then go to **Settings** and enter your OpenAI API key.
 
 ### Frontend (`frontend/.env.local`)
 

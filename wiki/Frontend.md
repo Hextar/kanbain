@@ -26,13 +26,17 @@ The frontend is a **Next.js 16** application using the App Router, React 19, and
 ```
 frontend/src/
 ├── app/                        # Next.js App Router
-│   ├── layout.tsx              # Root layout (providers, fonts)
-│   ├── page.tsx                # Project list page
-│   ├── project/[projectId]/
-│   │   └── page.tsx            # Project workspace (Server Component)
-│   └── api/                    # Next.js API route proxies to Flask
+│   ├── layout.tsx              # Root layout (QueryClient, toasts)
+│   ├── (auth)/login|signup|forgot-password|reset-password|activate
+│   ├── (app)/                  # Authenticated shell
+│   │   ├── page.tsx            # Project list
+│   │   └── project/[projectId]/
+│   └── api/                    # Next.js API route proxies to Flask (forwards cookies)
+│
+├── middleware.ts               # Redirects anonymous visitors to /login
 │
 ├── modules/                    # Feature modules
+│   ├── Auth/                   # Session, login/signup, user menu
 │   ├── Project/                # Project CRUD, wizard, plan status
 │   ├── Task/                   # Kanban board, task dialogs, flow view
 │   └── Settings/               # OpenAI API key management
@@ -48,6 +52,14 @@ frontend/src/
 ---
 
 ## App Router Pages
+
+### `/login` and `/signup`
+
+Unauthenticated. Email/password form plus a top-level link to `/api/auth/google` so the browser follows OAuth redirects. Google is not a `fetch` call. Signup sends an activation email and does not create a session until `/activate`. Login has a Forgot password link.
+
+### `/forgot-password`, `/reset-password`, `/activate`
+
+Public token/email flows for recovering a password and confirming a new account.
 
 ### `/` — Project List
 
