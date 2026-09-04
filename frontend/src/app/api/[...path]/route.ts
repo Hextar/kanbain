@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiOrigin, isMockApi } from "@api/env";
 import { handleMock } from "@api/mockDb";
+import { REALTIME_CLIENT_HEADER } from "@libraries/realtime/session";
 
 type RouteContext = {
   params: Promise<{ path: string[] }>;
@@ -18,6 +19,10 @@ async function handle(request: Request, context: RouteContext) {
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
+  const cookie = request.headers.get("cookie");
+  if (cookie) headers.set("cookie", cookie);
+  const realtimeClient = request.headers.get(REALTIME_CLIENT_HEADER);
+  if (realtimeClient) headers.set(REALTIME_CLIENT_HEADER, realtimeClient);
 
   const response = await fetch(upstream, {
     method: request.method,
@@ -27,14 +32,21 @@ async function handle(request: Request, context: RouteContext) {
         ? undefined
         : await request.arrayBuffer(),
     cache: "no-store",
+    redirect: "manual",
   });
+
+  const out = new Headers();
+  const responseType = response.headers.get("content-type");
+  if (responseType) out.set("content-type", responseType);
+  const location = response.headers.get("location");
+  if (location) out.set("location", location);
+  for (const cookieValue of response.headers.getSetCookie()) {
+    out.append("set-cookie", cookieValue);
+  }
 
   return new NextResponse(response.body, {
     status: response.status,
-    headers: {
-      "content-type":
-        response.headers.get("content-type") ?? "application/json",
-    },
+    headers: out,
   });
 }
 
