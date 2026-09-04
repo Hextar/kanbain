@@ -30,6 +30,7 @@ The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backe
 
 - Frontend: [frontend/README.md](frontend/README.md)
 - Backend: [backend/README.md](backend/README.md)
+- Wiki: [github.com/Hextar/kanbain/wiki](https://github.com/Hextar/kanbain/wiki) — pages live in [`wiki/`](wiki/) and publish to [`kanbain.wiki.git`](https://github.com/Hextar/kanbain.wiki.git)
 
 ## Docker
 
@@ -134,3 +135,13 @@ npm run dev:mock
 Open http://localhost:3000. Data lives in memory until you restart Next.
 
 Run Flask on the host only when you are changing the API: start Postgres with `docker compose up database`, then follow [backend/README.md](backend/README.md).
+
+## Wiki
+
+The GitHub wiki is a **separate git repo** at [`https://github.com/Hextar/kanbain.wiki.git`](https://github.com/Hextar/kanbain.wiki.git). Edit markdown in [`wiki/`](wiki/) in this repo — that is the source of truth. A workflow on `main` copies those files into the wiki repo so they show up at [github.com/Hextar/kanbain/wiki](https://github.com/Hextar/kanbain/wiki).
+
+To publish immediately from your machine (after the first wiki page exists on GitHub):
+
+```bash
+./scripts/publish-wiki.sh
+```
