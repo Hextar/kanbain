@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from ..extensions import db
 from ..http import error_response
-from ..identity import request_organization_id
+from ..identity import current_organization_id
 from ..models import Assignee
 from ..validation import json_error, parse_optional_id, require_text
 
@@ -11,10 +11,12 @@ assignees_bp = Blueprint("assignees", __name__)
 
 @assignees_bp.get("/api/assignees")
 def list_assignees():
-    org_id = request_organization_id()
-    statement = db.select(Assignee).order_by(Assignee.name.asc())
-    if org_id is not None:
-        statement = statement.where(Assignee.organization_id == org_id)
+    org_id = current_organization_id()
+    statement = (
+        db.select(Assignee)
+        .where(Assignee.organization_id == org_id)
+        .order_by(Assignee.name.asc())
+    )
     assignees = db.session.execute(statement).scalars()
     return jsonify([assignee.to_dict() for assignee in assignees])
 
@@ -31,9 +33,7 @@ def create_assignee():
     except ValueError as exc:
         return json_error(exc)
 
-    org_id = request_organization_id()
-    if not org_id:
-        return error_response("Unauthorized", 401)
+    org_id = current_organization_id()
 
     if assignee_id and db.session.get(Assignee, assignee_id):
         return error_response(f"Assignee {assignee_id} already exists", 409)

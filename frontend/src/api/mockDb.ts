@@ -62,129 +62,6 @@ function jsonError(message: string, status: number) {
   return Response.json({ message }, { status });
 }
 
-const MOCK_SESSION_COOKIE = "kanbain_session=mock; Path=/; HttpOnly; SameSite=Lax";
-const MOCK_SESSION_CLEAR =
-  "kanbain_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
-
-const mockUser = {
-  id: "mock-user",
-  email: "dev@kanbain.local",
-  name: "Dev",
-  emailVerified: true,
-};
-const mockOrg = {
-  id: "mock-org",
-  name: "Dev's workspace",
-};
-
-function hasMockSession(request: Request) {
-  return (request.headers.get("cookie") ?? "").includes("kanbain_session=");
-}
-
-function mockSessionPayload() {
-  return { user: mockUser, organization: mockOrg };
-}
-
-function withCookie(response: Response, cookie: string) {
-  const headers = new Headers(response.headers);
-  headers.append("set-cookie", cookie);
-  return new Response(response.body, { status: response.status, headers });
-}
-
-async function handleMockAuth(request: Request, apiPath: string) {
-  if (apiPath === "/api/auth/register" && request.method === "POST") {
-    const payload = (await request.json()) as {
-      email?: string;
-      password?: string;
-      name?: string;
-    };
-    if (!payload.email?.trim() || !payload.password) {
-      return jsonError("email and password are required", 400);
-    }
-    if (payload.password.length < 8) {
-      return jsonError("password must be at least 8 characters", 400);
-    }
-    mockUser.email = payload.email.trim().toLowerCase();
-    mockUser.name = payload.name?.trim() || mockUser.name;
-    mockOrg.name = `${mockUser.name.split(/\s+/)[0]}'s workspace`;
-    return Response.json(
-      {
-        ...mockSessionPayload(),
-        message: "Check your email to activate your account.",
-        debugActivationUrl: "/activate?token=mock",
-      },
-      { status: 201 },
-    );
-  }
-  if (apiPath === "/api/auth/login" && request.method === "POST") {
-    const payload = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
-    if (!payload.email?.trim() || !payload.password) {
-      return jsonError("email and password are required", 400);
-    }
-    mockUser.email = payload.email.trim().toLowerCase();
-    return withCookie(Response.json(mockSessionPayload()), MOCK_SESSION_COOKIE);
-  }
-  if (apiPath === "/api/auth/activate" && request.method === "POST") {
-    const payload = (await request.json()) as { token?: string };
-    if (!payload.token?.trim()) {
-      return jsonError("This activation link is invalid or has expired.", 400);
-    }
-    return withCookie(Response.json(mockSessionPayload()), MOCK_SESSION_COOKIE);
-  }
-  if (apiPath === "/api/auth/resend-activation" && request.method === "POST") {
-    return Response.json({
-      message: "Check your email to activate your account.",
-    });
-  }
-  if (apiPath === "/api/auth/forgot-password" && request.method === "POST") {
-    return Response.json({
-      message:
-        "If an account exists for that email, we sent a message with next steps.",
-    });
-  }
-  if (apiPath === "/api/auth/reset-password" && request.method === "POST") {
-    const payload = (await request.json()) as {
-      token?: string;
-      password?: string;
-    };
-    if (!payload.token?.trim() || !payload.password) {
-      return jsonError("This reset link is invalid or has expired.", 400);
-    }
-    if (payload.password.length < 8) {
-      return jsonError("password must be at least 8 characters", 400);
-    }
-    return withCookie(Response.json(mockSessionPayload()), MOCK_SESSION_COOKIE);
-  }
-  if (apiPath === "/api/auth/logout" && request.method === "POST") {
-    return withCookie(new Response(null, { status: 204 }), MOCK_SESSION_CLEAR);
-  }
-  if (apiPath === "/api/auth/me" && request.method === "GET") {
-    if (!hasMockSession(request)) {
-      return jsonError("Unauthorized", 401);
-    }
-    return Response.json(mockSessionPayload());
-  }
-  if (apiPath === "/api/auth/ws-ticket" && request.method === "GET") {
-    if (!hasMockSession(request)) {
-      return jsonError("Unauthorized", 401);
-    }
-    return Response.json({ ticket: "mock" });
-  }
-  if (
-    (apiPath === "/api/auth/google" || apiPath === "/api/auth/google/callback") &&
-    request.method === "GET"
-  ) {
-    return withCookie(
-      new Response(null, { status: 302, headers: { location: "/" } }),
-      MOCK_SESSION_COOKIE,
-    );
-  }
-  return null;
-}
-
 function mockSettings() {
   if (!openaiApiKeyHint) {
     return { openaiApiKeyConfigured: false, openaiApiKeyRevoked: false };
@@ -739,8 +616,9 @@ function respond<T>(run: () => T, status = 200) {
 }
 
 export async function handleMock(request: Request, apiPath: string) {
-  const authResponse = await handleMockAuth(request, apiPath);
-  if (authResponse) return authResponse;
+  if (apiPath.startsWith("/api/auth")) {
+    return jsonError("Mock API does not include auth. Run the Flask backend.", 501);
+  }
 
   const url = new URL(request.url);
   const segments = apiPath.split("/").filter(Boolean);

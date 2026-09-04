@@ -34,6 +34,14 @@ class Config:
     SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
     RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
     REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    RATELIMIT_ENABLED = True
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI") or os.environ.get(
+        "REDIS_URL", "memory://"
+    )
+    AUTH_LOGIN_LIMIT = os.environ.get("AUTH_LOGIN_LIMIT", "10 per minute")
+    AUTH_REGISTER_LIMIT = os.environ.get("AUTH_REGISTER_LIMIT", "5 per minute")
+    AUTH_MAIL_LIMIT = os.environ.get("AUTH_MAIL_LIMIT", "5 per minute")
+    AUTH_OAUTH_LIMIT = os.environ.get("AUTH_OAUTH_LIMIT", "10 per minute")
     PLANNER = os.environ.get("PLANNER", "openai")
     PLANNER_DELAY_SECONDS = float(os.environ.get("PLANNER_DELAY_SECONDS", "2"))
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -62,6 +70,8 @@ class TestConfig(Config):
     PLANNER_DELAY_SECONDS = 0
     OPENAI_API_KEY = ""
     MAIL_PROVIDER = "console"
+    RATELIMIT_ENABLED = False
+    RATELIMIT_STORAGE_URI = "memory://"
 
 
 def require_secret_key(app: Flask) -> None:

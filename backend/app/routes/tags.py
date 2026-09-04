@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from ..extensions import db
 from ..http import error_response
-from ..identity import request_organization_id
+from ..identity import current_organization_id
 from ..models import Tag
 from ..validation import json_error, parse_optional_id, require_text
 
@@ -11,10 +11,10 @@ tags_bp = Blueprint("tags", __name__)
 
 @tags_bp.get("/api/tags")
 def list_tags():
-    org_id = request_organization_id()
-    statement = db.select(Tag).order_by(Tag.name.asc())
-    if org_id is not None:
-        statement = statement.where(Tag.organization_id == org_id)
+    org_id = current_organization_id()
+    statement = (
+        db.select(Tag).where(Tag.organization_id == org_id).order_by(Tag.name.asc())
+    )
     tags = db.session.execute(statement).scalars()
     return jsonify([tag.to_dict() for tag in tags])
 
@@ -31,9 +31,7 @@ def create_tag():
     except ValueError as exc:
         return json_error(exc)
 
-    org_id = request_organization_id()
-    if not org_id:
-        return error_response("Unauthorized", 401)
+    org_id = current_organization_id()
 
     if tag_id and db.session.get(Tag, tag_id):
         return error_response(f"Tag {tag_id} already exists", 409)

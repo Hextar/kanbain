@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { ApiError } from "@api/env";
 import Button from "@uiKit/Button";
 import Card from "@uiKit/Card";
 import { FieldLabel, FormMessage } from "@uiKit/Field";
@@ -28,7 +29,11 @@ export default function ForgotPasswordForm({
       await requestPasswordReset(email);
       setSent(true);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Something went wrong");
+      if (caught instanceof ApiError && caught.status === 429) {
+        setError("Too many attempts. Try again shortly.");
+      } else {
+        setError(caught instanceof Error ? caught.message : "Something went wrong");
+      }
     } finally {
       setPending(false);
     }

@@ -5,10 +5,11 @@ import re
 from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, current_app, jsonify, redirect, request
 
-from ..extensions import db
+from ..extensions import db, limiter
 from ..http import error_response
 from ..identity import (
     MIN_PASSWORD_LENGTH,
+    GoogleLinkError,
     create_user_with_org,
     hash_password,
     issue_activation_token,
@@ -17,7 +18,8 @@ from ..identity import (
     load_identity,
     login_session,
     logout_session,
-    personal_workspace_name,
+    primary_organization,
+    upsert_google_user,
     verify_activation_token,
     verify_password,
     verify_password_reset_token,
@@ -25,9 +27,10 @@ from ..identity import (
 from ..mail import (
     activation_email,
     password_reset_email,
+    send_mail,
     try_send_mail,
 )
-from ..models import Membership, Organization, User
+from ..models import Organization, User
 from ..serialize import utcnow
 from ..validation import json_error, parse_optional_text
 
@@ -99,6 +102,7 @@ def _display_name(payload: dict, email: str) -> str:
 
 
 @auth_bp.post("/api/auth/register")
+@limiter.limit(lambda: current_app.config["AUTH_REGISTER_LIMIT"])
 def register():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -119,9 +123,14 @@ def register():
         name=name,
         password_hash=hash_password(password),
     )
+    try:
+        _send_activation(user)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Register: activation mail failed")
+        return error_response("Couldn't send the activation email. Try again.", 503)
     db.session.commit()
-    current_app.logger.info("Register: sending activation mail")
-    _send_activation(user)
+    current_app.logger.info("Register: sent activation mail")
     return jsonify(
         {
             **_session_payload(user, organization),
@@ -131,6 +140,7 @@ def register():
 
 
 @auth_bp.post("/api/auth/login")
+@limiter.limit(lambda: current_app.config["AUTH_LOGIN_LIMIT"])
 def login():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -154,7 +164,7 @@ def login():
     if user.email_verified_at is None:
         return jsonify({"message": UNVERIFIED_MESSAGE, "code": "unverified"}), 403
 
-    organization = _organization_for(user)
+    organization = primary_organization(user)
     if organization is None:
         return error_response("Invalid email or password", 401)
 
@@ -177,7 +187,7 @@ def activate():
         user.email_verified_at = utcnow()
         user.updated_at = utcnow()
         db.session.commit()
-    organization = _organization_for(user)
+    organization = primary_organization(user)
     if organization is None:
         return error_response(INVALID_ACTIVATION_MESSAGE, 400)
     login_session(user, organization.id)
@@ -185,6 +195,7 @@ def activate():
 
 
 @auth_bp.post("/api/auth/resend-activation")
+@limiter.limit(lambda: current_app.config["AUTH_MAIL_LIMIT"])
 def resend_activation():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -195,11 +206,16 @@ def resend_activation():
         return json_error(exc)
     user = db.session.scalar(db.select(User).where(User.email == email))
     if user is not None and user.email_verified_at is None:
-        _send_activation(user)
+        try:
+            _send_activation(user)
+        except Exception:
+            current_app.logger.exception("Resend-activation: mail failed")
+            return error_response("Couldn't send the activation email. Try again.", 503)
     return jsonify({"message": GENERIC_ACTIVATION_MESSAGE})
 
 
 @auth_bp.post("/api/auth/forgot-password")
+@limiter.limit(lambda: current_app.config["AUTH_MAIL_LIMIT"])
 def forgot_password():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -240,7 +256,7 @@ def reset_password():
     user.email_verified_at = user.email_verified_at or now
     user.updated_at = now
     db.session.commit()
-    organization = _organization_for(user)
+    organization = primary_organization(user)
     if organization is None:
         return error_response(INVALID_RESET_MESSAGE, 400)
     login_session(user, organization.id)
@@ -275,6 +291,7 @@ def ws_ticket():
 
 
 @auth_bp.get("/api/auth/google")
+@limiter.limit(lambda: current_app.config["AUTH_OAUTH_LIMIT"])
 def google_start():
     if not google_configured():
         return error_response("Google sign-in is not configured", 503)
@@ -283,14 +300,22 @@ def google_start():
 
 
 @auth_bp.get("/api/auth/google/callback")
+@limiter.limit(lambda: current_app.config["AUTH_OAUTH_LIMIT"])
 def google_callback():
     if not google_configured():
         return error_response("Google sign-in is not configured", 503)
     try:
         profile = fetch_google_profile()
+        user, organization = upsert_google_user(
+            sub=profile["sub"],
+            email=profile["email"],
+            name=profile["name"],
+            email_verified=profile["email_verified"],
+        )
     except GoogleAuthError as exc:
         return error_response(str(exc), 401)
-    user, organization = upsert_google_user(profile)
+    except GoogleLinkError as exc:
+        return error_response(str(exc), 401)
     db.session.commit()
     login_session(user, organization.id)
     return redirect(f"{_public_app_url()}/")
@@ -312,71 +337,13 @@ def fetch_google_profile() -> dict:
     if not isinstance(email, str) or not email.strip():
         raise GoogleAuthError("Google did not return an email address")
     name = info.get("name")
+    verified = info.get("email_verified")
     return {
         "sub": sub,
         "email": email.strip().lower(),
         "name": name.strip() if isinstance(name, str) and name.strip() else None,
+        "email_verified": verified is True or verified == "true",
     }
-
-
-def upsert_google_user(profile: dict) -> tuple[User, Organization]:
-    sub = profile["sub"]
-    email = profile["email"]
-    name = profile.get("name") or email.split("@", 1)[0]
-
-    user = db.session.scalar(db.select(User).where(User.google_sub == sub))
-    if user is None:
-        user = db.session.scalar(db.select(User).where(User.email == email))
-        if user is not None:
-            user.google_sub = sub
-            user.updated_at = utcnow()
-            if not user.name and name:
-                user.name = name
-        else:
-            user, organization = create_user_with_org(
-                email=email,
-                name=name,
-                google_sub=sub,
-                email_verified_at=utcnow(),
-            )
-            return user, organization
-
-    if user.email_verified_at is None:
-        user.email_verified_at = utcnow()
-        user.updated_at = utcnow()
-
-    membership = db.session.scalar(
-        db.select(Membership).where(Membership.user_id == user.id)
-    )
-    if membership is None:
-        organization = Organization(
-            name=personal_workspace_name(user.name),
-            created_at=utcnow(),
-        )
-        db.session.add(organization)
-        db.session.flush()
-        db.session.add(
-            Membership(
-                user_id=user.id,
-                organization_id=organization.id,
-                role="owner",
-            )
-        )
-        db.session.flush()
-        return user, organization
-    organization = db.session.get(Organization, membership.organization_id)
-    if organization is None:
-        raise GoogleAuthError("Could not resolve workspace")
-    return user, organization
-
-
-def _organization_for(user: User) -> Organization | None:
-    membership = db.session.scalar(
-        db.select(Membership).where(Membership.user_id == user.id)
-    )
-    if membership is None:
-        return None
-    return db.session.get(Organization, membership.organization_id)
 
 
 def _public_app_url() -> str:
@@ -387,7 +354,7 @@ def _public_app_url() -> str:
 
 def _send_activation(user: User) -> None:
     url = f"{_public_app_url()}/activate?token={issue_activation_token(user)}"
-    try_send_mail(activation_email(to=user.email, name=user.name, url=url))
+    send_mail(activation_email(to=user.email, name=user.name, url=url))
 
 
 def _send_password_reset(user: User) -> None:

@@ -62,6 +62,43 @@ def test_register_requires_activation(anon_client, app):
     assert logged_in.get_json()["user"]["email"] == "ada@example.com"
 
 
+def test_register_rolls_back_when_mail_fails(anon_client, app, monkeypatch):
+    def boom(_email):
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr("app.routes.auth.send_mail", boom)
+    response = anon_client.post(
+        "/api/auth/register",
+        json={"email": "ada@example.com", "password": "password12", "name": "Ada"},
+    )
+    assert response.status_code == 503
+    with app.app_context():
+        assert db_user("ada@example.com") is None
+
+
+def test_login_rate_limit():
+    from app import create_app
+    from app.config import TestConfig
+    from app.extensions import db
+
+    class TightLimits(TestConfig):
+        RATELIMIT_ENABLED = True
+        AUTH_LOGIN_LIMIT = "2 per minute"
+
+    application = create_app(TightLimits)
+    with application.app_context():
+        db.create_all()
+        client = application.test_client()
+        payload = {"email": "ada@example.com", "password": "password12"}
+        assert client.post("/api/auth/login", json=payload).status_code == 401
+        assert client.post("/api/auth/login", json=payload).status_code == 401
+        limited = client.post("/api/auth/login", json=payload)
+        assert limited.status_code == 429
+        assert limited.get_json()["message"] == "Too many attempts. Try again shortly."
+        db.session.remove()
+        db.drop_all()
+
+
 def test_login_rejects_unverified(anon_client):
     anon_client.post(
         "/api/auth/register",
@@ -168,7 +205,12 @@ def test_google_only_account_cannot_password_login(anon_client, monkeypatch):
     monkeypatch.setattr("app.routes.auth.google_configured", lambda: True)
     monkeypatch.setattr(
         "app.routes.auth.fetch_google_profile",
-        lambda: {"sub": "g-1", "email": "ada@example.com", "name": "Ada"},
+        lambda: {
+            "sub": "g-1",
+            "email": "ada@example.com",
+            "name": "Ada",
+            "email_verified": True,
+        },
     )
     assert anon_client.get("/api/auth/google/callback").status_code == 302
     anon_client.post("/api/auth/logout")
@@ -183,7 +225,12 @@ def test_google_creates_user(anon_client, app, monkeypatch):
     monkeypatch.setattr("app.routes.auth.google_configured", lambda: True)
     monkeypatch.setattr(
         "app.routes.auth.fetch_google_profile",
-        lambda: {"sub": "g-1", "email": "ada@example.com", "name": "Ada"},
+        lambda: {
+            "sub": "g-1",
+            "email": "ada@example.com",
+            "name": "Ada",
+            "email_verified": True,
+        },
     )
     response = anon_client.get("/api/auth/google/callback")
     assert response.status_code == 302
@@ -207,7 +254,12 @@ def test_google_links_existing_email(anon_client, app, monkeypatch):
     monkeypatch.setattr("app.routes.auth.google_configured", lambda: True)
     monkeypatch.setattr(
         "app.routes.auth.fetch_google_profile",
-        lambda: {"sub": "g-1", "email": "ada@example.com", "name": "Ada Lovelace"},
+        lambda: {
+            "sub": "g-1",
+            "email": "ada@example.com",
+            "name": "Ada Lovelace",
+            "email_verified": True,
+        },
     )
     assert anon_client.get("/api/auth/google/callback").status_code == 302
     me = anon_client.get("/api/auth/me").get_json()
@@ -219,6 +271,58 @@ def test_google_links_existing_email(anon_client, app, monkeypatch):
         count = db.session.scalar(db.select(db.func.count()).select_from(User))
         assert count == 1
         assert db_user("ada@example.com").google_sub == "g-1"
+        assert db_user("ada@example.com").password_hash is not None
+
+
+def test_google_merges_verified_password_account(anon_client, app, monkeypatch):
+    register_verified(
+        anon_client, app, email="ada@example.com", password="password12", name="Ada"
+    )
+    org_id = anon_client.get("/api/auth/me").get_json()["organization"]["id"]
+    anon_client.post("/api/auth/logout")
+    monkeypatch.setattr("app.routes.auth.google_configured", lambda: True)
+    monkeypatch.setattr(
+        "app.routes.auth.fetch_google_profile",
+        lambda: {
+            "sub": "g-1",
+            "email": "ada@example.com",
+            "name": "Ada Lovelace",
+            "email_verified": True,
+        },
+    )
+    assert anon_client.get("/api/auth/google/callback").status_code == 302
+    me = anon_client.get("/api/auth/me").get_json()
+    assert me["organization"]["id"] == org_id
+    anon_client.post("/api/auth/logout")
+    logged_in = anon_client.post(
+        "/api/auth/login",
+        json={"email": "ada@example.com", "password": "password12"},
+    )
+    assert logged_in.status_code == 200
+    with app.app_context():
+        from app.extensions import db
+
+        count = db.session.scalar(db.select(db.func.count()).select_from(User))
+        assert count == 1
+        user = db_user("ada@example.com")
+        assert user.google_sub == "g-1"
+        assert user.password_hash is not None
+
+
+def test_google_rejects_unverified_email(anon_client, monkeypatch):
+    monkeypatch.setattr("app.routes.auth.google_configured", lambda: True)
+    monkeypatch.setattr(
+        "app.routes.auth.fetch_google_profile",
+        lambda: {
+            "sub": "g-1",
+            "email": "ada@example.com",
+            "name": "Ada",
+            "email_verified": False,
+        },
+    )
+    response = anon_client.get("/api/auth/google/callback")
+    assert response.status_code == 401
+    assert anon_client.get("/api/auth/me").status_code == 401
 
 
 def test_google_unconfigured(anon_client):

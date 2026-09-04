@@ -57,6 +57,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (caught instanceof ApiError && caught.code === "unverified") {
         setUnverified(true);
         setError(caught.message);
+      } else if (caught instanceof ApiError && caught.status === 429) {
+        setError("Too many attempts. Try again shortly.");
       } else {
         setError(caught instanceof Error ? caught.message : "Something went wrong");
       }
@@ -72,7 +74,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       await resendActivation(email);
       setResent(true);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Something went wrong");
+      if (caught instanceof ApiError && caught.status === 429) {
+        setError("Too many attempts. Try again shortly.");
+      } else {
+        setError(caught instanceof Error ? caught.message : "Something went wrong");
+      }
     } finally {
       setPending(false);
     }

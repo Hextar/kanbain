@@ -1,8 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config, require_secret_key
-from .extensions import db, migrate, sock
+from .extensions import db, limiter, migrate, sock
+from .http import error_response
 from .identity import configure_sessions, register_auth_gate
 from .logging import configure_logging
 from .mail import init_mail
@@ -15,11 +17,17 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     configure_logging(app)
     configure_sessions(app)
     init_mail(app)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     db.init_app(app)
     migrate.init_app(app, db)
     sock.init_app(app)
+    limiter.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
+
+    @app.errorhandler(429)
+    def _rate_limited(_error):
+        return error_response("Too many attempts. Try again shortly.", 429)
 
     from . import models as _models  # noqa: F401
     from .cli import register_cli

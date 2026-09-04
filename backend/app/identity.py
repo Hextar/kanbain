@@ -71,6 +71,22 @@ def request_organization_id() -> str | None:
     return None
 
 
+def current_organization_id() -> str:
+    org_id = request_organization_id()
+    if not isinstance(org_id, str) or not org_id:
+        raise RuntimeError("organization identity is not bound")
+    return org_id
+
+
+def primary_organization(user: User) -> Organization | None:
+    membership = db.session.scalar(
+        db.select(Membership).where(Membership.user_id == user.id)
+    )
+    if membership is None:
+        return None
+    return db.session.get(Organization, membership.organization_id)
+
+
 def load_identity() -> Identity | None:
     user_id = session.get(SESSION_USER_KEY)
     organization_id = session.get(SESSION_ORG_KEY)
@@ -147,6 +163,62 @@ def create_user_with_org(
     db.session.add(user)
     db.session.add(organization)
     db.session.add(membership)
+    db.session.flush()
+    return user, organization
+
+
+class GoogleLinkError(Exception):
+    pass
+
+
+def upsert_google_user(
+    *,
+    sub: str,
+    email: str,
+    name: str | None,
+    email_verified: bool,
+) -> tuple[User, Organization]:
+    if not email_verified:
+        raise GoogleLinkError("Google did not verify this email address")
+    now = utcnow()
+    display_name = name or email.split("@", 1)[0]
+    user = db.session.scalar(db.select(User).where(User.google_sub == sub))
+    if user is None:
+        user = db.session.scalar(db.select(User).where(User.email == email))
+        if user is None:
+            return create_user_with_org(
+                email=email,
+                name=display_name,
+                google_sub=sub,
+                email_verified_at=now,
+            )
+        if user.google_sub and user.google_sub != sub:
+            raise GoogleLinkError(
+                "This email is already linked to another Google account"
+            )
+        user.google_sub = sub
+        if name and not user.name:
+            user.name = name
+        user.updated_at = now
+    if user.email_verified_at is None:
+        user.email_verified_at = now
+        user.updated_at = now
+    organization = primary_organization(user)
+    if organization is not None:
+        return user, organization
+    organization = Organization(
+        name=personal_workspace_name(user.name),
+        created_at=now,
+    )
+    db.session.add(organization)
+    db.session.flush()
+    db.session.add(
+        Membership(
+            user_id=user.id,
+            organization_id=organization.id,
+            role="owner",
+        )
+    )
     db.session.flush()
     return user, organization
 

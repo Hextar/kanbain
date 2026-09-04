@@ -21,6 +21,11 @@ async function handle(request: Request, context: RouteContext) {
   if (contentType) headers.set("content-type", contentType);
   const cookie = request.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "127.0.0.1";
+  headers.set("x-forwarded-for", clientIp);
   const realtimeClient = request.headers.get(REALTIME_CLIENT_HEADER);
   if (realtimeClient) headers.set(REALTIME_CLIENT_HEADER, realtimeClient);
 
