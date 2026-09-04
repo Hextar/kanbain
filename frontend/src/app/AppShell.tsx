@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { SettingsButton } from "@modules/Settings/components/SettingsProvider";
+import UserMenu from "@modules/Auth/components/UserMenu";
 import { projectKeys } from "@modules/Project/api/projectKeys";
 import type { Project } from "@modules/Project/types/Project";
 import AppHeader, { HeaderProvider } from "@uiKit/AppHeader";
@@ -26,7 +26,7 @@ function AppHeaderHost() {
 
   return (
     <AppHeader projectName={projectName}>
-      <SettingsButton size="xs" />
+      <UserMenu />
     </AppHeader>
   );
 }

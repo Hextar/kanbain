@@ -7,8 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Settings } from "lucide-react";
-import IconButton from "@uiKit/IconButton";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import SettingsDialog from "./SettingsDialog";
 
@@ -30,31 +28,6 @@ export function useSettingsDialog() {
     throw new Error("useSettingsDialog must be used within SettingsProvider");
   }
   return context;
-}
-
-export function SettingsButton({
-  size = "md",
-}: {
-  size?: "xs" | "sm" | "md" | "lg";
-}) {
-  const { data } = useSettings();
-  const { openSettings } = useSettingsDialog();
-  const configured = data?.openaiApiKeyConfigured === true;
-  const iconSize = size === "xs" || size === "sm" ? 16 : 20;
-
-  return (
-    <IconButton
-      aria-label="Settings"
-      className={`shrink-0 ${configured ? "text-purple-400" : "text-zinc-400"}`}
-      size={size}
-      suppressHydrationWarning
-      type="button"
-      variant="secondary"
-      onClick={() => openSettings()}
-    >
-      <Settings size={iconSize} />
-    </IconButton>
-  );
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {

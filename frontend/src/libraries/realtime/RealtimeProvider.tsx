@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { applyRealtimeMessage, parseRealtimeMessage } from "./applyEvent";
 import { realtimeClientId, wsUrl } from "./session";
+import { fetchWsTicket } from "@modules/Auth/api/session";
 
 const PING_MS = 20_000;
 const BACKOFF_MAX_MS = 15_000;
@@ -69,34 +70,43 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     function connect() {
       if (closed) return;
-      const socket = new WebSocket(url);
-      socketRef.current = socket;
-      socket.onopen = () => {
-        delay = 1000;
-        setConnected(true);
-        for (const projectId of countsRef.current.keys()) {
-          socket.send(JSON.stringify({ type: "subscribe", projectId }));
-        }
-        window.clearInterval(ping);
-        ping = window.setInterval(() => {
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: "ping" }));
-          }
-        }, PING_MS);
-      };
-      socket.onmessage = (incoming) => {
-        const message = parseRealtimeMessage(incoming.data);
-        if (!message) return;
-        applyRealtimeMessage(queryClient, message, clientId);
-      };
-      socket.onclose = () => {
-        setConnected(false);
-        socketRef.current = null;
-        window.clearInterval(ping);
+      void (async () => {
+        const ticket = await fetchWsTicket();
         if (closed) return;
-        reconnect = window.setTimeout(connect, delay);
-        delay = Math.min(delay * 2, BACKOFF_MAX_MS);
-      };
+        if (!ticket) {
+          reconnect = window.setTimeout(connect, delay);
+          delay = Math.min(delay * 2, BACKOFF_MAX_MS);
+          return;
+        }
+        const socket = new WebSocket(`${url}?ticket=${encodeURIComponent(ticket)}`);
+        socketRef.current = socket;
+        socket.onopen = () => {
+          delay = 1000;
+          setConnected(true);
+          for (const projectId of countsRef.current.keys()) {
+            socket.send(JSON.stringify({ type: "subscribe", projectId }));
+          }
+          window.clearInterval(ping);
+          ping = window.setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: "ping" }));
+            }
+          }, PING_MS);
+        };
+        socket.onmessage = (incoming) => {
+          const message = parseRealtimeMessage(incoming.data);
+          if (!message) return;
+          applyRealtimeMessage(queryClient, message, clientId);
+        };
+        socket.onclose = () => {
+          setConnected(false);
+          socketRef.current = null;
+          window.clearInterval(ping);
+          if (closed) return;
+          reconnect = window.setTimeout(connect, delay);
+          delay = Math.min(delay * 2, BACKOFF_MAX_MS);
+        };
+      })();
     }
 
     connect();

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { RealtimeProvider } from "@libraries/realtime/RealtimeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ToastHost from "@uiKit/ToastHost";
 
@@ -23,10 +22,8 @@ export default function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RealtimeProvider>
-        {children}
-        <ToastHost />
-      </RealtimeProvider>
+      {children}
+      <ToastHost />
     </QueryClientProvider>
   );
 }

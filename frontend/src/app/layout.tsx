@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { SettingsProvider } from "@modules/Settings/components/SettingsProvider";
-import AppShell from "./AppShell";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -17,11 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="h-dvh w-full min-w-0 overflow-hidden">
-        <Providers>
-          <SettingsProvider>
-            <AppShell>{children}</AppShell>
-          </SettingsProvider>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
