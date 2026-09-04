@@ -193,7 +193,7 @@ export default function ProjectCard({
 
   const surfaceClassName = twMerge(
     cardClassName("md"),
-    "relative flex h-full min-w-0 flex-col overflow-hidden pt-4 text-left",
+    "relative flex h-full max-h-48 min-w-0 flex-col overflow-hidden pt-4 text-left",
     canOpen &&
       `transition-colors ${accent.hoverBorder} focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none`,
     isPlanning && "plan-shimmer pointer-events-none border-purple-500/40",
@@ -203,7 +203,7 @@ export default function ProjectCard({
   return (
     <article
       ref={rootRef}
-      className="relative flex h-full min-w-0 flex-col hover:z-10"
+      className="relative flex h-full max-h-48 min-w-0 flex-col hover:z-10"
       data-project-id={project.id}
       data-spawning={isSpawnPending(project.id) ? "" : undefined}
     >

@@ -15,7 +15,7 @@ export default function ProjectHomeSkeleton() {
       <HeaderSlot>
         <Skeleton className="h-9 w-48 rounded-md" />
       </HeaderSlot>
-      <ul className="grid grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid content-start grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
         {CARD_KEYS.map((key) => (
           <li key={key} className="min-w-0">
             <ProjectCardSkeleton />
@@ -29,7 +29,7 @@ export default function ProjectHomeSkeleton() {
 function ProjectCardSkeleton() {
   return (
     <Card
-      className="relative flex h-full min-w-0 flex-col overflow-hidden pt-4"
+      className="relative flex h-full max-h-48 min-w-0 flex-col overflow-hidden pt-4"
       size="md"
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-white/10" />

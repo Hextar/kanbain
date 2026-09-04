@@ -83,7 +83,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       </HeaderSlot>
       <CanvasDots className="flex min-h-0 w-full flex-1 flex-col">
         {hasProjects ? (
-          <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid min-h-0 flex-1 content-start grid-cols-1 gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (
               <li key={project.id} className="h-full min-w-0">
                 <ProjectCard
