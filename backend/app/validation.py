@@ -24,6 +24,10 @@ COLUMN_COLOR_SEQUENCE = (
     "indigo",
 )
 COLUMN_COLORS = set(COLUMN_COLOR_SEQUENCE)
+NAME_MAX = 255
+URL_MAX = 2048
+BODY_MAX = 32_000
+LIST_MAX = 50
 
 
 def parse_optional_id(value: object, field: str = "id") -> str | None:
@@ -51,20 +55,29 @@ def require_title(payload: dict) -> str:
     return require_text(payload, "title")
 
 
-def require_text(payload: dict, field: str) -> str:
+def require_text(payload: dict, field: str, *, max_length: int = NAME_MAX) -> str:
     value = payload.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} is required")
-    return value.strip()
+    stripped = value.strip()
+    if len(stripped) > max_length:
+        raise ValueError(f"{field} is too long")
+    return stripped
 
 
-def parse_optional_text(value: object, field: str) -> str | None:
+def parse_optional_text(
+    value: object, field: str, *, max_length: int = NAME_MAX
+) -> str | None:
     if value is None or value == "":
         return None
     if not isinstance(value, str):
         raise ValueError(f"{field} must be a string")
     stripped = value.strip()
-    return stripped or None
+    if not stripped:
+        return None
+    if len(stripped) > max_length:
+        raise ValueError(f"{field} is too long")
+    return stripped
 
 
 def parse_enum(value: object, allowed: set[str], field: str, *, required: bool = False) -> str | None:
@@ -81,12 +94,26 @@ def parse_priority(value: object) -> str | None:
     return parse_enum(value, PRIORITIES, "priority")
 
 
-def parse_string_list(value: object, field: str) -> list[str] | None:
+def parse_string_list(
+    value: object,
+    field: str,
+    *,
+    max_items: int = LIST_MAX,
+    item_max_length: int = URL_MAX,
+) -> list[str] | None:
     if value is None:
         return None
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ValueError(f"{field} must be an array of strings")
-    return value
+    if len(value) > max_items:
+        raise ValueError(f"{field} is too long")
+    items = []
+    for item in value:
+        stripped = item.strip()
+        if len(stripped) > item_max_length:
+            raise ValueError(f"{field} is too long")
+        items.append(stripped)
+    return items
 
 
 def parse_number(value: object, field: str) -> float | None:

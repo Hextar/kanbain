@@ -15,6 +15,8 @@ from ..lookups import (
 from ..models import BoardColumn, Task, TaskDependency, new_id
 from ..serialize import parse_datetime, utcnow
 from ..validation import (
+    BODY_MAX,
+    NAME_MAX,
     TSHIRTS,
     WORK_KINDS,
     json_error,
@@ -97,11 +99,15 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         task.number = _next_task_number(task.project_id)
 
     if "description" in payload:
-        task.description = parse_optional_text(payload.get("description"), "description")
+        task.description = parse_optional_text(
+            payload.get("description"), "description", max_length=BODY_MAX
+        )
 
     if "acceptanceCriteria" in payload:
         task.acceptance_criteria = parse_string_list(
-            payload.get("acceptanceCriteria"), "acceptanceCriteria"
+            payload.get("acceptanceCriteria"),
+            "acceptanceCriteria",
+            item_max_length=BODY_MAX,
         )
 
     if "priority" in payload:
@@ -136,7 +142,9 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
             task.milestone_id = milestone_id
 
     if "tags" in payload:
-        tags = parse_string_list(payload.get("tags"), "tags")
+        tags = parse_string_list(
+            payload.get("tags"), "tags", item_max_length=NAME_MAX
+        )
         if tags is None:
             task.tags = None
         else:
@@ -147,7 +155,9 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
     if "attachments" in payload:
         task.attachments = parse_string_list(payload.get("attachments"), "attachments")
     if "comments" in payload:
-        task.comments = parse_string_list(payload.get("comments"), "comments")
+        task.comments = parse_string_list(
+            payload.get("comments"), "comments", item_max_length=BODY_MAX
+        )
 
     if "dueDate" in payload:
         task.due_date = parse_datetime(payload.get("dueDate"))
@@ -157,7 +167,9 @@ def _apply_task_fields(task: Task, payload: dict, *, creating: bool) -> None:
         task.updated_at = parse_datetime(payload.get("updatedAt"))
 
     if "dependsOn" in payload:
-        depends_on = parse_string_list(payload.get("dependsOn"), "dependsOn")
+        depends_on = parse_string_list(
+            payload.get("dependsOn"), "dependsOn", item_max_length=36
+        )
         _replace_dependencies(task, depends_on or [])
 
     column_changed = not creating and source_column_id != task.column_id
