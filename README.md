@@ -81,7 +81,8 @@ The UI then treats planning as unconfigured and opens Settings if someone tries 
 ### Full stack (built frontend)
 
 ```bash
-# Frontend (:8080), Flask API (:3000), planner worker, Redis, Postgres (:5432)
+# Frontend (:8080), Flask API (:3000), planner worker, Redis, Postgres
+# Postgres and Redis bind to 127.0.0.1 so a public VPS does not expose them.
 docker compose up --build
 ```
 

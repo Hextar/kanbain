@@ -56,7 +56,11 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 | `OPENAI_ROUTING_MODEL` | — | `gpt-4o-mini` | Classification/critique model |
 | `PLANNER_DELAY_SECONDS` | — | `0` | Artificial delay for stub mode (useful for testing progress UI) |
 | `RAG_RESEARCH_TOKEN_BUDGET` | — | `2500` | Max tokens of RAG context per planning run |
-| `PUBLIC_APP_URL` | — | `http://localhost:5173` | Public frontend origin. Used as the Google OAuth redirect base (`{PUBLIC_APP_URL}/api/auth/google/callback`) |
+| `PUBLIC_APP_URL` | — | `http://localhost:5173` | Public frontend origin. Used as the Google OAuth redirect base (`{PUBLIC_APP_URL}/api/auth/google/callback`). CORS defaults to this origin. When it is `https://…`, HTTP requests (except `/api/health`) redirect to HTTPS. |
+| `CORS_ORIGINS` | — | `PUBLIC_APP_URL` | Comma-separated browser origins allowed to call the API directly. |
+| `RATELIMIT_DEFAULT` | — | `120 per minute` | Per-IP cap on `/api/*` (`/api/health` is exempt). |
+| `PLANNER_LIMIT` | — | `5 per hour` | Per-IP cap on creating a project that plans, and on `POST …/plan`. |
+| `MAX_CONTENT_LENGTH` | — | `262144` | Max JSON body size in bytes. |
 | `GOOGLE_CLIENT_ID` | — | — | Google OAuth client id. Leave empty to disable Google sign-in |
 | `GOOGLE_CLIENT_SECRET` | — | — | Google OAuth client secret |
 | `MAIL_PROVIDER` | — | `console` | `console` logs messages (local/dev), `smtp` uses SMTP, `resend` uses the Resend HTTP API |
@@ -75,6 +79,7 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 |---|---|---|---|
 | `NEXT_PUBLIC_WS_URL` | — | `ws://localhost:3000/ws` | WebSocket URL; set to `off` to disable |
 | `MOCK_API` | — | — | In-memory board API for UI experiments. Does not include login. |
+| `TRUST_PROXY` | — | — | Set to `1` only behind a reverse proxy that overwrites `X-Forwarded-For`. Otherwise the `/api` proxy ignores client-supplied forwarded IPs. |
 
 ---
 

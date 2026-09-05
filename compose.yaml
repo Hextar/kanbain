@@ -81,13 +81,13 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - 6379:6379
+      - 127.0.0.1:6379:6379
 
   database:
     image: pgvector/pgvector:pg15
     # Recreate the volume if you previously used stock postgres:15, or CREATE EXTENSION vector will fail.
     ports:
-      - 5432:5432
+      - 127.0.0.1:5432:5432
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
