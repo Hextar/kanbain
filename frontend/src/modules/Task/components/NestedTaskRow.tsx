@@ -3,6 +3,7 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { useHtml5Drag } from "@libraries/dnd/useHtml5Drag";
+import Badge from "@uiKit/Badge";
 import HoverPreview from "@uiKit/HoverPreview";
 import {
   consumeCelebrate,
@@ -11,7 +12,7 @@ import {
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
 import { useAssignees } from "../hooks/useCatalog";
 import { compactTaskKey } from "../helpers/taskKey";
-import { labeledPriority, PRIORITY_ACCENT } from "../helpers/taskBadges";
+import { labeledPriority, PRIORITY_STYLES } from "../helpers/taskBadges";
 import TaskCardPreview from "./TaskCardPreview";
 import TaskHeading from "./TaskHeading";
 import TaskContextMenu from "./TaskContextMenu";
@@ -71,9 +72,6 @@ export default function NestedTaskRow({
     (assignee) => assignee.id === task.assigneeId,
   )?.name;
   const keyLabel = compactTaskKey(task);
-  const accentBar = task.priority
-    ? PRIORITY_ACCENT[task.priority].bar
-    : undefined;
 
   return (
     <TaskContextMenu
@@ -102,7 +100,7 @@ export default function NestedTaskRow({
           disabled={isDragging || Boolean(task.isSaving)}
           content={
             <TaskCardPreview
-              accentBar={accentBar ?? cardAccentBar}
+              accentBar={cardAccentBar}
               projectId={projectId}
               task={task}
             />
@@ -130,25 +128,35 @@ export default function NestedTaskRow({
             }}
             onDragEnd={dragProps.onDragEnd}
           >
-            {accentBar ? (
+            {cardAccentBar ? (
               <div
                 aria-hidden
                 data-dnd-ghost-accent=""
                 className={twMerge(
                   "absolute top-0 bottom-0 left-0 w-[2px] rounded-l-md",
-                  accentBar,
+                  cardAccentBar,
                 )}
               />
             ) : null}
-            {task.priority ? (
-              <span className="sr-only">{labeledPriority(task.priority)}</span>
-            ) : null}
-            <TaskHeading
-              className="text-xs"
-              taskKey={keyLabel}
-              title={task.title}
-              tooltip={false}
-            />
+            <div className="flex min-w-0 items-center gap-1.5">
+              <TaskHeading
+                className="min-w-0 flex-1 text-xs"
+                taskKey={keyLabel}
+                title={task.title}
+                tooltip={false}
+              />
+              {task.priority ? (
+                <Badge
+                  aria-label={labeledPriority(task.priority)}
+                  className={twMerge(
+                    "shrink-0 uppercase",
+                    PRIORITY_STYLES[task.priority],
+                  )}
+                >
+                  {task.priority[0]}
+                </Badge>
+              ) : null}
+            </div>
             {assigneeName ? (
               <p className="mt-1 text-[11px] text-zinc-500">{assigneeName}</p>
             ) : null}
