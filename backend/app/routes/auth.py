@@ -173,6 +173,7 @@ def login():
 
 
 @auth_bp.post("/api/auth/activate")
+@limiter.limit(lambda: current_app.config["AUTH_MAIL_LIMIT"])
 def activate():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -237,6 +238,7 @@ def forgot_password():
 
 
 @auth_bp.post("/api/auth/reset-password")
+@limiter.limit(lambda: current_app.config["AUTH_MAIL_LIMIT"])
 def reset_password():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):

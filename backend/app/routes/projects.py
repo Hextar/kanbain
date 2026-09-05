@@ -1,7 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.orm import selectinload
 
-from ..extensions import db
+from ..extensions import db, limiter
 from ..http import error_response
 from ..identity import current_organization_id
 from ..lookups import UnknownEntityError, get_member, get_project
@@ -11,12 +11,14 @@ from ..queue import enqueue_plan
 from ..seed import add_default_columns
 from ..serialize import parse_datetime, utcnow
 from ..validation import (
+    BODY_MAX,
     DEADLINE_KINDS,
     METHODOLOGIES,
     QUALITY_BARS,
     RISK_LEVELS,
     SENIORITIES,
     THOUGHT_EFFORTS,
+    URL_MAX,
     json_error,
     parse_enum,
     parse_number,
@@ -28,20 +30,40 @@ from ..validation import (
 
 projects_bp = Blueprint("projects", __name__)
 
+PLAN_BUSY_MESSAGE = "A plan is already running for this workspace."
+
+
+def _org_has_active_plan(organization_id: str) -> bool:
+    return (
+        db.session.scalar(
+            db.select(Project.id).where(
+                Project.organization_id == organization_id,
+                Project.plan_status == "planning",
+            )
+        )
+        is not None
+    )
+
 
 def _apply_project_fields(project: Project, payload: dict, *, creating: bool) -> None:
     if creating or "name" in payload:
         project.name = require_text(payload, "name")
     if "goal" in payload:
-        project.goal = parse_optional_text(payload.get("goal"), "goal")
+        project.goal = parse_optional_text(payload.get("goal"), "goal", max_length=BODY_MAX)
     if "description" in payload:
-        project.description = parse_optional_text(payload.get("description"), "description")
+        project.description = parse_optional_text(
+            payload.get("description"), "description", max_length=BODY_MAX
+        )
     if "prdUrl" in payload:
-        project.prd_url = parse_optional_text(payload.get("prdUrl"), "prdUrl")
+        project.prd_url = parse_optional_text(
+            payload.get("prdUrl"), "prdUrl", max_length=URL_MAX
+        )
     if "designUrls" in payload:
         project.design_urls = parse_string_list(payload.get("designUrls"), "designUrls")
     if "repoUrl" in payload:
-        project.repo_url = parse_optional_text(payload.get("repoUrl"), "repoUrl")
+        project.repo_url = parse_optional_text(
+            payload.get("repoUrl"), "repoUrl", max_length=URL_MAX
+        )
     if "deadlineKind" in payload:
         kind = parse_enum(payload.get("deadlineKind"), DEADLINE_KINDS, "deadlineKind")
         if kind:
@@ -106,6 +128,7 @@ def list_projects():
 
 
 @projects_bp.post("/api/projects")
+@limiter.limit(lambda: current_app.config["PLANNER_LIMIT"])
 def create_project():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -150,6 +173,9 @@ def create_project():
         skip_plan = False
     elif not isinstance(skip_plan, bool):
         return json_error(ValueError("skipPlan must be a boolean"))
+
+    if not skip_plan and _org_has_active_plan(org_id):
+        return error_response(PLAN_BUSY_MESSAGE, 409)
 
     db.session.add(project)
     db.session.flush()
@@ -282,6 +308,7 @@ def delete_member(project_id: str, member_id: str):
 
 
 @projects_bp.post("/api/projects/<project_id>/plan")
+@limiter.limit(lambda: current_app.config["PLANNER_LIMIT"])
 def enqueue_project_plan(project_id: str):
     try:
         project = get_project(project_id)
@@ -290,6 +317,8 @@ def enqueue_project_plan(project_id: str):
 
     if project.plan_status == "planning":
         return jsonify(project.to_dict())
+    if _org_has_active_plan(project.organization_id):
+        return error_response(PLAN_BUSY_MESSAGE, 409)
 
     project.plan_status = "planning"
     project.plan_error = None

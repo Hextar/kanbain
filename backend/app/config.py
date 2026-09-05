@@ -22,8 +22,16 @@ class Config:
         "postgresql+psycopg://postgres:postgres@localhost:5432/kanban_dashboard",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+    CORS_ORIGINS = [
+        origin.strip().rstrip("/")
+        for origin in (
+            os.environ.get("CORS_ORIGINS")
+            or os.environ.get("PUBLIC_APP_URL", "http://localhost:5173")
+        ).split(",")
+        if origin.strip()
+    ]
     PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "http://localhost:5173")
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", str(256 * 1024)))
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     MAIL_PROVIDER = os.environ.get("MAIL_PROVIDER", "console")
@@ -38,10 +46,12 @@ class Config:
     RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI") or os.environ.get(
         "REDIS_URL", "memory://"
     )
+    RATELIMIT_DEFAULT = os.environ.get("RATELIMIT_DEFAULT", "120 per minute")
     AUTH_LOGIN_LIMIT = os.environ.get("AUTH_LOGIN_LIMIT", "10 per minute")
     AUTH_REGISTER_LIMIT = os.environ.get("AUTH_REGISTER_LIMIT", "5 per minute")
     AUTH_MAIL_LIMIT = os.environ.get("AUTH_MAIL_LIMIT", "5 per minute")
     AUTH_OAUTH_LIMIT = os.environ.get("AUTH_OAUTH_LIMIT", "10 per minute")
+    PLANNER_LIMIT = os.environ.get("PLANNER_LIMIT", "5 per hour")
     PLANNER = os.environ.get("PLANNER", "openai")
     PLANNER_DELAY_SECONDS = float(os.environ.get("PLANNER_DELAY_SECONDS", "2"))
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -72,6 +82,7 @@ class TestConfig(Config):
     MAIL_PROVIDER = "console"
     RATELIMIT_ENABLED = False
     RATELIMIT_STORAGE_URI = "memory://"
+    CORS_ORIGINS = ["http://localhost:5173"]
 
 
 def require_secret_key(app: Flask) -> None:
