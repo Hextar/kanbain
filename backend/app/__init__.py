@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, redirect, request
 from flask_cors import CORS
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config, require_secret_key
@@ -25,9 +26,38 @@ def create_app(config_class: type[Config] = Config) -> Flask:
     limiter.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": app.config["CORS_ORIGINS"]}})
 
+    @app.before_request
+    def _redirect_https():
+        public = (app.config.get("PUBLIC_APP_URL") or "").strip()
+        if not public.startswith("https://"):
+            return None
+        if request.path == "/api/health" or request.is_secure:
+            return None
+        url = request.url.replace("http://", "https://", 1)
+        return redirect(url, 301)
+
+    @app.after_request
+    def _security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
+        if request.is_secure:
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        return response
+
     @app.errorhandler(429)
     def _rate_limited(_error):
         return error_response("Too many attempts. Try again shortly.", 429)
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def _too_large(_error):
+        return error_response("Request too large", 413)
 
     from . import models as _models  # noqa: F401
     from .cli import register_cli
