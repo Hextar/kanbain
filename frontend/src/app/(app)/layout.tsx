@@ -6,6 +6,7 @@ import AuthProvider from "@modules/Auth/components/AuthProvider";
 import { SettingsProvider } from "@modules/Settings/components/SettingsProvider";
 import { RealtimeProvider } from "@libraries/realtime/RealtimeProvider";
 import AppShell from "../AppShell";
+import Providers from "../providers";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   let session;
@@ -19,12 +20,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthProvider initial={session}>
-      <SettingsProvider>
-        <RealtimeProvider>
-          <AppShell>{children}</AppShell>
-        </RealtimeProvider>
-      </SettingsProvider>
-    </AuthProvider>
+    <Providers>
+      <AuthProvider initial={session}>
+        <SettingsProvider>
+          <RealtimeProvider>
+            <AppShell>{children}</AppShell>
+          </RealtimeProvider>
+        </SettingsProvider>
+      </AuthProvider>
+    </Providers>
   );
 }

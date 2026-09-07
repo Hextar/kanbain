@@ -7,6 +7,7 @@ import {
   useCallback,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
@@ -17,7 +18,6 @@ import KanbanHeader from "./components/KanbanHeader";
 import TaskColumn from "./components/TaskColumn";
 import TaskDetailDialog from "./components/TaskDetailDialog";
 import FlipItem from "./components/FlipItem";
-import FlowView from "./components/FlowView";
 import { useColumns } from "./hooks/useColumns";
 import { useHorizontalOverflowScroll } from "./hooks/useHorizontalOverflowScroll";
 import { useTasks } from "./hooks/useTasks";
@@ -67,6 +67,8 @@ const COLUMN_SORTABLE = {
   axis: "x" as const,
   itemSelector: BOARD_COLUMN_SELECTOR,
 };
+
+const FlowView = dynamic(() => import("./components/FlowView"));
 
 export default function KanbanBoard(props: KanbanBoardProps) {
   return (

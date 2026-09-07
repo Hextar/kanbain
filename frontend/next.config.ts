@@ -32,15 +32,33 @@ const securityHeaders = [
   },
 ];
 
+const staticCacheHeaders = [
+  ...securityHeaders,
+  {
+    key: "Cache-Control",
+    value: "public, max-age=31536000, immutable",
+  },
+];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: dirname,
   reactCompiler: true,
+  poweredByHeader: false,
+  compress: true,
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   async headers() {
     if (process.env.NODE_ENV !== "production") {
       return [];
     }
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/_next/static/:path*", headers: staticCacheHeaders },
+      { source: "/favicon.svg", headers: staticCacheHeaders },
+      { source: "/apple-touch-icon.svg", headers: staticCacheHeaders },
+      { source: "/:path*", headers: securityHeaders },
+    ];
   },
 };
 

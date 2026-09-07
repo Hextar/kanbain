@@ -125,3 +125,22 @@ def test_https_redirect_skips_health():
         assert bounced.headers["Location"].startswith("https://")
         db.session.remove()
         db.drop_all()
+
+
+def test_gzip_large_json(client):
+    import gzip
+    import json
+
+    created = client.post(
+        "/api/projects",
+        json={"name": "Gzip", "description": "x" * 2048, "skipPlan": True},
+    )
+    assert created.status_code == 201
+    project_id = created.get_json()["id"]
+    response = client.get(
+        f"/api/projects/{project_id}", headers={"Accept-Encoding": "gzip"}
+    )
+    assert response.headers.get("Content-Encoding") == "gzip"
+    body = json.loads(gzip.decompress(response.get_data()))
+    assert body["name"] == "Gzip"
+    assert body["description"] == "x" * 2048

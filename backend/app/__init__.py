@@ -5,7 +5,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import Config, require_secret_key
 from .extensions import db, limiter, migrate, sock
-from .http import error_response
+from .http import error_response, gzip_response
 from .identity import configure_sessions, register_auth_gate
 from .logging import configure_logging
 from .mail import init_mail
@@ -38,6 +38,7 @@ def create_app(config_class: type[Config] = Config) -> Flask:
 
     @app.after_request
     def _security_headers(response):
+        gzip_response(request, response)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

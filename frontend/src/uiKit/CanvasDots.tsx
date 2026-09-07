@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, type ComponentProps } from "react";
-import { twMerge } from "tailwind-merge";
 import { attachCanvas, detachCanvas } from "@libraries/pointerLight";
+import CanvasSurface from "./CanvasSurface";
 
 export default function CanvasDots({
   className,
@@ -19,16 +19,8 @@ export default function CanvasDots({
   }, []);
 
   return (
-    <div
-      {...props}
-      ref={ref}
-      className={twMerge("canvas-dots relative", className)}
-    >
-      <div aria-hidden className="canvas-lantern">
-        <div className="canvas-lantern-wash" />
-        <div className="canvas-lantern-dots" />
-      </div>
+    <CanvasSurface {...props} ref={ref} className={className}>
       {children}
-    </div>
+    </CanvasSurface>
   );
 }
