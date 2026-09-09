@@ -36,6 +36,8 @@ The Kanban UI lives in `frontend/` (Next.js App Router). The Flask API in `backe
 
 On macOS, start the Docker client before building. Copy `.env.example` to `.env` and set `SECRET_KEY` — Compose will not start without it.
 
+The same `docker-compose.yaml` is used locally and on Coolify. The frontend container has **no host port**: Coolify’s proxy already binds 80/443 and reaches Next on container port 8080 (set the FQDN with `:8080`). Locally, run Next on the host instead of publishing 8080.
+
 ### SECRET_KEY
 
 `SECRET_KEY` is a passphrase **you** choose. It lives only in the **repo-root** `.env` (never in `frontend/`, never committed). Docker Compose injects the same value into the API and the planner worker. Redis stores the OpenAI API key as ciphertext; the worker decrypts it on the server when it calls OpenAI. The browser never sees `SECRET_KEY` or the full OpenAI key.
@@ -78,15 +80,9 @@ docker compose exec backend flask invalidate-openai-keys --yes
 
 The UI then treats planning as unconfigured and opens Settings if someone tries to generate a board. `OPENAI_API_KEY` in the environment is unchanged; that is an operator key, not a Settings-saved key.
 
-### Full stack (built frontend)
+### Built frontend (Coolify / in-network)
 
-```bash
-# Frontend (:8080), Flask API (:3000), planner worker, Redis, Postgres
-# Postgres and Redis bind to 127.0.0.1 so a public VPS does not expose them.
-docker compose up --build
-```
-
-`/api` on the frontend container is proxied to Flask. This is a production-style Next.js build. Use it to run the whole app, not to iterate on the UI.
+`docker compose up --build` starts Next in Docker too. There is no `localhost:8080` mapping — that would steal the port from Coolify’s proxy. On Coolify, point the frontend domain at container port 8080.
 
 ### Frontend development against the real API
 

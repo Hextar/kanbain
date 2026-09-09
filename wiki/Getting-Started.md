@@ -26,16 +26,18 @@ cd kanbain
 cp backend/.env.example backend/.env
 # Edit backend/.env — set SECRET_KEY at minimum (see below)
 
-# 3. Start all services
-docker compose up
+# 3. Start API, worker, Redis, Postgres
+docker compose up -d --build database backend worker
 
 # 4. Apply database migrations and seed the wiki corpus
 docker compose exec backend flask db upgrade
 docker compose exec backend flask seed
 
-# 5. Open the app
-open http://localhost:8080
+# 5. Run the UI on the host
+cd frontend && npm install && npm run dev
 ```
+
+Open the URL Next prints (Flask is on port 3000). The frontend container is for Coolify; it is not published on `localhost:8080`.
 
 On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must open the activation link before they can sign in. Then go to **Settings** and enter your OpenAI API key. The key is encrypted and stored server-side.
 
@@ -208,7 +210,7 @@ flask db migrate -m "description of change"
 ## Docker Services
 
 ```bash
-# Start all services
+# Start API + worker + Redis + Postgres
 docker compose up
 
 # Start in background

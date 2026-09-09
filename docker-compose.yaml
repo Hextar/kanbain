@@ -1,13 +1,12 @@
-# Full stack: docker compose up --build
 # Requires SECRET_KEY in the project-root .env (see .env.example).
-# API + DB + planner worker for local Next.js (`npm run dev`):
-#   docker compose up -d --build database backend worker
+# Local UI: docker compose up -d --build database backend worker && npm run dev
+# Coolify proxies the frontend container (no host port — Traefik already owns 80/443).
 services:
   frontend:
     build:
       context: ./frontend
-    ports:
-      - 8080:8080
+    expose:
+      - "8080"
     environment:
       API_URL: http://backend:3000
       PORT: 8080
