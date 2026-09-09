@@ -14,7 +14,7 @@ KanbAIn is a full-stack web application composed of five Docker services that co
 | `redis` | redis:7-alpine | 6379 | Job queue broker + pub/sub channel for realtime events |
 | `database` | pgvector/pgvector:pg15 | 5432 | PostgreSQL 15 with vector search extension |
 
-All services are declared in `compose.yaml` at the repo root.
+All services are declared in `docker-compose.yaml` at the repo root.
 
 ---
 

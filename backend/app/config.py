@@ -11,7 +11,7 @@ _BACKEND_ROOT = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _BACKEND_ROOT.parent
 
 load_dotenv(_BACKEND_ROOT / ".env")
-if (_REPO_ROOT / "compose.yaml").is_file():
+if (_REPO_ROOT / "docker-compose.yaml").is_file():
     load_dotenv(_REPO_ROOT / ".env", override=True)
 
 

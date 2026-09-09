@@ -235,7 +235,7 @@ docker compose down -v
 
 ```
 kanbain/
-├── compose.yaml              # Docker Compose service definitions
+├── docker-compose.yaml       # Docker Compose service definitions
 ├── frontend/                 # Next.js application
 │   ├── src/
 │   │   ├── app/              # App Router pages
