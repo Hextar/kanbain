@@ -54,7 +54,7 @@ export type ContextMenuEntry = ContextMenuItem | ContextMenuSeparator;
 export type ContextMenuAnchor = { x: number; y: number };
 
 type ContextMenuProps = {
-  children?: ReactElement<TriggerProps>;
+  children?: ReactElement;
   items: ContextMenuEntry[] | ((close: () => void) => ContextMenuEntry[]);
   disabled?: boolean;
   label?: string;
