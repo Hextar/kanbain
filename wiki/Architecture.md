@@ -56,7 +56,7 @@ apply_plan() writes tasks to Postgres
 publish_project_event() → Redis pub/sub
 ```
 
-The worker runs in a separate Docker container using the same codebase as the backend. Job timeouts are derived from the `thought_effort` level (longer for `high`/`max`).
+The worker is a separate Docker container from the same image as Flask (`python -m app.worker`, not gunicorn). Long LLM jobs stay off the API/WebSocket process so ordinary requests stay fast; you can scale API replicas and workers independently. Job timeouts follow `thought_effort` (longer for `high`/`max`).
 
 ### 3. Backend → Browser (Realtime)
 
@@ -121,7 +121,7 @@ Clients subscribe to their project's channel when they open a project workspace.
 
 ### Why RQ + Worker?
 
-AI planning calls OpenAI APIs and can take 30–120 seconds. Synchronous HTTP would time out. RQ lets the API return immediately with `plan_status = "planning"` while the worker does the heavy lifting in the background.
+AI planning calls OpenAI and can take minutes. Synchronous HTTP would time out and would occupy a gunicorn worker for the whole run. RQ plus a separate worker container lets the API return immediately with `plan_status = "planning"`, keeps REST and WebSocket off that load, and lets you scale planners without scaling the API (and vice versa).
 
 ### Why pgvector?
 
