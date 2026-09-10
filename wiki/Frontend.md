@@ -28,30 +28,55 @@ frontend/src/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root layout (QueryClient, toasts)
 │   ├── (auth)/login|signup|forgot-password|reset-password|activate
+│   ├── about/                  # Public about + privacy
 │   ├── (app)/                  # Authenticated shell
 │   │   ├── page.tsx            # Project list
 │   │   └── project/[projectId]/
 │   └── api/                    # Next.js API route proxies to Flask (forwards cookies)
 │
-├── middleware.ts               # Redirects anonymous visitors to /login
+├── middleware.ts               # Redirects anonymous visitors to /login (`/about` is public)
 │
 ├── modules/                    # Feature modules
 │   ├── Auth/                   # Session, login/signup, user menu
+│   ├── About/                  # Public about copy, privacy, site footer
 │   ├── Project/                # Project CRUD, wizard, plan status
 │   ├── Task/                   # Kanban board, task dialogs, flow view
 │   └── Settings/               # OpenAI API key management
 │
-├── libraries/                  # Shared infrastructure
-│   ├── dnd/                    # Custom drag-and-drop system
-│   ├── realtime/               # WebSocket + event handling
-│   └── api/                    # Typed API client helpers
+├── libraries/                  # Shared client infrastructure (`@libraries/…`)
+│   ├── dnd/                    # Custom HTML5 drag-and-drop
+│   ├── realtime/               # WebSocket + TanStack Query cache patches
+│   ├── toast/                  # In-memory toast list (`showToast`)
+│   ├── pointerLight/           # Pointer-follow CSS vars for dotted canvases
+│   └── particles/              # Spawn / shatter / celebrate overlay FX
 │
+├── api/                        # `API_URL`, mock board (`MOCK_API=1`)
 └── uiKit/                      # Design system components
 ```
 
 ---
 
+## Libraries (`libraries/`)
+
+In-house modules, not npm packages. Import as `@libraries/…`.
+
+| Folder | What it does |
+|---|---|
+| `dnd/` | HTML5 drag-and-drop for columns and cards. Details: [Drag and Drop](Frontend-Drag-and-Drop). |
+| `realtime/` | WebSocket session, reconnect, and `applyRealtimeMessage()` into the Query cache. Details: [Realtime Updates](Frontend-Realtime). |
+| `toast/` | Tiny subscribe/get store (`showToast`). `ToastHost` in `uiKit/` is the only subscriber. |
+| `pointerLight/` | One window `pointermove` listener. Writes `--light-nx` / `--light-ny` on `:root` and `--lantern-x` / `--lantern-y` on registered canvases. `CanvasDots` calls `attachCanvas` / `detachCanvas`. Fine pointer + hover only; no-op when `prefers-reduced-motion`. |
+| `particles/` | Full-screen overlay (`#fx-root`) for board FX. `markSpawn` / `consumeSpawn` fade a new card in; `shatter` / `shatterByAttr` clone-and-burst a deleted card; `markCelebrate` / `consumeCelebrate` confetti when work lands in the last column. All no-ops under reduced motion. |
+
+HTTP to Flask is `src/api/` (`env.ts`, `mockDb.ts`) plus per-module `modules/*/api/`, not a `libraries/api` folder.
+
+---
+
 ## App Router Pages
+
+### `/about`
+
+Public (no session). Developer bio, short privacy note, and links to the GitHub repo and LinkedIn. Copy lives in `modules/About/site.ts`. Auth screens share the same footer; signed-in users also get **About** in the account menu.
 
 ### `/login` and `/signup`
 
@@ -98,6 +123,7 @@ The workspace shows one of two states depending on `project.planStatus`:
 | `FlowView/` | D3 force-directed graph showing task dependency relationships |
 | `helpers/boardFilter.ts` | Filter clause parsing and `matchingTaskIds()` logic |
 | `helpers/taskOrder.ts` | Fractional indexing for task ordering within columns |
+| `components/FlipItem.tsx` | FLIP animation wrapper for column and nested-task reorder |
 
 ### `modules/Settings/`
 
@@ -134,17 +160,64 @@ Transient UI state (draft column titles, tooltip visibility, dialog open/close) 
 
 ## UI Kit (`uiKit/`)
 
-KanbAIn ships a small, bespoke design system:
+Bespoke primitives imported as `@uiKit/…`. No Radix or shadcn. Stories sit next to each component; `Overview.stories.tsx` is the full gallery (`npm run storybook` in `frontend/`).
+
+Labels and errors live on `Field`, not on `Input`. Column/task reorder FLIP is `modules/Task/components/FlipItem.tsx`, not the kit.
+
+### Buttons and forms
 
 | Component | Purpose |
 |---|---|
-| `Button.tsx` | Primary/secondary/ghost button variants |
-| `Input.tsx` | Text input with label and error state |
-| `Dialog.tsx` | Modal dialog with focus trap |
-| `ContextMenu.tsx` | Right-click / trigger context menu |
-| `ToastHost.tsx` | Toast notification container |
-| `CanvasDots.tsx` | Animated dot grid background (used on empty states) |
-| `FlipItem.tsx` | FLIP animation wrapper for list reordering |
+| `Button.tsx` | Filled / outline / ghost; primary / secondary / danger |
+| `IconButton.tsx` | Icon-only button (same kinds and variants) |
+| `ButtonGroup.tsx` | Segmented control / tabs (`ButtonGroupItem`) |
+| `Field.tsx` | Label + control layout; `FormMessage` for errors |
+| `Input.tsx` | Text input |
+| `Select.tsx` | Native `<select>` with kit chrome |
+| `Textarea.tsx` | Textarea; optional `autoGrow` |
+| `RadioButton.tsx` | Styled radio |
+
+### Feedback
+
+| Component | Purpose |
+|---|---|
+| `Badge.tsx` | Status / count pill |
+| `Chip.tsx` | Dismissible filter chip |
+| `Callout.tsx` | Inline ok / warn / danger message |
+| `ProgressBar.tsx` | Linear progress |
+| `ProgressRing.tsx` | Circular completion (board header) |
+| `Skeleton.tsx` | Loading placeholder |
+| `EmptyState.tsx` | Page / panel / compact empty layouts |
+| `ToastHost.tsx` | Popover toast stack; messages via `@libraries/toast` |
+
+### Surfaces
+
+| Component | Purpose |
+|---|---|
+| `Card.tsx` | Project / task card surface |
+| `CanvasSurface.tsx` | Static dotted canvas (auth layout) |
+| `CanvasDots.tsx` | Same canvas plus pointer-follow light (boards, home) |
+| `LightOrb.tsx` | Decorative blur orb (dialogs, chrome) |
+| `ColorSwatch.tsx` | Column-color picker swatch |
+| `Avatar.tsx` | Initials avatar and `AvatarStack` |
+
+### Overlays
+
+| Component | Purpose |
+|---|---|
+| `Dialog.tsx` | Modal with focus trap; `DialogPanel` sections |
+| `ConfirmDialog.tsx` | Confirm / cancel wrapper around `Dialog` |
+| `ContextMenu.tsx` | Right-click / trigger menu |
+| `PopoverPanel.tsx` | Anchored popover (`Popover` + panel) |
+| `Tooltip.tsx` | Hover / focus tooltip |
+| `HoverPreview.tsx` | Delayed hover card; `AnchoredHoverPreview` for the flow graph |
+
+### Chrome and motion
+
+| Component | Purpose |
+|---|---|
+| `AppHeader.tsx` | App chrome; `HeaderProvider` / `HeaderSlot` for page-injected center and trailing |
+| `CollapsibleSlot.tsx` | Height-animated show/hide (nested cards) |
 
 ---
 
