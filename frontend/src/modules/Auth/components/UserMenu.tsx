@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { LogOut, Settings } from "lucide-react";
+import { Info, LogOut, Settings } from "lucide-react";
 import Avatar from "@uiKit/Avatar";
 import PopoverPanel, { Popover } from "@uiKit/PopoverPanel";
+import AboutDialog from "@modules/About/AboutDialog";
 import { useSettingsDialog } from "@modules/Settings/components/SettingsProvider";
 import { useAuth } from "./AuthProvider";
 
@@ -18,11 +19,17 @@ export default function UserMenu() {
   const { session, signOut } = useAuth();
   const { openSettings } = useSettingsDialog();
   const [open, setOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   function handleOpenSettings() {
     setOpen(false);
     openSettings();
+  }
+
+  function handleOpenAbout() {
+    setOpen(false);
+    setAboutOpen(true);
   }
 
   async function handleSignOut() {
@@ -35,49 +42,59 @@ export default function UserMenu() {
   }
 
   return (
-    <Popover open={open} onClose={() => setOpen(false)}>
-      <button
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={`${session.user.name} account menu`}
-        className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-        onClick={() => setOpen((current) => !current)}
-        type="button"
-      >
-        <Avatar
-          className="bg-purple-500/20 text-purple-200"
-          initials={initialsFor(session.user.name)}
-        />
-      </button>
-      {open ? (
-        <PopoverPanel className="w-64 p-1" role="menu">
-          <div className="px-3 py-2">
-            <p className="truncate text-sm font-medium text-white">
-              {session.user.name}
-            </p>
-            <p className="truncate text-xs text-zinc-500">{session.user.email}</p>
-            <p className="mt-1 truncate text-xs text-zinc-600">
-              {session.organization.name}
-            </p>
-          </div>
-          <div className="my-1 h-px bg-white/8" role="separator" />
-          <MenuItem
-            disabled={signingOut}
-            icon={<Settings aria-hidden size={14} />}
-            onClick={handleOpenSettings}
-          >
-            Settings
-          </MenuItem>
-          <MenuItem
-            disabled={signingOut}
-            icon={<LogOut aria-hidden size={14} />}
-            onClick={() => void handleSignOut()}
-          >
-            Sign out
-          </MenuItem>
-        </PopoverPanel>
-      ) : null}
-    </Popover>
+    <>
+      <Popover open={open} onClose={() => setOpen(false)}>
+        <button
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label={`${session.user.name} account menu`}
+          className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
+          onClick={() => setOpen((current) => !current)}
+          type="button"
+        >
+          <Avatar
+            className="bg-purple-500/20 text-purple-200"
+            initials={initialsFor(session.user.name)}
+          />
+        </button>
+        {open ? (
+          <PopoverPanel className="w-64 p-1" role="menu">
+            <div className="px-3 py-2">
+              <p className="truncate text-sm font-medium text-white">
+                {session.user.name}
+              </p>
+              <p className="truncate text-xs text-zinc-500">{session.user.email}</p>
+              <p className="mt-1 truncate text-xs text-zinc-600">
+                {session.organization.name}
+              </p>
+            </div>
+            <div className="my-1 h-px bg-white/8" role="separator" />
+            <MenuItem
+              disabled={signingOut}
+              icon={<Settings aria-hidden size={14} />}
+              onClick={handleOpenSettings}
+            >
+              Settings
+            </MenuItem>
+            <MenuItem
+              disabled={signingOut}
+              icon={<Info aria-hidden size={14} />}
+              onClick={handleOpenAbout}
+            >
+              About
+            </MenuItem>
+            <MenuItem
+              disabled={signingOut}
+              icon={<LogOut aria-hidden size={14} />}
+              onClick={() => void handleSignOut()}
+            >
+              Sign out
+            </MenuItem>
+          </PopoverPanel>
+        ) : null}
+      </Popover>
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
+    </>
   );
 }
 

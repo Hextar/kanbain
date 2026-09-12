@@ -28,17 +28,16 @@ frontend/src/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root layout (QueryClient, toasts)
 │   ├── (auth)/login|signup|forgot-password|reset-password|activate
-│   ├── about/                  # Public about + privacy
 │   ├── (app)/                  # Authenticated shell
 │   │   ├── page.tsx            # Project list
 │   │   └── project/[projectId]/
 │   └── api/                    # Next.js API route proxies to Flask (forwards cookies)
 │
-├── middleware.ts               # Redirects anonymous visitors to /login (`/about` is public)
+├── middleware.ts               # Redirects anonymous visitors to /login
 │
 ├── modules/                    # Feature modules
 │   ├── Auth/                   # Session, login/signup, user menu
-│   ├── About/                  # Public about copy, privacy, site footer
+│   ├── About/                  # About dialog copy, privacy, auth footer
 │   ├── Project/                # Project CRUD, wizard, plan status
 │   ├── Task/                   # Kanban board, task dialogs, flow view
 │   └── Settings/               # OpenAI API key management
@@ -73,10 +72,6 @@ HTTP to Flask is `src/api/` (`env.ts`, `mockDb.ts`) plus per-module `modules/*/a
 ---
 
 ## App Router Pages
-
-### `/about`
-
-Public (no session). Developer bio, short privacy note, and links to the GitHub repo and LinkedIn. Copy lives in `modules/About/site.ts`. Auth screens share the same footer; signed-in users also get **About** in the account menu.
 
 ### `/login` and `/signup`
 
@@ -127,7 +122,11 @@ The workspace shows one of two states depending on `project.planStatus`:
 
 ### `modules/Settings/`
 
-Settings page where users enter their OpenAI API key. The key is sent to Flask which encrypts and stores it — it is never returned to the browser after saving.
+Settings dialog where users enter their OpenAI API key. The key is sent to Flask which encrypts and stores it — it is never returned to the browser after saving.
+
+### `modules/About/`
+
+About dialog (developer bio, short privacy note, GitHub + LinkedIn). Opened from the account menu, or from About / Privacy in the auth-screen footer. Copy lives in `site.ts`.
 
 ---
 
