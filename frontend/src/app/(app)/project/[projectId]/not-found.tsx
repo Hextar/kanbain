@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import EmptyState from "@uiKit/EmptyState";
+import { useT } from "@/i18n";
 
 export default function NotFound() {
+  const t = useT();
+
   return (
     <EmptyState
       action={
@@ -9,11 +14,11 @@ export default function NotFound() {
           className="text-purple-400 underline-offset-4 hover:underline"
           href="/"
         >
-          Back to projects
+          {t("project.backToProjects")}
         </Link>
       }
       size="compact"
-      title="Project not found"
+      title={t("app.projectNotFound")}
     />
   );
 }

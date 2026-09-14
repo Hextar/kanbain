@@ -2,6 +2,7 @@
 
 import Button from "@uiKit/Button";
 import EmptyState from "@uiKit/EmptyState";
+import { useT } from "@/i18n";
 
 export default function Error({
   reset,
@@ -9,16 +10,18 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
+
   return (
     <EmptyState
       action={
         <Button type="button" onClick={reset}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       }
-      body="The Flask API may be down. Start Postgres and the backend, then try again."
+      body={t("app.couldNotLoadProjectsBody")}
       size="compact"
-      title="Could not load projects"
+      title={t("app.couldNotLoadProjects")}
     />
   );
 }

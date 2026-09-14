@@ -2,6 +2,7 @@
 
 import Button from "@uiKit/Button";
 import EmptyState from "@uiKit/EmptyState";
+import { useT } from "@/i18n";
 
 export default function Error({
   reset,
@@ -9,15 +10,17 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
+
   return (
     <EmptyState
       action={
         <Button type="button" onClick={reset}>
-          Try again
+          {t("common.tryAgain")}
         </Button>
       }
       size="compact"
-      title="Could not load this board"
+      title={t("app.couldNotLoadBoard")}
     />
   );
 }
