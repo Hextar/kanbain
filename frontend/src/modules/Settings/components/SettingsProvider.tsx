@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useT } from "@/i18n";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import SettingsDialog from "./SettingsDialog";
 
@@ -31,6 +32,7 @@ export function useSettingsDialog() {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
+  const t = useT();
   const { data, isError } = useSettings();
   const updateSettings = useUpdateSettings();
   const [open, setOpen] = useState(false);
@@ -72,10 +74,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         return;
       }
       setApiKey("");
-      setNotice("API key saved.");
+      setNotice(t("settings.noticeSaved"));
     } catch {
       setNotice(null);
-      setError("Could not save the API key.");
+      setError(t("settings.errorSave"));
     }
   }
 
@@ -84,10 +86,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       await updateSettings.mutateAsync(null);
       setApiKey("");
-      setNotice("API key removed. Paste a new one to save it.");
+      setNotice(t("settings.noticeRemoved"));
     } catch {
       setNotice(null);
-      setError("Could not remove the API key.");
+      setError(t("settings.errorRemove"));
     }
   }
 

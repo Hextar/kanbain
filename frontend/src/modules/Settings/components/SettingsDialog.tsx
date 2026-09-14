@@ -7,6 +7,7 @@ import Callout from "@uiKit/Callout";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
 import { FieldLabel, FormMessage } from "@uiKit/Field";
 import Input from "@uiKit/Input";
+import { useT, type TFunction } from "@/i18n";
 import { OPENAI_API_KEY_DOCS_URL } from "../api/settings";
 
 type SettingsDialogProps = {
@@ -42,11 +43,12 @@ export default function SettingsDialog({
   onSave,
   onClear,
 }: SettingsDialogProps) {
+  const t = useT();
   const descriptionId = useId();
   const formId = useId();
   const inputId = useId();
   const trimmed = apiKey.trim();
-  const status = statusCopy({ configured, revoked, forPlanner, hint });
+  const status = statusCopy(t, { configured, revoked, forPlanner, hint });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,7 +60,7 @@ export default function SettingsDialog({
     <Dialog
       className="max-w-md"
       descriptionId={descriptionId}
-      eyebrow="Workspace"
+      eyebrow={t("settings.eyebrow")}
       footer={
         <div
           className={
@@ -76,7 +78,7 @@ export default function SettingsDialog({
               variant="danger"
               onClick={onClear}
             >
-              Remove key
+              {t("settings.removeKey")}
             </Button>
           ) : null}
           <Button
@@ -85,23 +87,20 @@ export default function SettingsDialog({
             size="sm"
             type="submit"
           >
-            {configured ? "Replace key" : "Save key"}
+            {configured ? t("settings.replaceKey") : t("settings.saveKey")}
           </Button>
         </div>
       }
       open={open}
-      title="Settings"
+      title={t("settings.title")}
       onClose={onClose}
     >
       <form className="flex flex-col gap-3" id={formId} onSubmit={handleSubmit}>
-        <p className="text-sm leading-relaxed text-zinc-400" id={descriptionId}>
-          The OpenAI API key is encrypted on the server so the planner worker
-          can generate boards. It is never shown in full after you save it.
+        <p className="text-sm leading-relaxed text-muted" id={descriptionId}>
+          {t("settings.description")}
         </p>
         {loadFailed ? (
-          <Callout tone="danger">
-            Could not load settings from the server.
-          </Callout>
+          <Callout tone="danger">{t("settings.loadFailed")}</Callout>
         ) : (
           <Callout
             body={status.body}
@@ -116,32 +115,34 @@ export default function SettingsDialog({
             tone={status.tone}
           />
         )}
-        <DialogPanel title={configured ? "Replace key" : "API key"}>
+        <DialogPanel>
           <div className="flex flex-col gap-2">
             <FieldLabel htmlFor={inputId}>
-              {configured ? "Replace OpenAI API key" : "OpenAI API key"}
+              {configured ? t("settings.labelReplace") : t("settings.labelKey")}
             </FieldLabel>
             <Input
               autoComplete="off"
               autoFocus={open}
               className="font-mono"
               id={inputId}
-              placeholder={configured ? "Paste a new key to replace" : "sk-..."}
+              placeholder={
+                configured ? t("settings.placeholderReplace") : t("settings.placeholderSk")
+              }
               spellCheck={false}
               type="password"
               value={apiKey}
               onChange={(event) => onApiKeyChange(event.target.value)}
             />
-            <p className="text-[11px] text-zinc-500">
-              Need a key?{" "}
+            <p className="text-[11px] text-subtle">
+              {t("settings.needAKey")}{" "}
               <a
                 className="text-purple-400 underline decoration-purple-400/40 underline-offset-2 hover:text-purple-300 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
                 href={OPENAI_API_KEY_DOCS_URL}
                 rel="noreferrer"
                 target="_blank"
               >
-                How to create an OpenAI API key
-                <span className="sr-only"> (opens in a new tab)</span>
+                {t("settings.howToCreate")}
+                <span className="sr-only">{t("settings.opensInNewTab")}</span>
               </a>
             </p>
             {error ? (
@@ -156,45 +157,48 @@ export default function SettingsDialog({
   );
 }
 
-function statusCopy({
-  configured,
-  revoked,
-  forPlanner,
-  hint,
-}: {
-  configured: boolean;
-  revoked: boolean;
-  forPlanner: boolean;
-  hint: string | undefined;
-}): { tone: "ok" | "warn" | "muted"; title: string; body: string } {
+function statusCopy(
+  t: TFunction,
+  {
+    configured,
+    revoked,
+    forPlanner,
+    hint,
+  }: {
+    configured: boolean;
+    revoked: boolean;
+    forPlanner: boolean;
+    hint: string | undefined;
+  },
+): { tone: "ok" | "warn" | "muted"; title: string; body: string } {
   if (configured) {
     return {
       tone: "ok",
-      title: "An API key is already saved",
+      title: t("settings.configuredTitle"),
       body: hint
-        ? `This key ends in ${hint}. Remove it, or paste a new key to replace it.`
-        : "Remove it, or paste a new key to replace it.",
+        ? t("settings.configuredBodyHint", { hint })
+        : t("settings.configuredBody"),
     };
   }
   if (revoked) {
     return {
       tone: "warn",
-      title: "Stored API keys were revoked",
+      title: t("settings.revokedTitle"),
       body: forPlanner
-        ? "Paste a new key to generate a board."
-        : "Paste a new key to enable planning.",
+        ? t("settings.revokedBodyPlanner")
+        : t("settings.revokedBody"),
     };
   }
   if (forPlanner) {
     return {
       tone: "warn",
-      title: "An OpenAI API key is required",
-      body: "Paste a key below to generate a board. You can still create an empty board without one.",
+      title: t("settings.requiredTitle"),
+      body: t("settings.requiredBody"),
     };
   }
   return {
     tone: "muted",
-    title: "No API key saved yet",
-    body: "Paste one below to enable planning.",
+    title: t("settings.emptyTitle"),
+    body: t("settings.emptyBody"),
   };
 }
