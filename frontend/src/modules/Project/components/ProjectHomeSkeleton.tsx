@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/i18n";
 import { HeaderSlot } from "@uiKit/AppHeader";
 import Card from "@uiKit/Card";
 import Skeleton from "@uiKit/Skeleton";
@@ -5,13 +8,15 @@ import Skeleton from "@uiKit/Skeleton";
 const CARD_KEYS = ["a", "b", "c", "d", "e", "f"] as const;
 
 export default function ProjectHomeSkeleton() {
+  const t = useT();
+
   return (
     <div
       aria-busy
       className="flex min-h-0 w-full flex-1 flex-col"
       role="status"
     >
-      <span className="sr-only">Loading projects…</span>
+      <span className="sr-only">{t("project.loading")}</span>
       <HeaderSlot>
         <Skeleton className="h-9 w-48 rounded-md" />
       </HeaderSlot>

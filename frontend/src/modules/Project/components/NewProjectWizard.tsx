@@ -3,6 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useT } from "@/i18n";
 import Button from "@uiKit/Button";
 import ButtonGroup, { ButtonGroupItem } from "@uiKit/ButtonGroup";
 import Input from "@uiKit/Input";
@@ -80,6 +81,7 @@ export default function NewProjectWizard({
   onClose,
   onCreated,
 }: NewProjectWizardProps) {
+  const t = useT();
   const advancedId = useId();
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -117,7 +119,7 @@ export default function NewProjectWizard({
       onCreated(project);
       onClose();
     } catch {
-      setError("Could not create the project.");
+      setError(t("project.createError"));
     } finally {
       setPending(null);
     }
@@ -130,9 +132,9 @@ export default function NewProjectWizard({
 
   return (
     <Dialog
-      eyebrow="New project"
+      eyebrow={t("project.wizardEyebrow")}
       open={open}
-      title="Create"
+      title={t("project.wizardTitle")}
       onClose={resetAndClose}
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -144,7 +146,7 @@ export default function NewProjectWizard({
             variant="secondary"
             onClick={resetAndClose}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={!canCreateEmpty || isPending}
@@ -154,7 +156,7 @@ export default function NewProjectWizard({
             variant="secondary"
             onClick={() => void handleCreate(true)}
           >
-            {pending === "empty" ? "Creating…" : "Create empty board"}
+            {pending === "empty" ? t("project.creating") : t("project.createEmpty")}
           </Button>
           <Button
             disabled={!canPlan || isPending}
@@ -162,7 +164,7 @@ export default function NewProjectWizard({
             size="sm"
             type="submit"
           >
-            {pending === "plan" ? "Planning…" : "Generate board"}
+            {pending === "plan" ? t("project.planningAction") : t("project.generateBoard")}
           </Button>
         </div>
       }
@@ -172,9 +174,9 @@ export default function NewProjectWizard({
         id="new-project-wizard"
         onSubmit={handleSubmit}
       >
-        <DialogPanel title="Project">
+        <DialogPanel title={t("project.panelProject")}>
           <div className="flex flex-col gap-2.5">
-            <Field htmlFor="wizard-name" label="Title">
+            <Field htmlFor="wizard-name" label={t("project.title")}>
               <Input
                 autoFocus={open}
                 className={CONTROL}
@@ -185,16 +187,16 @@ export default function NewProjectWizard({
                 onChange={(event) => update("name", event.target.value)}
               />
             </Field>
-            <Field align="start" htmlFor="wizard-goal" label="Description">
+            <Field align="start" htmlFor="wizard-goal" label={t("project.description")}>
               <Textarea
                 className={AREA}
                 id="wizard-goal"
-                placeholder="What are you building? Constraints, outcomes, anything the planner should know…"
+                placeholder={t("project.goalPlaceholder")}
                 value={draft.goal}
                 onChange={(event) => update("goal", event.target.value)}
               />
             </Field>
-            <Field htmlFor="wizard-prd" label="PRD URL">
+            <Field htmlFor="wizard-prd" label={t("project.prdUrl")}>
               <Input
                 className={CONTROL}
                 id="wizard-prd"
@@ -204,16 +206,16 @@ export default function NewProjectWizard({
                 onChange={(event) => update("prdUrl", event.target.value)}
               />
             </Field>
-            <Field htmlFor="wizard-designs" label="Design URLs">
+            <Field htmlFor="wizard-designs" label={t("project.designUrls")}>
               <Input
                 className={CONTROL}
                 id="wizard-designs"
-                placeholder="Comma-separated links"
+                placeholder={t("project.designPlaceholder")}
                 value={draft.designUrls}
                 onChange={(event) => update("designUrls", event.target.value)}
               />
             </Field>
-            <Field htmlFor="wizard-repo" label="Repo URL">
+            <Field htmlFor="wizard-repo" label={t("project.repoUrl")}>
               <Input
                 className={CONTROL}
                 id="wizard-repo"
@@ -223,13 +225,13 @@ export default function NewProjectWizard({
                 onChange={(event) => update("repoUrl", event.target.value)}
               />
             </Field>
-            <Field label="Effort">
+            <Field label={t("project.effort")}>
               <Segmented
                 options={[
-                  { value: "low", label: "Low" },
-                  { value: "medium", label: "Med" },
-                  { value: "high", label: "High" },
-                  { value: "max", label: "Max" },
+                  { value: "low", label: t("project.low") },
+                  { value: "medium", label: t("project.med") },
+                  { value: "high", label: t("project.high") },
+                  { value: "max", label: t("project.max") },
                 ]}
                 value={draft.thoughtEffort}
                 onChange={(value) =>
@@ -238,7 +240,7 @@ export default function NewProjectWizard({
               />
             </Field>
             <p className="pl-[6.5rem] text-[11px] leading-4 text-zinc-500">
-              Higher effort thinks longer and uses more tokens.
+              {t("project.effortHint")}
             </p>
           </div>
         </DialogPanel>
@@ -258,20 +260,20 @@ export default function NewProjectWizard({
               )}
               size={14}
             />
-            Advanced
+            {t("project.advanced")}
           </button>
           {showAdvanced ? (
             <div className="mt-3 flex flex-col gap-3" id={advancedId}>
-              <DialogPanel title="Team">
+              <DialogPanel title={t("project.panelTeam")}>
                 <TeamStep
                   members={draft.members}
                   onChange={(members) => update("members", members)}
                 />
               </DialogPanel>
-              <DialogPanel title="Deadline">
+              <DialogPanel title={t("project.panelDeadline")}>
                 <DeadlineStep draft={draft} onChange={update} />
               </DialogPanel>
-              <DialogPanel title="Planning">
+              <DialogPanel title={t("project.panelPlanning")}>
                 <WorkStep draft={draft} onChange={update} />
               </DialogPanel>
             </div>
@@ -290,10 +292,12 @@ function TeamStep({
   members: MemberDraft[];
   onChange: (members: MemberDraft[]) => void;
 }) {
+  const t = useT();
+
   return (
     <div className="flex flex-col gap-2.5">
       {members.length === 0 ? (
-        <span className="text-[11px] text-zinc-500">No teammates yet</span>
+        <span className="text-[11px] text-zinc-500">{t("project.noTeammates")}</span>
       ) : null}
       {members.map((member) => (
         <div
@@ -301,9 +305,9 @@ function TeamStep({
           key={member.key}
         >
           <Input
-            aria-label="Name"
+            aria-label={t("auth.name")}
             className={CONTROL}
-            placeholder="Name"
+            placeholder={t("auth.name")}
             value={member.name}
             onChange={(event) =>
               onChange(
@@ -316,9 +320,9 @@ function TeamStep({
             }
           />
           <Input
-            aria-label="Role"
+            aria-label={t("project.role")}
             className={CONTROL}
-            placeholder="Role"
+            placeholder={t("project.role")}
             value={member.role}
             onChange={(event) =>
               onChange(
@@ -331,7 +335,7 @@ function TeamStep({
             }
           />
           <Select
-            aria-label="Seniority"
+            aria-label={t("project.seniority")}
             value={member.seniority}
             onChange={(event) =>
               onChange(
@@ -346,15 +350,15 @@ function TeamStep({
               )
             }
           >
-            <option value="">Seniority</option>
-            <option value="junior">Junior</option>
-            <option value="mid">Mid</option>
-            <option value="senior">Senior</option>
-            <option value="staff">Staff</option>
-            <option value="principal">Principal</option>
+            <option value="">{t("project.seniority")}</option>
+            <option value="junior">{t("project.junior")}</option>
+            <option value="mid">{t("project.mid")}</option>
+            <option value="senior">{t("project.senior")}</option>
+            <option value="staff">{t("project.staff")}</option>
+            <option value="principal">{t("project.principal")}</option>
           </Select>
           <Input
-            aria-label="Capacity"
+            aria-label={t("project.capacity")}
             className={CONTROL}
             min="0"
             placeholder="1"
@@ -372,7 +376,9 @@ function TeamStep({
             }
           />
           <IconButton
-            aria-label={`Remove ${member.name || "member"}`}
+            aria-label={t("project.removeMember", {
+              name: member.name || t("project.memberFallback"),
+            })}
             size="xs"
             type="button"
             variant="secondary"
@@ -405,7 +411,7 @@ function TeamStep({
       >
         <span className="inline-flex items-center gap-1.5">
           <Plus size={14} />
-          Add teammate
+          {t("project.addTeammate")}
         </span>
       </Button>
     </div>
@@ -422,20 +428,21 @@ function DeadlineStep({
     value: WizardDraft[K],
   ) => void;
 }) {
+  const t = useT();
   const needsDate = draft.deadlineKind !== "ongoing";
   return (
     <div className="flex flex-col gap-2.5">
       <Segmented
         options={[
-          { value: "hard", label: "Hard date" },
-          { value: "nice_to_have", label: "Nice to have" },
-          { value: "ongoing", label: "Ongoing" },
+          { value: "hard", label: t("project.hardDate") },
+          { value: "nice_to_have", label: t("project.niceToHave") },
+          { value: "ongoing", label: t("project.ongoing") },
         ]}
         value={draft.deadlineKind}
         onChange={(value) => onChange("deadlineKind", value as DeadlineKind)}
       />
       {needsDate ? (
-        <Field htmlFor="wizard-deadline" label="Target date">
+        <Field htmlFor="wizard-deadline" label={t("project.targetDate")}>
           <Input
             className={twMerge(CONTROL, "[color-scheme:dark]")}
             id="wizard-deadline"
@@ -460,32 +467,34 @@ function WorkStep({
     value: WizardDraft[K],
   ) => void;
 }) {
+  const t = useT();
+
   return (
     <div className="flex flex-col gap-2.5">
       <Segmented
-        label="Method"
+        label={t("project.method")}
         options={[
-          { value: "kanban", label: "Kanban" },
-          { value: "scrum", label: "Scrum" },
+          { value: "kanban", label: t("project.kanban") },
+          { value: "scrum", label: t("project.scrum") },
         ]}
         value={draft.methodology}
         onChange={(value) => onChange("methodology", value as Methodology)}
       />
       <Segmented
-        label="Quality"
+        label={t("project.quality")}
         options={[
-          { value: "mvp", label: "MVP" },
-          { value: "production_grade", label: "Production-grade" },
+          { value: "mvp", label: t("project.mvp") },
+          { value: "production_grade", label: t("project.productionGrade") },
         ]}
         value={draft.qualityBar}
         onChange={(value) => onChange("qualityBar", value as QualityBar)}
       />
       <Segmented
-        label="Risk"
+        label={t("project.risk")}
         options={[
-          { value: "low", label: "Low" },
-          { value: "medium", label: "Medium" },
-          { value: "high", label: "High" },
+          { value: "low", label: t("project.low") },
+          { value: "medium", label: t("project.medium") },
+          { value: "high", label: t("project.high") },
         ]}
         value={draft.riskTolerance}
         onChange={(value) => onChange("riskTolerance", value as RiskTolerance)}

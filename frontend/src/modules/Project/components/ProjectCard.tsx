@@ -6,6 +6,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { CircleAlert, RotateCw, Sparkles, Trash } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useDateLocale, useT } from "@/i18n";
 import IconButton from "@uiKit/IconButton";
 import Tooltip from "@uiKit/Tooltip";
 import Avatar, { AvatarStack } from "@uiKit/Avatar";
@@ -25,10 +26,13 @@ import {
   projectInitials,
 } from "../helpers/projectIdentity";
 
-const DEADLINE_LABELS: Record<Project["deadlineKind"], string> = {
-  hard: "Hard deadline",
-  nice_to_have: "Nice to have",
-  ongoing: "Ongoing",
+const DEADLINE_KEYS: Record<
+  Project["deadlineKind"],
+  "project.hardDeadline" | "project.niceToHave" | "project.ongoing"
+> = {
+  hard: "project.hardDeadline",
+  nice_to_have: "project.niceToHave",
+  ongoing: "project.ongoing",
 };
 
 const ICON_SIZE = 16;
@@ -48,11 +52,17 @@ function stopCardNavigation(event: MouseEvent) {
   event.stopPropagation();
 }
 
-function PlanErrorIcon({ message }: { message: string }) {
+function PlanErrorIcon({
+  message,
+  label,
+}: {
+  message: string;
+  label: string;
+}) {
   return (
     <Tooltip align="end" className="w-56" content={message}>
       <button
-        aria-label="Planning error"
+        aria-label={label}
         className="inline-flex size-7 cursor-help items-center justify-center rounded-md text-red-400 hover:bg-red-500/15 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none"
         type="button"
       >
@@ -70,13 +80,16 @@ export default function ProjectCard({
   isDeleting = false,
   isOpening = false,
 }: ProjectCardProps) {
+  const t = useT();
+  const dateLocale = useDateLocale();
   const rootRef = useRef<HTMLElement>(null);
   const { accent, Icon } = projectIdentity(project.id);
   const initials = projectInitials(project.name);
   const createdLabel = project.createdAt
-    ? format(project.createdAt, "d MMM yyyy")
+    ? format(project.createdAt, "d MMM yyyy", { locale: dateLocale })
     : null;
-  const methodologyLabel = project.methodology === "scrum" ? "Scrum" : "Kanban";
+  const methodologyLabel =
+    project.methodology === "scrum" ? t("project.scrum") : t("project.kanban");
   const isPlanning = project.planStatus === "planning" || isOpening;
   const isFailed = project.planStatus === "failed";
   const canOpen = project.planStatus === "ready" && !isOpening;
@@ -92,7 +105,7 @@ export default function ProjectCard({
   const completionPercent =
     taskCount === 0 ? 0 : Math.round((completedCount / taskCount) * 100);
   const summary = (project.goal ?? project.description ?? "").trim();
-  const errorMessage = project.planError ?? "Planning failed.";
+  const errorMessage = project.planError ?? t("project.planningFailed");
   const members = project.members ?? [];
   const extraMembers = Math.max(0, members.length - VISIBLE_MEMBERS);
   const actionCount =
@@ -114,7 +127,7 @@ export default function ProjectCard({
       {isPlanning && !isOpening ? (
         <ProgressBar
           barClassName="bg-gradient-to-r from-violet-400 to-purple-600"
-          label="Planning progress"
+          label={t("project.planningProgress")}
           percent={progressPercent}
           trackClassName="bg-purple-950"
           variant="flush"
@@ -124,8 +137,11 @@ export default function ProjectCard({
           barClassName={accent.bar}
           label={
             taskCount === 0
-              ? "No tasks yet"
-              : `${completedCount} of ${taskCount} tasks completed`
+              ? t("project.noTasksYet")
+              : t("project.tasksCompleted", {
+                  completed: completedCount,
+                  total: taskCount,
+                })
           }
           percent={completionPercent}
           trackClassName={twMerge(accent.bar, "opacity-20")}
@@ -164,9 +180,9 @@ export default function ProjectCard({
         </div>
       </div>
       <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1.5 pt-4">
-        {isFailed ? <Badge tone="danger">Failed</Badge> : null}
+        {isFailed ? <Badge tone="danger">{t("project.failed")}</Badge> : null}
         <Badge tone="muted">{methodologyLabel}</Badge>
-        <Badge tone="muted">{DEADLINE_LABELS[project.deadlineKind]}</Badge>
+        <Badge tone="muted">{t(DEADLINE_KEYS[project.deadlineKind])}</Badge>
         {createdLabel ? <Badge tone="muted">{createdLabel}</Badge> : null}
         {members.length > 0 ? (
           <AvatarStack className="ml-auto" extra={extraMembers}>
@@ -231,7 +247,12 @@ export default function ProjectCard({
         onClick={stopCardNavigation}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        {isFailed ? <PlanErrorIcon message={errorMessage} /> : null}
+        {isFailed ? (
+          <PlanErrorIcon
+            label={t("project.planningError")}
+            message={errorMessage}
+          />
+        ) : null}
         {isPlanning ? (
           <span className="inline-flex size-7 items-center justify-center text-purple-300">
             <Sparkles aria-hidden size={ICON_SIZE} />
@@ -239,7 +260,9 @@ export default function ProjectCard({
         ) : null}
         {isFailed && onRetry ? (
           <IconButton
-            aria-label={isRetrying ? "Retrying planning" : "Retry planning"}
+            aria-label={
+              isRetrying ? t("project.retryingPlanning") : t("project.retryPlanning")
+            }
             disabled={isRetrying}
             size="xs"
             type="button"
@@ -254,7 +277,7 @@ export default function ProjectCard({
         ) : null}
         {onDelete ? (
           <IconButton
-            aria-label={`Delete ${project.name}`}
+            aria-label={t("project.deleteProject", { name: project.name })}
             disabled={isDeleting}
             size="xs"
             type="button"

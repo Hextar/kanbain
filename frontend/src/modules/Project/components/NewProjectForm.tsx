@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useT } from "@/i18n";
 import Button from "@uiKit/Button";
 import NewProjectWizard from "./NewProjectWizard";
 import type { Project } from "../types/Project";
@@ -15,6 +16,7 @@ export default function NewProjectForm({
   size = "toolbar",
   onCreated,
 }: NewProjectFormProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const isHero = size === "hero";
 
@@ -28,7 +30,7 @@ export default function NewProjectForm({
       >
         <span className="inline-flex items-center gap-2">
           <Plus size={isHero ? 22 : 16} />
-          Create new project
+          {t("project.create")}
         </span>
       </Button>
       <NewProjectWizard

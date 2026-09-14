@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useT } from "@/i18n";
 import Button from "@uiKit/Button";
 import Callout from "@uiKit/Callout";
 import EmptyState from "@uiKit/EmptyState";
@@ -41,6 +42,7 @@ export default function ProjectWorkspace({
   initialColumns,
   initialTasks,
 }: ProjectWorkspaceProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [initial] = useState(() => {
     const revived = reviveProject(project);
@@ -95,7 +97,7 @@ export default function ProjectWorkspace({
       );
       queryClient.removeQueries({ queryKey: projectKeys.board(current.id) });
     } catch {
-      showToast("Couldn't retry planning.");
+      showToast(t("project.toastRetry"));
     } finally {
       setIsRetrying(false);
     }
@@ -107,16 +109,16 @@ export default function ProjectWorkspace({
         action={
           <>
             <Button disabled={isRetrying} type="button" onClick={handleRetry}>
-              {isRetrying ? "Retrying…" : "Retry planning"}
+              {isRetrying ? t("common.retrying") : t("project.retryPlanning")}
             </Button>
             <Link className="text-purple-400 hover:text-purple-300" href="/">
-              Back to projects
+              {t("project.backToProjects")}
             </Link>
           </>
         }
         body={
           <p className="text-red-400">
-            {current.planError ?? "Planning failed."}
+            {current.planError ?? t("project.planningFailed")}
           </p>
         }
         size="page"
@@ -136,14 +138,14 @@ export default function ProjectWorkspace({
               type="button"
               onClick={() => void boardQuery.refetch()}
             >
-              {boardQuery.isFetching ? "Retrying…" : "Try again"}
+              {boardQuery.isFetching ? t("common.retrying") : t("common.tryAgain")}
             </Button>
             <Link className="text-purple-400 hover:text-purple-300" href="/">
-              Back to projects
+              {t("project.backToProjects")}
             </Link>
           </>
         }
-        body="Couldn't load the board."
+        body={t("project.couldNotLoadBoard")}
         size="page"
         title={current.name}
       />
@@ -154,7 +156,7 @@ export default function ProjectWorkspace({
     const opening = current.planStatus === "ready";
     return (
       <KanbanBoardSkeleton
-        label={opening ? "Loading board…" : live.message}
+        label={opening ? t("project.loadingBoard") : t("project.planning")}
         progress={opening ? undefined : live.progress}
         statusText={opening ? undefined : live.message}
       />

@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useT } from "@/i18n";
 import { HeaderSlot } from "@uiKit/AppHeader";
 import CanvasDots from "@uiKit/CanvasDots";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
@@ -23,6 +24,7 @@ type ProjectHomeProps = {
 };
 
 export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [initial] = useState(() => initialProjects.map(reviveProject));
   const { data: projects = [], warmingIds } = useProjects(initial);
@@ -52,7 +54,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
     try {
       remember(await retryProjectPlanAction(projectId));
     } catch {
-      showToast("Couldn't retry planning.");
+      showToast(t("project.toastRetry"));
     } finally {
       setRetryingId(null);
     }
@@ -70,7 +72,7 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       queryClient.removeQueries({ queryKey: projectKeys.board(projectId) });
     } catch {
       if (previous) queryClient.setQueryData(projectKeys.list(), previous);
-      showToast("Couldn't delete the project.");
+      showToast(t("project.toastDelete"));
     } finally {
       setDeletingId(null);
     }
@@ -103,9 +105,11 @@ export default function ProjectHome({ initialProjects }: ProjectHomeProps) {
       </CanvasDots>
       <ConfirmDialog
         open={projectToDelete !== null}
-        title={`Delete “${projectToDelete?.name ?? "this project"}”?`}
-        description="This will permanently delete this project and all of its boards, tasks, and milestones. This cannot be undone."
-        confirmLabel="Delete project"
+        title={t("project.deleteTitle", {
+          name: projectToDelete?.name ?? t("project.deleteFallback"),
+        })}
+        description={t("project.deleteDescription")}
+        confirmLabel={t("project.deleteConfirm")}
         variant="danger"
         onCancel={() => setProjectToDelete(null)}
         onConfirm={() => {
