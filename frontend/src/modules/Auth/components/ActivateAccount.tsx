@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Card from "@uiKit/Card";
 import { FormMessage } from "@uiKit/Field";
+import { useT } from "@/i18n";
 import { activateAccount } from "../api/session";
 
 type ActivateAccountProps = {
@@ -12,10 +13,11 @@ type ActivateAccountProps = {
 };
 
 export default function ActivateAccount({ token }: ActivateAccountProps) {
+  const t = useT();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(
-    token ? null : "This activation link is missing or invalid.",
-  );
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const missingToken = token.length === 0;
 
   useEffect(() => {
     if (!token) return;
@@ -28,31 +30,34 @@ export default function ActivateAccount({ token }: ActivateAccountProps) {
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
-        setError(
-          caught instanceof Error
-            ? caught.message
-            : "This activation link is invalid or has expired.",
-        );
+        setFailed(true);
+        setApiError(caught instanceof Error ? caught.message : null);
       });
     return () => {
       cancelled = true;
     };
   }, [router, token]);
 
+  const message = missingToken
+    ? t("auth.activateMissing")
+    : failed
+      ? (apiError ?? t("auth.activateInvalid"))
+      : null;
+
   return (
     <Card className="w-full max-w-md" size="md">
-      <h1 className="text-lg font-semibold text-white">Activate account</h1>
-      {error ? (
+      <h1 className="text-lg font-semibold text-white">{t("auth.activateTitle")}</h1>
+      {message ? (
         <>
-          <FormMessage className="mt-4">{error}</FormMessage>
+          <FormMessage className="mt-4">{message}</FormMessage>
           <p className="mt-5 text-center text-sm text-zinc-500">
             <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/login">
-              Back to sign in
+              {t("auth.backToSignIn")}
             </Link>
           </p>
         </>
       ) : (
-        <p className="mt-2 text-sm text-zinc-500">Confirming your email…</p>
+        <p className="mt-2 text-sm text-zinc-500">{t("auth.confirmingEmail")}</p>
       )}
     </Card>
   );

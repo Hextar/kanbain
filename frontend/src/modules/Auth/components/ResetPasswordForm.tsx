@@ -7,6 +7,7 @@ import Button from "@uiKit/Button";
 import Card from "@uiKit/Card";
 import { FieldLabel, FormMessage } from "@uiKit/Field";
 import Input from "@uiKit/Input";
+import { useT } from "@/i18n";
 import { resetPassword } from "../api/session";
 
 type ResetPasswordFormProps = {
@@ -14,6 +15,7 @@ type ResetPasswordFormProps = {
 };
 
 export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
+  const t = useT();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,29 +31,28 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       router.push("/");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Something went wrong");
+      setError(
+        caught instanceof Error ? caught.message : t("common.somethingWentWrong"),
+      );
       setPending(false);
     }
   }
 
   return (
     <Card className="w-full max-w-md" size="md">
-      <h1 className="text-lg font-semibold text-white">Choose a new password</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Use at least 8 characters. You will be signed in after saving.
-      </p>
+      <h1 className="text-lg font-semibold text-white">{t("auth.resetTitle")}</h1>
+      <p className="mt-1 text-sm text-zinc-500">{t("auth.resetBody")}</p>
       {missingToken ? (
         <FormMessage className="mt-6">
-          This reset link is missing or invalid.{" "}
+          {t("auth.resetMissing")}{" "}
           <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/forgot-password">
-            Request a new one
+            {t("auth.requestNewLink")}
           </Link>
-          .
         </FormMessage>
       ) : (
         <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1.5">
-            <FieldLabel htmlFor="password">New password</FieldLabel>
+            <FieldLabel htmlFor="password">{t("auth.newPassword")}</FieldLabel>
             <Input
               autoComplete="new-password"
               autoFocus
@@ -65,13 +66,13 @@ export default function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           </div>
           {error ? <FormMessage>{error}</FormMessage> : null}
           <Button disabled={pending} type="submit">
-            {pending ? "Saving…" : "Save password"}
+            {pending ? t("common.saving") : t("auth.savePassword")}
           </Button>
         </form>
       )}
       <p className="mt-5 text-center text-sm text-zinc-500">
         <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/login">
-          Back to sign in
+          {t("auth.backToSignIn")}
         </Link>
       </p>
     </Card>

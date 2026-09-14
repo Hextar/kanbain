@@ -7,6 +7,7 @@ import Button from "@uiKit/Button";
 import Card from "@uiKit/Card";
 import { FieldLabel, FormMessage } from "@uiKit/Field";
 import Input from "@uiKit/Input";
+import { useT } from "@/i18n";
 import { requestPasswordReset } from "../api/session";
 
 type ForgotPasswordFormProps = {
@@ -16,6 +17,7 @@ type ForgotPasswordFormProps = {
 export default function ForgotPasswordForm({
   initialEmail = "",
 }: ForgotPasswordFormProps) {
+  const t = useT();
   const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -30,9 +32,11 @@ export default function ForgotPasswordForm({
       setSent(true);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 429) {
-        setError("Too many attempts. Try again shortly.");
+        setError(t("common.tooManyAttempts"));
       } else {
-        setError(caught instanceof Error ? caught.message : "Something went wrong");
+        setError(
+          caught instanceof Error ? caught.message : t("common.somethingWentWrong"),
+        );
       }
     } finally {
       setPending(false);
@@ -41,19 +45,16 @@ export default function ForgotPasswordForm({
 
   return (
     <Card className="w-full max-w-md" size="md">
-      <h1 className="text-lg font-semibold text-white">Forgot password</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Enter your email and we will send a reset link if an account exists.
-      </p>
+      <h1 className="text-lg font-semibold text-white">{t("auth.forgotTitle")}</h1>
+      <p className="mt-1 text-sm text-zinc-500">{t("auth.forgotBody")}</p>
       {sent ? (
         <FormMessage className="mt-6" tone="success">
-          If an account exists for that email, we sent a message with next
-          steps.
+          {t("auth.forgotSent")}
         </FormMessage>
       ) : (
         <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1.5">
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">{t("auth.email")}</FieldLabel>
             <Input
               autoComplete="email"
               autoFocus
@@ -66,13 +67,13 @@ export default function ForgotPasswordForm({
           </div>
           {error ? <FormMessage>{error}</FormMessage> : null}
           <Button disabled={pending} type="submit">
-            {pending ? "Sending…" : "Send reset link"}
+            {pending ? t("common.sending") : t("auth.sendResetLink")}
           </Button>
         </form>
       )}
       <p className="mt-5 text-center text-sm text-zinc-500">
         <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/login">
-          Back to sign in
+          {t("auth.backToSignIn")}
         </Link>
       </p>
     </Card>

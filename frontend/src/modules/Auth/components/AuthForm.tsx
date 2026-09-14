@@ -8,6 +8,7 @@ import Button from "@uiKit/Button";
 import Card from "@uiKit/Card";
 import { FieldLabel, FormMessage } from "@uiKit/Field";
 import Input from "@uiKit/Input";
+import { useT } from "@/i18n";
 import { login, register, resendActivation } from "../api/session";
 
 type AuthFormProps = {
@@ -15,6 +16,7 @@ type AuthFormProps = {
 };
 
 export default function AuthForm({ mode }: AuthFormProps) {
+  const t = useT();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,9 +60,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
         setUnverified(true);
         setError(caught.message);
       } else if (caught instanceof ApiError && caught.status === 429) {
-        setError("Too many attempts. Try again shortly.");
+        setError(t("common.tooManyAttempts"));
       } else {
-        setError(caught instanceof Error ? caught.message : "Something went wrong");
+        setError(
+          caught instanceof Error ? caught.message : t("common.somethingWentWrong"),
+        );
       }
       setPending(false);
     }
@@ -75,9 +79,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
       setResent(true);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 429) {
-        setError("Too many attempts. Try again shortly.");
+        setError(t("common.tooManyAttempts"));
       } else {
-        setError(caught instanceof Error ? caught.message : "Something went wrong");
+        setError(
+          caught instanceof Error ? caught.message : t("common.somethingWentWrong"),
+        );
       }
     } finally {
       setPending(false);
@@ -87,11 +93,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
   if (checkEmail) {
     return (
       <Card className="w-full max-w-md" size="md">
-        <h1 className="text-lg font-semibold text-white">Check your email</h1>
+        <h1 className="text-lg font-semibold text-white">
+          {t("auth.checkEmailTitle")}
+        </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          We sent an activation link to{" "}
-          <span className="text-zinc-300">{email}</span>. Open it to finish
-          creating your workspace.
+          {t("auth.checkEmailBody", { email })}
         </p>
         {debugActivationUrl ? (
           <p className="mt-3 text-sm">
@@ -99,14 +105,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
               className="cursor-pointer text-purple-300 hover:text-purple-200"
               href={debugActivationUrl}
             >
-              Activate account
+              {t("auth.activateAccount")}
             </Link>
-            <span className="text-zinc-600"> (mock API)</span>
+            <span className="text-zinc-600">{t("auth.mockApi")}</span>
           </p>
         ) : null}
         {resent ? (
           <FormMessage className="mt-4" tone="success">
-            Activation email sent again.
+            {t("auth.activationSent")}
           </FormMessage>
         ) : null}
         {error ? <FormMessage className="mt-4">{error}</FormMessage> : null}
@@ -118,11 +124,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
           variant="secondary"
           onClick={() => void handleResend()}
         >
-          {pending ? "Sending…" : "Resend email"}
+          {pending ? t("common.sending") : t("auth.resendEmail")}
         </Button>
         <p className="mt-5 text-center text-sm text-zinc-500">
           <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/login">
-            Back to sign in
+            {t("auth.backToSignIn")}
           </Link>
         </p>
       </Card>
@@ -132,17 +138,15 @@ export default function AuthForm({ mode }: AuthFormProps) {
   return (
     <Card className="w-full max-w-md" size="md">
       <h1 className="text-lg font-semibold text-white">
-        {isSignup ? "Create your workspace" : "Sign in to KanbAIn"}
+        {isSignup ? t("auth.signUpTitle") : t("auth.signInTitle")}
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
-        {isSignup
-          ? "Email and password, or continue with Google."
-          : "Use your email or Google account."}
+        {isSignup ? t("auth.signUpBody") : t("auth.signInBody")}
       </p>
       <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
         {isSignup ? (
           <div className="flex flex-col gap-1.5">
-            <FieldLabel htmlFor="name">Name</FieldLabel>
+            <FieldLabel htmlFor="name">{t("auth.name")}</FieldLabel>
             <Input
               autoComplete="name"
               id="name"
@@ -152,7 +156,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           </div>
         ) : null}
         <div className="flex flex-col gap-1.5">
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="email">{t("auth.email")}</FieldLabel>
           <Input
             autoComplete="email"
             autoFocus
@@ -165,13 +169,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-3">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <FieldLabel htmlFor="password">{t("auth.password")}</FieldLabel>
             {isSignup ? null : (
               <Link
                 className="cursor-pointer text-[11px] font-medium text-purple-300 hover:text-purple-200"
                 href={forgotHref}
               >
-                Forgot password?
+                {t("auth.forgotPassword")}
               </Link>
             )}
           </div>
@@ -194,25 +198,25 @@ export default function AuthForm({ mode }: AuthFormProps) {
             variant="secondary"
             onClick={() => void handleResend()}
           >
-            {pending ? "Sending…" : "Resend activation email"}
+            {pending ? t("common.sending") : t("auth.resendActivation")}
           </Button>
         ) : null}
         {resent ? (
-          <FormMessage tone="success">Activation email sent again.</FormMessage>
+          <FormMessage tone="success">{t("auth.activationSent")}</FormMessage>
         ) : null}
         <Button disabled={pending} type="submit">
           {pending
             ? isSignup
-              ? "Creating account…"
-              : "Signing in…"
+              ? t("auth.creatingAccount")
+              : t("auth.signingIn")
             : isSignup
-              ? "Create account"
-              : "Sign in"}
+              ? t("auth.createAccount")
+              : t("auth.signIn")}
         </Button>
       </form>
       <div className="mt-4 flex items-center gap-3 text-xs text-zinc-600">
         <span className="h-px flex-1 bg-white/8" />
-        or
+        {t("common.or")}
         <span className="h-px flex-1 bg-white/8" />
       </div>
       <a
@@ -220,21 +224,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
         href="/api/auth/google"
       >
         <GoogleMark />
-        Continue with Google
+        {t("auth.continueGoogle")}
       </a>
       <p className="mt-5 text-center text-sm text-zinc-500">
         {isSignup ? (
           <>
-            Already have an account?{" "}
+            {t("auth.alreadyHaveAccount")}{" "}
             <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/login">
-              Sign in
+              {t("auth.signIn")}
             </Link>
           </>
         ) : (
           <>
-            New here?{" "}
+            {t("auth.newHere")}{" "}
             <Link className="cursor-pointer text-purple-300 hover:text-purple-200" href="/signup">
-              Create an account
+              {t("auth.createAccount")}
             </Link>
           </>
         )}
