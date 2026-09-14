@@ -10,6 +10,7 @@ import {
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useT } from "@/i18n";
 import { useHtml5Drop } from "@libraries/dnd/useHtml5Drop";
 import { markSpawn } from "@libraries/particles";
 import Button from "@uiKit/Button";
@@ -449,6 +450,7 @@ function columnDialogProps(
 }
 
 function AddColumnButton({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <div className="flex h-[52px] w-[280px] shrink-0 flex-col self-start overflow-hidden rounded-xl border border-dashed border-white/12">
       <Button
@@ -459,7 +461,7 @@ function AddColumnButton({ onClick }: { onClick: () => void }) {
         onClick={onClick}
       >
         <Plus size={16} />
-        Add column
+        {t("task.addColumn")}
       </Button>
     </div>
   );

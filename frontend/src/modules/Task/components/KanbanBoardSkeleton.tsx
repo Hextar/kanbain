@@ -1,4 +1,7 @@
+"use client";
+
 import { GripVertical } from "lucide-react";
+import { useT } from "@/i18n";
 import { HeaderSlot } from "@uiKit/AppHeader";
 import ButtonGroup from "@uiKit/ButtonGroup";
 import { buttonGroupItemClassName } from "@uiKit/buttonGroupStyles";
@@ -25,10 +28,12 @@ type KanbanBoardSkeletonProps = {
 };
 
 export default function KanbanBoardSkeleton({
-  label = "Loading board…",
+  label,
   statusText,
   progress,
 }: KanbanBoardSkeletonProps) {
+  const t = useT();
+  const resolvedLabel = label ?? t("project.loadingBoard");
   const showProgress = statusText !== undefined && progress !== undefined;
   return (
     <CanvasDots
@@ -36,11 +41,11 @@ export default function KanbanBoardSkeleton({
       className="flex h-full min-h-0 w-full max-w-full min-w-0 flex-1 flex-col overflow-x-clip"
       role="status"
     >
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{resolvedLabel}</span>
       <HeaderSlot center={<ViewTabsSkeleton />}>
         {statusText ? (
           <span className="hidden truncate text-xs text-zinc-500 sm:inline">
-            {showProgress ? "Planning" : statusText}
+            {showProgress ? t("project.planning") : statusText}
           </span>
         ) : (
           <>
@@ -76,12 +81,13 @@ export default function KanbanBoardSkeleton({
 }
 
 function ViewTabsSkeleton() {
+  const t = useT();
   return (
     <ButtonGroup aria-hidden>
       <span className={buttonGroupItemClassName({ selected: true })}>
-        Board
+        {t("view.board")}
       </span>
-      <span className={buttonGroupItemClassName()}>Flow</span>
+      <span className={buttonGroupItemClassName()}>{t("view.flow")}</span>
     </ButtonGroup>
   );
 }

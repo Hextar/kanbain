@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useT } from "@/i18n";
 import ColorSwatch from "@uiKit/ColorSwatch";
 import PopoverPanel, { Popover } from "@uiKit/PopoverPanel";
 import {
@@ -22,6 +23,7 @@ export default function ColumnColorMenu({
   disabled = false,
   onChange,
 }: ColumnColorMenuProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
 
@@ -34,7 +36,7 @@ export default function ColumnColorMenu({
       <button
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={`Change ${columnTitle} color`}
+        aria-label={t("column.changeColor", { title: columnTitle })}
         className="inline-flex size-5 cursor-pointer items-center justify-center rounded-full hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none disabled:opacity-50"
         disabled={disabled}
         type="button"
@@ -45,7 +47,7 @@ export default function ColumnColorMenu({
       {open ? (
         <PopoverPanel
           align="start"
-          aria-label="Column color"
+          aria-label={t("column.color")}
           className="w-40 p-2"
           role="listbox"
         >
@@ -54,7 +56,7 @@ export default function ColumnColorMenu({
               <ColorSwatch
                 key={option.id}
                 colorClassName={option.dot}
-                label={option.label}
+                label={t(`column.${option.id}`)}
                 selected={option.id === accent.id}
                 onClick={() => {
                   onChange(option.id);

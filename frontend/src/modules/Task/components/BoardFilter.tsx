@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ListFilter } from "lucide-react";
+import { useT, type TFunction } from "@/i18n";
 import { twMerge } from "tailwind-merge";
 import Badge from "@uiKit/Badge";
 import Button from "@uiKit/Button";
@@ -43,13 +44,14 @@ export default function BoardFilter({
   clauses,
   onChange,
 }: BoardFilterProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [drillField, setDrillField] = useState<FilterField | undefined>();
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
-  const suggestions = suggestFilters(query, catalog, clauses, drillField);
+  const suggestions = suggestFilters(query, catalog, clauses, drillField, t);
   const clampedIndex =
     suggestions.length === 0
       ? 0
@@ -137,6 +139,7 @@ export default function BoardFilter({
               key={clauseKey(clause)}
               catalog={catalog}
               clause={clause}
+              t={t}
               onCycle={() =>
                 onChange(
                   replaceClause(
@@ -158,7 +161,7 @@ export default function BoardFilter({
             variant="secondary"
             onClick={() => onChange([])}
           >
-            Clear
+            {t("filter.clear")}
           </Button>
         </div>
       ) : null}
@@ -191,7 +194,7 @@ export default function BoardFilter({
         >
           <span className="inline-flex items-center gap-1">
             <ListFilter aria-hidden size={14} />
-            Filter
+            {t("filter.filter")}
             {clauses.length > 0 ? (
               <Badge className="bg-purple-500/20 px-1.5 text-[11px] font-medium text-purple-200 tabular-nums">
                 {clauses.length}
@@ -213,8 +216,10 @@ export default function BoardFilter({
                 name="board-filter"
                 placeholder={
                   drillField
-                    ? `${fieldLabel(drillField)}…`
-                    : "Assignee, priority, title…"
+                    ? t("filter.drillPlaceholder", {
+                        field: fieldLabel(drillField, t),
+                      })
+                    : t("filter.placeholder")
                 }
                 role="combobox"
                 spellCheck={false}
@@ -234,8 +239,8 @@ export default function BoardFilter({
               {suggestions.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-zinc-500">
                   {drillField === "title"
-                    ? "Type at least 2 characters…"
-                    : "No matching filters"}
+                    ? t("filter.typeAtLeast2")
+                    : t("filter.noMatching")}
                 </li>
               ) : (
                 suggestions.map((suggestion, index) => {
@@ -276,8 +281,8 @@ export default function BoardFilter({
       {clauses.length > 0 ? (
         <span className="sr-only" aria-live="polite">
           {clauses.length === 1
-            ? "1 filter applied"
-            : `${clauses.length} filters applied`}
+            ? t("filter.oneApplied")
+            : t("filter.nApplied", { n: clauses.length })}
         </span>
       ) : null}
     </div>
@@ -287,39 +292,44 @@ export default function BoardFilter({
 function FilterChip({
   catalog,
   clause,
+  t,
   onCycle,
   onRemove,
 }: {
   catalog: FilterCatalog;
   clause: FilterClause;
+  t: TFunction;
   onCycle: () => void;
   onRemove: () => void;
 }) {
   const canCycle = clause.operator === "is" || clause.operator === "isNot";
+  const or = t("common.or");
   const values =
     clause.operator === "isEmpty"
       ? ""
       : clause.values
-          .map((value) => displayValue(clause.field, value, catalog))
-          .join(" or ");
+          .map((value) => displayValue(clause.field, value, catalog, t))
+          .join(` ${or} `);
 
   return (
     <Chip
-      removeLabel={`Remove ${clauseLabel(clause, catalog)}`}
+      removeLabel={t("filter.removeClause", {
+        label: clauseLabel(clause, catalog, t),
+      })}
       onRemove={onRemove}
     >
-      <span className="shrink-0">{fieldLabel(clause.field)}</span>
+      <span className="shrink-0">{fieldLabel(clause.field, t)}</span>
       {canCycle ? (
         <button
           className="shrink-0 cursor-pointer rounded-sm text-zinc-400 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
           type="button"
           onClick={onCycle}
         >
-          {operatorLabel(clause.operator)}
+          {operatorLabel(clause.operator, t)}
         </button>
       ) : (
         <span className="shrink-0 text-zinc-400">
-          {operatorLabel(clause.operator)}
+          {operatorLabel(clause.operator, t)}
         </span>
       )}
       {values ? <span className="min-w-0 truncate">{values}</span> : null}

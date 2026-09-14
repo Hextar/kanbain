@@ -8,6 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { Flag, Plus } from "lucide-react";
+import { useT } from "@/i18n";
 import Button from "@uiKit/Button";
 import IconButton from "@uiKit/IconButton";
 import Input from "@uiKit/Input";
@@ -27,12 +28,14 @@ type MilestoneMenuProps = {
 
 type MilestoneNameFieldProps = {
   label: string;
+  nameAria: string;
   milestone: Milestone;
   onSave: (title: string) => Promise<void>;
 };
 
 function MilestoneNameField({
   label,
+  nameAria,
   milestone,
   onSave,
 }: MilestoneNameFieldProps) {
@@ -75,7 +78,7 @@ function MilestoneNameField({
         {label}
       </span>
       <Input
-        aria-label={`${label} name`}
+        aria-label={nameAria}
         autoComplete="off"
         className="h-7 min-w-0 bg-transparent px-1.5 py-0 text-sm text-zinc-200 hover:bg-zinc-900 focus:bg-zinc-900"
         value={draft}
@@ -101,6 +104,7 @@ function MilestoneNameField({
 }
 
 export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
+  const t = useT();
   const { data: milestones = [] } = useMilestones(projectId);
   const createMilestone = useCreateMilestone(projectId);
   const updateMilestone = useUpdateMilestone(projectId);
@@ -120,14 +124,14 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
 
   return (
     <Popover className="shrink-0" open={open} onClose={close}>
-      <Tooltip content="Milestones" align="end">
+      <Tooltip content={t("milestone.title")} align="end">
         <IconButton
           aria-expanded={open}
           aria-haspopup="dialog"
           aria-label={
             milestones.length === 1
-              ? "Milestones, 1 saved"
-              : `Milestones, ${milestones.length} saved`
+              ? t("milestone.oneSaved")
+              : t("milestone.nSaved", { n: milestones.length })
           }
           size="xs"
           type="button"
@@ -138,11 +142,15 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
         </IconButton>
       </Tooltip>
       {open ? (
-        <PopoverPanel aria-label="Milestones" className="w-72" role="dialog">
+        <PopoverPanel
+          aria-label={t("milestone.title")}
+          className="w-72"
+          role="dialog"
+        >
           <div className="relative max-h-56 overflow-y-auto p-1">
             {milestones.length === 0 ? (
               <p className="px-3 py-2 text-sm text-zinc-500">
-                No milestones yet
+                {t("milestone.noneYet")}
               </p>
             ) : (
               <ul className="flex flex-col">
@@ -152,6 +160,7 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
                     <MilestoneNameField
                       key={milestone.id}
                       label={key}
+                      nameAria={t("milestone.nameAria", { key })}
                       milestone={milestone}
                       onSave={async (nextTitle) => {
                         await updateMilestone.mutateAsync({
@@ -171,16 +180,16 @@ export default function MilestoneMenu({ projectId }: MilestoneMenuProps) {
           >
             <Input
               ref={inputRef}
-              aria-label="New milestone title"
+              aria-label={t("milestone.newTitle")}
               autoComplete="off"
               className="h-8 min-w-0 bg-zinc-900 px-2 py-1 text-sm"
               name="milestone-title"
-              placeholder="New milestone…"
+              placeholder={t("milestone.placeholder")}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
             <Button
-              aria-label="Add milestone"
+              aria-label={t("milestone.add")}
               disabled={!trimmedTitle || createMilestone.isPending}
               size="xs"
               type="submit"

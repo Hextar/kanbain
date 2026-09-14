@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n";
 import { HeaderSlot } from "@uiKit/AppHeader";
 import ProgressRing from "@uiKit/ProgressRing";
 import { useAssignees, useMilestones, useTags } from "../hooks/useCatalog";
@@ -31,6 +32,7 @@ export default function Header({
   hrefForView,
   onClausesChange,
 }: HeaderProps) {
+  const t = useT();
   const { data: assignees = [] } = useAssignees();
   const { data: tags = [] } = useTags();
   const { data: milestones = [] } = useMilestones(projectId);
@@ -44,12 +46,18 @@ export default function Header({
       />
       {totalCount > 0 ? (
         <span
-          aria-label={`${completedCount} of ${totalCount} completed`}
+          aria-label={t("task.completedOf", {
+            completed: completedCount,
+            total: totalCount,
+          })}
           className="inline-flex shrink-0 items-center gap-1.5 text-xs text-zinc-400"
         >
           <ProgressRing completed={completedCount} total={totalCount} />
           <span className="hidden tabular-nums sm:inline">
-            {completedCount}/{totalCount} completed
+            {t("task.completedSlash", {
+              completed: completedCount,
+              total: totalCount,
+            })}
           </span>
         </span>
       ) : null}

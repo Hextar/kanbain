@@ -10,6 +10,7 @@ import {
   releaseCelebrate,
 } from "@libraries/particles";
 import { TASK_DRAG_MIME, type TaskDragPayload } from "../constants";
+import { useT } from "@/i18n";
 import { useAssignees } from "../hooks/useCatalog";
 import { compactTaskKey } from "../helpers/taskKey";
 import { labeledPriority, PRIORITY_STYLES } from "../helpers/taskBadges";
@@ -39,6 +40,7 @@ export default function NestedTaskRow({
   onUpdate,
   onDelete,
 }: NestedTaskRowProps) {
+  const t = useT();
   const skipClickRef = useRef(false);
   const rootRef = useRef<HTMLElement>(null);
   const { data: assignees = [] } = useAssignees();
@@ -147,7 +149,7 @@ export default function NestedTaskRow({
               />
               {task.priority ? (
                 <Badge
-                  aria-label={labeledPriority(task.priority)}
+                  aria-label={labeledPriority(task.priority, t)}
                   className={twMerge(
                     "shrink-0 uppercase",
                     PRIORITY_STYLES[task.priority],

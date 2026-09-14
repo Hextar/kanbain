@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ReactElement } from "react";
 import { Columns3, Flag, Link2, Maximize2, Trash2, User } from "lucide-react";
+import { useT } from "@/i18n";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import ContextMenu, { type ContextMenuEntry } from "@uiKit/ContextMenu";
 import { shatterByAttr } from "@libraries/particles";
@@ -12,16 +13,12 @@ import { taskQueryValue } from "../helpers/taskKey";
 import type { TaskPriority } from "../types/Catalog";
 import type { Task, TaskItem } from "../types/Task";
 
-const PRIORITY_OPTIONS: {
-  id: string;
-  value: TaskPriority | undefined;
-  label: string;
-}[] = [
-  { id: "high", value: "high", label: "High" },
-  { id: "medium", value: "medium", label: "Medium" },
-  { id: "low", value: "low", label: "Low" },
-  { id: "none", value: undefined, label: "None" },
-];
+const PRIORITY_IDS = [
+  { id: "high", value: "high" as const },
+  { id: "medium", value: "medium" as const },
+  { id: "low", value: "low" as const },
+  { id: "none", value: undefined },
+] as const;
 
 type TaskContextMenuProps = {
   task: TaskItem;
@@ -69,6 +66,7 @@ export default function TaskContextMenu({
   onUpdate,
   onDelete,
 }: TaskContextMenuProps) {
+  const t = useT();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const retainRef = useRef(false);
   const { data: assignees = [] } = useAssignees();
@@ -85,32 +83,32 @@ export default function TaskContextMenu({
   const items: ContextMenuEntry[] = [
     {
       id: "open",
-      label: "Open",
+      label: t("task.open"),
       icon: <Maximize2 aria-hidden className="size-3.5 text-zinc-500" />,
       disabled: saving,
       onSelect: () => onOpen(task),
     },
     {
       id: "priority",
-      label: "Priority",
+      label: t("task.priority"),
       icon: <Flag aria-hidden className="size-3.5 text-zinc-500" />,
       disabled: saving,
-      items: PRIORITY_OPTIONS.map((option) => ({
+      items: PRIORITY_IDS.map((option) => ({
         id: `priority-${option.id}`,
-        label: option.label,
+        label: option.value ? t(`task.${option.value}`) : t("common.none"),
         checked: (task.priority ?? undefined) === option.value,
         onSelect: () => onUpdate(withPriority(task, option.value)),
       })),
     },
     {
       id: "assign",
-      label: "Assign",
+      label: t("task.assign"),
       icon: <User aria-hidden className="size-3.5 text-zinc-500" />,
       disabled: saving,
       items: [
         {
           id: "assign-none",
-          label: "Unassigned",
+          label: t("task.unassigned"),
           checked: !task.assigneeId,
           onSelect: () => onUpdate(withAssignee(task, undefined)),
         },
@@ -124,7 +122,7 @@ export default function TaskContextMenu({
     },
     {
       id: "move",
-      label: "Move to",
+      label: t("task.moveTo"),
       icon: <Columns3 aria-hidden className="size-3.5 text-zinc-500" />,
       disabled: saving || destinations.length === 0,
       hidden: destinations.length === 0,
@@ -146,7 +144,7 @@ export default function TaskContextMenu({
     { type: "separator" },
     {
       id: "copy-link",
-      label: "Copy link",
+      label: t("task.copyLink"),
       icon: <Link2 aria-hidden className="size-3.5 text-zinc-500" />,
       onSelect: () => {
         const url = `${window.location.origin}/project/${projectId}?task=${taskQueryValue(task)}`;
@@ -155,7 +153,7 @@ export default function TaskContextMenu({
     },
     {
       id: "delete",
-      label: "Delete",
+      label: t("common.delete"),
       icon: <Trash2 aria-hidden className="size-3.5" />,
       danger: true,
       disabled: saving,
@@ -172,16 +170,16 @@ export default function TaskContextMenu({
         anchor={anchor}
         disabled={saving}
         items={items}
-        label={`Actions for ${task.title}`}
+        label={t("task.actionsFor", { title: task.title })}
         onClose={handleClose}
       >
         {children}
       </ContextMenu>
       <ConfirmDialog
-        confirmLabel="Delete card"
-        description="This will permanently delete this card and any nested cards. This cannot be undone."
+        confirmLabel={t("task.deleteCard")}
+        description={t("task.deleteCardDescription")}
         open={confirmOpen}
-        title={`Delete “${task.title}”?`}
+        title={t("task.deleteCardTitle", { title: task.title })}
         variant="danger"
         onCancel={() => {
           retainRef.current = false;

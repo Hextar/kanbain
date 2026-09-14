@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Link2, Plus } from "lucide-react";
+import { useT } from "@/i18n";
 import { twMerge } from "tailwind-merge";
 import Badge from "@uiKit/Badge";
 import Button from "@uiKit/Button";
@@ -70,10 +71,12 @@ function SegmentedChoice<T extends string>({
   value,
   options,
   onChange,
+  noneLabel,
 }: {
   value: T | "";
   options: ChoiceOption<T>[];
   onChange: (value: T | "") => void;
+  noneLabel: string;
 }) {
   return (
     <ButtonGroup size="sm">
@@ -83,7 +86,7 @@ function SegmentedChoice<T extends string>({
         selected={value === ""}
         onClick={() => onChange("")}
       >
-        None
+        {noneLabel}
       </ButtonGroupItem>
       {options.map((option) => {
         const selected = option.value === value;
@@ -107,12 +110,14 @@ function InlineAdd({
   placeholder,
   value,
   disabled,
+  addLabel,
   onChange,
   onAdd,
 }: {
   placeholder: string;
   value: string;
   disabled: boolean;
+  addLabel: string;
   onChange: (value: string) => void;
   onAdd: () => void;
 }) {
@@ -131,7 +136,7 @@ function InlineAdd({
         }}
       />
       <Button
-        aria-label="Add"
+        aria-label={addLabel}
         className="h-8 shrink-0 px-2.5"
         disabled={disabled}
         kind="outline"
@@ -164,6 +169,7 @@ export default function TaskDetailDialog({
   onSave,
   onDelete,
 }: TaskDetailDialogProps) {
+  const t = useT();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
   const [priority, setPriority] = useState<TaskPriority | "">(
@@ -310,13 +316,15 @@ export default function TaskDetailDialog({
                   className="max-w-44 truncate bg-zinc-800/80 text-zinc-400 ring-1 ring-white/6"
                   title={parentOptionLabel(currentParent)}
                 >
-                  Child of {parentOptionLabel(currentParent)}
+                  {t("task.childOf", {
+                    parent: parentOptionLabel(currentParent),
+                  })}
                 </Badge>
               ) : null}
             </>
           ) : undefined
         }
-        title={isNew ? "New card" : (keyLabel ?? "Untitled")}
+        title={isNew ? t("task.newCard") : (keyLabel ?? t("task.untitled"))}
         titleTranslate={isNew || !keyLabel ? undefined : "no"}
         onClose={onClose}
         footer={
@@ -334,7 +342,7 @@ export default function TaskDetailDialog({
                 variant="danger"
                 onClick={() => setIsDeleteConfirmOpen(true)}
               >
-                Delete card
+                {t("task.deleteCard")}
               </Button>
             )}
             <div className="flex gap-2">
@@ -345,7 +353,7 @@ export default function TaskDetailDialog({
                 variant="secondary"
                 onClick={onClose}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 disabled={!trimmedTitle}
@@ -353,7 +361,7 @@ export default function TaskDetailDialog({
                 size="sm"
                 type="submit"
               >
-                {isNew ? "Add card" : "Save"}
+                {isNew ? t("task.addCard") : t("common.save")}
               </Button>
             </div>
           </div>
@@ -366,39 +374,41 @@ export default function TaskDetailDialog({
         >
           <div className="flex flex-col gap-1.5">
             <Input
-              aria-label="Title"
+              aria-label={t("task.title")}
               autoFocus={isNew}
               className="h-auto min-h-0 w-full flex-none rounded-none border-0 bg-transparent px-0 py-0 text-lg leading-snug font-semibold text-white placeholder:text-zinc-600 focus-visible:ring-0"
-              placeholder="Task title"
+              placeholder={t("task.titlePlaceholder")}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
             <Textarea
-              aria-label="Description"
+              aria-label={t("task.description")}
               autoGrow
               className="min-h-5 w-full rounded-none border-0 bg-transparent px-0 py-0 text-sm leading-5 text-zinc-400 placeholder:text-zinc-600 focus-visible:ring-0"
-              placeholder="Add a description…"
+              placeholder={t("task.descriptionPlaceholder")}
               rows={1}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
           </div>
 
-          <DialogPanel title="Properties">
+          <DialogPanel title={t("task.properties")}>
             <div className="flex flex-col gap-2.5">
-              <Field label="Priority">
+              <Field label={t("task.priority")}>
                 <SegmentedChoice
+                  noneLabel={t("common.none")}
                   options={PRIORITIES.map((value) => ({
                     value,
-                    label: value,
+                    label: t(`task.${value}`),
                     className: PRIORITY_STYLES[value],
                   }))}
                   value={priority}
                   onChange={setPriority}
                 />
               </Field>
-              <Field label="Estimate">
+              <Field label={t("task.estimate")}>
                 <SegmentedChoice
+                  noneLabel={t("common.none")}
                   options={TSHIRTS.map((value) => ({
                     value,
                     label: value,
@@ -408,12 +418,12 @@ export default function TaskDetailDialog({
                   onChange={setEstimateTshirt}
                 />
               </Field>
-              <Field label="Parent">
+              <Field label={t("task.parent")}>
                 <Select
                   value={parentId}
                   onChange={(event) => setParentId(event.target.value)}
                 >
-                  <option value="">None</option>
+                  <option value="">{t("common.none")}</option>
                   {parentChoices.map((parent) => (
                     <option key={parent.id} value={parent.id}>
                       {parentOptionLabel(parent)}
@@ -421,12 +431,12 @@ export default function TaskDetailDialog({
                   ))}
                 </Select>
               </Field>
-              <Field label="Milestone">
+              <Field label={t("task.milestone")}>
                 <Select
                   value={milestoneId}
                   onChange={(event) => setMilestoneId(event.target.value)}
                 >
-                  <option value="">None</option>
+                  <option value="">{t("common.none")}</option>
                   {milestones.map((milestone) => (
                     <option key={milestone.id} value={milestone.id}>
                       {milestoneLabel(milestone, milestones)}
@@ -437,14 +447,14 @@ export default function TaskDetailDialog({
             </div>
           </DialogPanel>
 
-          <DialogPanel title="People">
+          <DialogPanel title={t("task.people")}>
             <div className="flex flex-col gap-2.5">
-              <Field label="Assignee">
+              <Field label={t("task.assignee")}>
                 <Select
                   value={assigneeId}
                   onChange={(event) => setAssigneeId(event.target.value)}
                 >
-                  <option value="">Unassigned</option>
+                  <option value="">{t("task.unassigned")}</option>
                   {assignees.map((assignee) => (
                     <option key={assignee.id} value={assignee.id}>
                       {assignee.name}
@@ -452,10 +462,11 @@ export default function TaskDetailDialog({
                   ))}
                 </Select>
               </Field>
-              <Field label="Role">
+              <Field label={t("task.role")}>
                 <InlineAdd
+                  addLabel={t("task.add")}
                   disabled={!newAssigneeName.trim() || createAssignee.isPending}
-                  placeholder="New role"
+                  placeholder={t("task.newRole")}
                   value={newAssigneeName}
                   onAdd={() => void handleCreateAssignee()}
                   onChange={setNewAssigneeName}
@@ -464,7 +475,7 @@ export default function TaskDetailDialog({
             </div>
           </DialogPanel>
 
-          <DialogPanel title="Tags">
+          <DialogPanel title={t("task.tags")}>
             <div className="flex flex-col gap-2.5">
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => {
@@ -486,12 +497,15 @@ export default function TaskDetailDialog({
                   );
                 })}
                 {tags.length === 0 ? (
-                  <span className="text-[11px] text-zinc-500">No tags yet</span>
+                  <span className="text-[11px] text-zinc-500">
+                    {t("task.noTagsYet")}
+                  </span>
                 ) : null}
               </div>
               <InlineAdd
+                addLabel={t("task.add")}
                 disabled={!newTagName.trim() || createTag.isPending}
-                placeholder="New tag"
+                placeholder={t("task.newTag")}
                 value={newTagName}
                 onAdd={() => void handleCreateTag()}
                 onChange={setNewTagName}
@@ -506,16 +520,18 @@ export default function TaskDetailDialog({
               onClick={() => void copyLink()}
             >
               <Link2 aria-hidden size={12} />
-              {linkCopied ? "Link copied" : "Copy link"}
+              {linkCopied ? t("task.linkCopied") : t("task.copyLink")}
             </button>
           ) : null}
         </form>
       </Dialog>
       <ConfirmDialog
         open={isDeleteConfirmOpen}
-        title={`Delete “${task.title || keyLabel || "this card"}”?`}
-        description="This will permanently delete this card and any nested cards. This cannot be undone."
-        confirmLabel="Delete card"
+        title={t("task.deleteCardTitle", {
+          title: task.title || keyLabel || t("task.thisCard"),
+        })}
+        description={t("task.deleteCardDescription")}
+        confirmLabel={t("task.deleteCard")}
         variant="danger"
         onCancel={() => setIsDeleteConfirmOpen(false)}
         onConfirm={() => {

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ChartColumn } from "lucide-react";
+import { useT, type TFunction } from "@/i18n";
 import ButtonGroup, { buttonGroupItemClassName } from "@uiKit/ButtonGroup";
 import EmptyState from "@uiKit/EmptyState";
 import Skeleton from "@uiKit/Skeleton";
@@ -21,6 +22,15 @@ const FlowChart = dynamic(() => import("./FlowChart"), {
   ssr: false,
   loading: () => <Skeleton className="h-full w-full rounded-xl" />,
 });
+
+const CLUSTER_LABEL_KEYS = {
+  priority: "flow.priority",
+  assignee: "flow.person",
+  kind: "flow.type",
+  estimate: "flow.size",
+  milestone: "flow.milestone",
+  stage: "flow.stage",
+} as const satisfies Record<FlowCluster, `flow.${string}`>;
 
 type FlowViewProps = {
   projectId: string;
@@ -49,6 +59,7 @@ export default function FlowView({
   onUpdateTask,
   onDeleteTask,
 }: FlowViewProps) {
+  const t = useT();
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
 
@@ -56,11 +67,11 @@ export default function FlowView({
     return (
       <EmptyState
         aria-labelledby="view-tab-flow"
-        body="Switch to Board to add a column, then come back to see where work sits."
+        body={t("flow.noColumnsBody")}
         icon={<ChartColumn aria-hidden size={22} />}
         id="view-panel-flow"
         role="tabpanel"
-        title="No columns yet"
+        title={t("flow.noColumnsTitle")}
       />
     );
   }
@@ -71,20 +82,27 @@ export default function FlowView({
       <EmptyState
         aria-labelledby="view-tab-flow"
         body={
-          matchedTaskIds
-            ? "Nothing matches the current filters. Clear them to see the full flow."
-            : "Add tasks on the Board. This view sizes each stage by how many sit there."
+          matchedTaskIds ? t("flow.noMatchingBody") : t("flow.noTasksBody")
         }
         icon={<ChartColumn aria-hidden size={22} />}
         id="view-panel-flow"
         role="tabpanel"
-        title={matchedTaskIds ? "No matching tasks" : "No tasks yet"}
+        title={
+          matchedTaskIds ? t("flow.noMatchingTitle") : t("flow.noTasksTitle")
+        }
       />
     );
   }
 
-  const lanes = flowLanes(cluster, nodes, columns, assignees, milestones);
-  const insight = clusterInsight(cluster, lanes, nodes);
+  const lanes = flowLanes(
+    cluster,
+    nodes,
+    columns,
+    assignees,
+    milestones,
+    t,
+  );
+  const insight = clusterInsight(cluster, lanes, nodes, t);
 
   return (
     <div
@@ -95,9 +113,9 @@ export default function FlowView({
     >
       <div className="flex shrink-0 flex-wrap items-center gap-3 px-4 pt-3 pb-2">
         <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          Group by
+          {t("flow.groupBy")}
         </p>
-        <ClusterTabs cluster={cluster} hrefFor={hrefForCluster} />
+        <ClusterTabs cluster={cluster} hrefFor={hrefForCluster} t={t} />
         {insight ? (
           <p className="text-xs text-amber-200/90">{insight}</p>
         ) : null}
@@ -122,12 +140,14 @@ export default function FlowView({
 function ClusterTabs({
   cluster,
   hrefFor,
+  t,
 }: {
   cluster: FlowCluster;
   hrefFor: (cluster: FlowCluster) => string;
+  t: TFunction;
 }) {
   return (
-    <ButtonGroup aria-label="Group tasks by" role="tablist">
+    <ButtonGroup aria-label={t("flow.groupTasksBy")} role="tablist">
       {FLOW_CLUSTER_OPTIONS.map((item) => {
         const selected = item.id === cluster;
         return (
@@ -140,7 +160,7 @@ function ClusterTabs({
             scroll={false}
             tabIndex={selected ? 0 : -1}
           >
-            {item.label}
+            {t(CLUSTER_LABEL_KEYS[item.id])}
           </Link>
         );
       })}

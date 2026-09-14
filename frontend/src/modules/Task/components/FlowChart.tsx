@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "@/i18n";
 import { AnchoredHoverPreview } from "@uiKit/HoverPreview";
 import type { FlowLane, FlowNode } from "../helpers/flowCluster";
 import type { Column } from "../types/Column";
@@ -53,6 +54,7 @@ export default function FlowChart({
   onUpdateTask,
   onDeleteTask,
 }: FlowChartProps) {
+  const t = useT();
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<Engine | null>(null);
   const onOpenRef = useRef(onOpenTask);
@@ -63,6 +65,12 @@ export default function FlowChart({
     (task: Task, anchor: Element, immediate: boolean) => void
   >(() => {});
   const onPreviewLeaveRef = useRef<(immediate?: boolean) => void>(() => {});
+  const getChartAriaRef = useRef<(n: number, m: number) => string>(
+    (n, m) => t("flow.chartAria", { n, m }),
+  );
+  const getNodeAriaRef = useRef<(key: string | null, title: string) => string>(
+    (key, title) => t("flow.nodeAria", { key: key ?? t("task.fallback"), title }),
+  );
   const modelRef = useRef({ columns, lanes, nodes, selectedTaskId });
   const [menu, setMenu] = useState<MenuAnchor | null>(null);
   const [preview, setPreview] = useState<NodePreview | null>(null);
@@ -110,6 +118,13 @@ export default function FlowChart({
   }, [handlePreviewLeave]);
 
   useEffect(() => {
+    getChartAriaRef.current = (n: number, m: number) =>
+      t("flow.chartAria", { n, m });
+    getNodeAriaRef.current = (key: string | null, title: string) =>
+      t("flow.nodeAria", { key: key ?? t("task.fallback"), title });
+  }, [t]);
+
+  useEffect(() => {
     modelRef.current = { columns, lanes, nodes, selectedTaskId };
     engineRef.current?.update(modelRef.current);
   }, [columns, lanes, nodes, selectedTaskId]);
@@ -125,6 +140,8 @@ export default function FlowChart({
         getOnContextMenu: () => onContextMenuRef.current,
         getOnPreviewEnter: () => onPreviewEnterRef.current,
         getOnPreviewLeave: () => onPreviewLeaveRef.current,
+        getChartAria: (n, m) => getChartAriaRef.current(n, m),
+        getNodeAria: (key, title) => getNodeAriaRef.current(key, title),
       });
       engineRef.current = engine;
       engine.update(modelRef.current);

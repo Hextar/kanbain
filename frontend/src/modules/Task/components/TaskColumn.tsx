@@ -1,4 +1,7 @@
+"use client";
+
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useT } from "@/i18n";
 import { GripVertical, Plus, Trash } from "lucide-react";
 import ConfirmDialog from "@uiKit/ConfirmDialog";
 import Badge from "@uiKit/Badge";
@@ -92,6 +95,7 @@ export default function TaskColumn({
   onDeleteTask,
   onUpdate,
 }: TaskColumnProps) {
+  const t = useT();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(isNew);
   const [draftTitle, setDraftTitle] = useState(column.title);
@@ -288,8 +292,8 @@ export default function TaskColumn({
   const accent = columnAccent(column.color, accentIndex, isDone);
   const deleteDescription =
     taskCount > 0
-      ? `This will permanently delete this column and its ${taskCount} task${taskCount === 1 ? "" : "s"}. This cannot be undone.`
-      : "This will permanently delete this empty column. This cannot be undone.";
+      ? t("column.deleteWithTasks", { n: taskCount })
+      : t("column.deleteEmpty");
 
   function persist(patch: Partial<Column>) {
     onUpdate({
@@ -397,7 +401,7 @@ export default function TaskColumn({
           <div className="relative z-20 flex h-10 w-full flex-row items-center gap-1 px-2">
             <div
               {...dragProps}
-              aria-label={`Reorder ${column.title}`}
+              aria-label={t("column.reorder", { title: column.title })}
               className={twMerge(
                 "flex h-7 w-4 shrink-0 items-center justify-center",
                 column.isSaving || isEditingTitle
@@ -422,10 +426,10 @@ export default function TaskColumn({
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               {isEditingTitle ? (
                 <input
-                  aria-label="Column name"
+                  aria-label={t("column.name")}
                   autoFocus
                   className="h-7 min-w-0 flex-1 rounded bg-zinc-900 px-1.5 text-[11px] leading-none font-semibold text-zinc-200 ring-1 ring-white/15 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-purple-500"
-                  placeholder="Column name"
+                  placeholder={t("column.namePlaceholder")}
                   value={draftTitle}
                   onBlur={(event) => {
                     const next = event.relatedTarget;
@@ -468,11 +472,15 @@ export default function TaskColumn({
             </div>
             <Tooltip
               align="end"
-              content={isNew ? "Discard column" : "Delete column"}
+              content={isNew ? t("column.discard") : t("column.delete")}
               wrapperClassName="shrink-0"
             >
               <IconButton
-                aria-label={isNew ? "Discard column" : `Delete ${column.title}`}
+                aria-label={
+                  isNew
+                    ? t("column.discard")
+                    : t("column.deleteAria", { title: column.title })
+                }
                 className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
                 size="xs"
                 variant="secondary"
@@ -484,11 +492,11 @@ export default function TaskColumn({
             {isNew ? null : (
               <Tooltip
                 align="end"
-                content="Add card"
+                content={t("task.addCard")}
                 wrapperClassName="shrink-0"
               >
                 <IconButton
-                  aria-label={`Add card to ${column.title}`}
+                  aria-label={t("task.addCardToColumn", { title: column.title })}
                   className="text-zinc-500 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:opacity-100"
                   size="xs"
                   variant="secondary"
@@ -548,9 +556,9 @@ export default function TaskColumn({
         </div>
         <ConfirmDialog
           open={isDeleteConfirmOpen}
-          title={`Delete “${column.title}”?`}
+          title={t("column.deleteTitle", { title: column.title })}
           description={deleteDescription}
-          confirmLabel="Delete column"
+          confirmLabel={t("column.delete")}
           variant="danger"
           onCancel={() => setIsDeleteConfirmOpen(false)}
           onConfirm={() => {

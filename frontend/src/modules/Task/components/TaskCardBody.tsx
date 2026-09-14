@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { format } from "date-fns";
+import { format, type Locale } from "date-fns";
 import { MessageSquare, Paperclip } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useDateLocale, useT, type TFunction } from "@/i18n";
 import Badge from "@uiKit/Badge";
 import Tooltip from "@uiKit/Tooltip";
 import { useAssignees, useMilestones } from "../hooks/useCatalog";
@@ -25,18 +26,18 @@ type TaskCardBodyProps = {
   interactive?: boolean;
 };
 
-function compactAgo(date: Date): string {
+function compactAgo(date: Date, t: TFunction, locale: Locale): string {
   const delta = Date.now() - date.getTime();
-  if (!Number.isFinite(delta) || delta < 45_000) return "just now";
+  if (!Number.isFinite(delta) || delta < 45_000) return t("task.justNow");
   const minutes = Math.floor(delta / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("task.justNow");
+  if (minutes < 60) return t("task.minutesAgo", { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("task.hoursAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  if (days === 1) return "yesterday";
-  if (days < 14) return `${days}d ago`;
-  return format(date, "yyyy-MM-dd");
+  if (days === 1) return t("task.yesterday");
+  if (days < 14) return t("task.daysAgo", { n: days });
+  return format(date, "yyyy-MM-dd", { locale });
 }
 
 function TaskBadge({
@@ -62,6 +63,8 @@ export default function TaskCardBody({
   childCount = 0,
   interactive = true,
 }: TaskCardBodyProps) {
+  const t = useT();
+  const dateLocale = useDateLocale();
   const { data: assignees = [] } = useAssignees();
   const { data: milestones = [] } = useMilestones(projectId);
   const keyLabel = compactTaskKey(task);
@@ -94,7 +97,7 @@ export default function TaskCardBody({
           <TaskBadge
             className={twMerge("uppercase", PRIORITY_STYLES[task.priority])}
             interactive={interactive}
-            tooltip={labeledPriority(task.priority)}
+            tooltip={labeledPriority(task.priority, t)}
           >
             {task.priority}
           </TaskBadge>
@@ -103,7 +106,9 @@ export default function TaskCardBody({
           <TaskBadge
             className={ESTIMATE_STYLE}
             interactive={interactive}
-            tooltip={`Complexity: ${task.estimateTshirt.toUpperCase()}`}
+            tooltip={t("task.complexity", {
+              size: task.estimateTshirt.toUpperCase(),
+            })}
           >
             {task.estimateTshirt}
           </TaskBadge>
@@ -112,13 +117,13 @@ export default function TaskCardBody({
           <TaskBadge
             className={twMerge("capitalize", WORK_KIND_STYLES[task.workKind])}
             interactive={interactive}
-            tooltip={`Type: ${task.workKind}`}
+            tooltip={t("task.type", { kind: task.workKind })}
           >
             {task.workKind}
           </TaskBadge>
         ) : null}
         {task.isSaving ? (
-          <span className="text-[11px] text-zinc-500">Saving…</span>
+          <span className="text-[11px] text-zinc-500">{t("common.saving")}</span>
         ) : null}
       </div>
       <h3 className="mt-1.5">
@@ -145,7 +150,7 @@ export default function TaskCardBody({
           <TaskBadge
             className="bg-zinc-800 text-zinc-200"
             interactive={interactive}
-            tooltip={`Assignee: ${assigneeName}`}
+            tooltip={t("task.assigneeOf", { name: assigneeName })}
           >
             {assigneeName}
           </TaskBadge>
@@ -154,7 +159,7 @@ export default function TaskCardBody({
           <TaskBadge
             className="bg-zinc-800 text-zinc-400"
             interactive={interactive}
-            tooltip={`Milestone: ${milestoneName}`}
+            tooltip={t("task.milestoneOf", { name: milestoneName })}
           >
             {milestoneName}
           </TaskBadge>
@@ -163,21 +168,27 @@ export default function TaskCardBody({
           <TaskBadge
             className="bg-amber-500/10 text-amber-200"
             interactive={interactive}
-            tooltip={`Due ${format(task.dueDate, "d MMM yyyy")}`}
+            tooltip={t("task.due", {
+              date: format(task.dueDate, "d MMM yyyy", { locale: dateLocale }),
+            })}
           >
-            {format(task.dueDate, "MMM d")}
+            {format(task.dueDate, "MMM d", { locale: dateLocale })}
           </TaskBadge>
         ) : null}
         {stamp ? (
           interactive ? (
             <Tooltip
-              content={`Last updated ${format(stamp, "d MMM yyyy 'at' HH:mm")}`}
+              content={t("task.lastUpdated", {
+                date: format(stamp, "d MMM yyyy 'at' HH:mm", {
+                  locale: dateLocale,
+                }),
+              })}
             >
               <span
                 className="text-[11px] text-zinc-500"
                 suppressHydrationWarning
               >
-                {compactAgo(stamp)}
+                {compactAgo(stamp, t, dateLocale)}
               </span>
             </Tooltip>
           ) : (
@@ -185,7 +196,7 @@ export default function TaskCardBody({
               className="text-[11px] text-zinc-500"
               suppressHydrationWarning
             >
-              {compactAgo(stamp)}
+              {compactAgo(stamp, t, dateLocale)}
             </span>
           )
         ) : null}
@@ -193,7 +204,10 @@ export default function TaskCardBody({
           <TaskBadge
             className="bg-zinc-800 text-zinc-400"
             interactive={interactive}
-            tooltip={`Progress: ${doneCount}/${childCount} done`}
+            tooltip={t("task.progressDone", {
+              done: doneCount,
+              total: childCount,
+            })}
           >
             {doneCount}/{childCount}
           </TaskBadge>
@@ -203,7 +217,9 @@ export default function TaskCardBody({
             className="inline-flex items-center gap-0.5 text-zinc-400"
             interactive={interactive}
             tooltip={
-              commentCount === 1 ? "1 comment" : `${commentCount} comments`
+              commentCount === 1
+                ? t("task.oneComment")
+                : t("task.nComments", { n: commentCount })
             }
           >
             <MessageSquare aria-hidden size={10} />
@@ -216,8 +232,8 @@ export default function TaskCardBody({
             interactive={interactive}
             tooltip={
               attachmentCount === 1
-                ? "1 attachment"
-                : `${attachmentCount} attachments`
+                ? t("task.oneAttachment")
+                : t("task.nAttachments", { n: attachmentCount })
             }
           >
             <Paperclip aria-hidden size={10} />
@@ -232,7 +248,7 @@ export default function TaskCardBody({
               key={tag}
               className="rounded px-1.5 text-zinc-400 ring-1 ring-zinc-600/80"
               interactive={interactive}
-              tooltip={`Tag: ${tag}`}
+              tooltip={t("task.tagOf", { tag })}
             >
               {tag}
             </TaskBadge>

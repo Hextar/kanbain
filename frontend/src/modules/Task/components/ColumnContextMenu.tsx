@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useT, type TFunction } from "@/i18n";
 import ColorSwatch from "@uiKit/ColorSwatch";
 import ContextMenu, { type ContextMenuEntry } from "@uiKit/ContextMenu";
 import {
@@ -23,13 +24,15 @@ type ColumnContextMenuProps = {
 function ColorSwatches({
   selected,
   onChange,
+  t,
 }: {
   selected: ColumnColorId;
   onChange: (color: ColumnColorId) => void;
+  t: TFunction;
 }) {
   return (
     <div
-      aria-label="Column color"
+      aria-label={t("column.color")}
       className="grid w-40 grid-cols-5 gap-1.5 p-1.5"
       role="listbox"
     >
@@ -37,7 +40,7 @@ function ColorSwatches({
         <ColorSwatch
           key={option.id}
           colorClassName={option.dot}
-          label={option.label}
+          label={t(`column.${option.id}`)}
           selected={option.id === selected}
           onClick={() => onChange(option.id)}
         />
@@ -56,28 +59,30 @@ export default function ColumnContextMenu({
   onChangeColor,
   onDelete,
 }: ColumnContextMenuProps) {
+  const t = useT();
   return (
     <ContextMenu
       disabled={disabled}
       items={(close): ContextMenuEntry[] => [
         {
           id: "add",
-          label: "Add card",
+          label: t("task.addCard"),
           icon: <Plus aria-hidden className="size-3.5 text-zinc-500" />,
           onSelect: onAddCard,
         },
         {
           id: "rename",
-          label: "Rename",
+          label: t("task.rename"),
           icon: <Pencil aria-hidden className="size-3.5 text-zinc-500" />,
           onSelect: onRename,
         },
         {
           id: "color",
-          label: "Color",
+          label: t("task.color"),
           content: (
             <ColorSwatches
               selected={color}
+              t={t}
               onChange={(next) => {
                 onChangeColor(next);
                 close();
@@ -88,13 +93,13 @@ export default function ColumnContextMenu({
         { type: "separator" },
         {
           id: "delete",
-          label: "Delete",
+          label: t("common.delete"),
           icon: <Trash2 aria-hidden className="size-3.5" />,
           danger: true,
           onSelect: onDelete,
         },
       ]}
-      label={`${columnTitle} actions`}
+      label={t("task.columnActions", { title: columnTitle })}
     >
       {children}
     </ContextMenu>
