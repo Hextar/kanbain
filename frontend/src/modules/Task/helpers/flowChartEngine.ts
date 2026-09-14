@@ -56,6 +56,8 @@ export function createFlowChart(
       immediate: boolean,
     ) => void;
     getOnPreviewLeave: () => (immediate?: boolean) => void;
+    getChartAria?: (n: number, m: number) => string;
+    getNodeAria?: (key: string | null, title: string) => string;
   },
 ): FlowChartHandle {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -151,7 +153,8 @@ export function createFlowChart(
 
     svg.attr(
       "aria-label",
-      `Work in progress chart, ${nodes.length} tasks across ${colCount} stages`,
+      handlers.getChartAria?.(nodes.length, colCount) ??
+        `Work in progress chart, ${nodes.length} tasks across ${colCount} stages`,
     );
 
     const colSel = grid
@@ -290,10 +293,13 @@ export function createFlowChart(
     merged
       .attr("class", "node flow-node")
       .style("outline", "none")
-      .attr(
-        "aria-label",
-        (node) => `${compactTaskKey(node.task) ?? "Task"} ${node.task.title}`,
-      )
+      .attr("aria-label", (node) => {
+        const key = compactTaskKey(node.task) ?? null;
+        return (
+          handlers.getNodeAria?.(key, node.task.title) ??
+          `${key ?? "Task"} ${node.task.title}`
+        );
+      })
       .attr("aria-current", (node) =>
         node.id === next.selectedTaskId ? "true" : null,
       )

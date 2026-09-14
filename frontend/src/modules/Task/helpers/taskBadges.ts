@@ -1,3 +1,4 @@
+import type { TFunction } from "@/i18n/translate";
 import type { TaskPriority, WorkKind } from "../types/Catalog";
 
 export const PRIORITY_STYLES: Record<TaskPriority, string> = {
@@ -24,6 +25,9 @@ export const PRIORITY_ACCENT: Record<
   high: { bar: "bg-rose-400", glow: "from-rose-400/30" },
 };
 
-export function labeledPriority(priority: string) {
-  return `Priority: ${priority.charAt(0).toUpperCase()}${priority.slice(1)}`;
+export function labeledPriority(priority: string, t?: TFunction) {
+  const label = t
+    ? t(`task.${priority}` as "task.high" | "task.medium" | "task.low")
+    : `${priority.charAt(0).toUpperCase()}${priority.slice(1)}`;
+  return t ? `${t("task.priority")}: ${label}` : `Priority: ${label}`;
 }

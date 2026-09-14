@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useT } from "@/i18n";
 import {
   useMutation,
   useQuery,
@@ -218,6 +219,7 @@ function patchTaskInCaches(
 }
 
 export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
+  const t = useT();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: taskKeys.list(filters),
@@ -306,7 +308,7 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
           );
         }
         queryClient.removeQueries({ queryKey: taskKeys.detail(task.id) });
-        showToast("Couldn't create the card.");
+        showToast(t("task.toastCreate"));
       }
     });
   }
@@ -330,7 +332,7 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
             current.map((item) => (item.id === previous.id ? previous : item)),
           );
         }
-        showToast("Couldn't save the card.");
+        showToast(t("task.toastSave"));
       }
     });
   }
@@ -353,7 +355,7 @@ export function useTasks(filters: TaskListFilters = {}, initialTasks?: Task[]) {
         await deleteTaskMutation(id);
       } catch {
         restoreTaskLists(queryClient, snapshots);
-        showToast("Couldn't delete the card.");
+        showToast(t("task.toastDelete"));
       }
     });
   }
@@ -411,6 +413,7 @@ export type MoveTaskOptions = {
 };
 
 export function useMoveTask() {
+  const t = useT();
   const queryClient = useQueryClient();
   const { mutateAsync: updateTaskMutation } = useUpdateTask();
 
@@ -655,10 +658,10 @@ export function useMoveTask() {
               value,
             );
           }
-          showToast("Couldn't move the card.");
+          showToast(t("task.toastMove"));
         });
     },
-    [queryClient, updateTaskMutation],
+    [queryClient, t, updateTaskMutation],
   );
 
   return { moveTask };

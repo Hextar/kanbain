@@ -1,3 +1,4 @@
+import type { TFunction } from "@/i18n/translate";
 import { filterColumnCards } from "./boardFilter";
 import { columnAccentFill } from "./columnAccent";
 import { groupTasksByColumn } from "./groupTasksByColumn";
@@ -116,24 +117,40 @@ export function clusterLabel(
   columns: Column[],
   assignees: Assignee[],
   milestones: Milestone[],
+  t?: TFunction,
 ): string {
   switch (cluster) {
     case "priority":
-      return key === "none" ? "None" : capitalize(key);
+      if (key === "none") return t ? t("flow.none") : "None";
+      return t
+        ? t(`task.${key}` as "task.high" | "task.medium" | "task.low")
+        : capitalize(key);
     case "assignee":
-      if (key === "none") return "Unassigned";
-      return assignees.find((person) => person.id === key)?.name ?? "Unknown";
+      if (key === "none") return t ? t("flow.unassigned") : "Unassigned";
+      return (
+        assignees.find((person) => person.id === key)?.name ??
+        (t ? t("flow.unknown") : "Unknown")
+      );
     case "kind":
-      return capitalize(key);
+      return t
+        ? t(`filter.${key}` as "filter.epic" | "filter.story" | "filter.task")
+        : capitalize(key);
     case "estimate":
-      return key === "none" ? "None" : key.toUpperCase();
+      return key === "none" ? (t ? t("flow.none") : "None") : key.toUpperCase();
     case "milestone": {
-      if (key === "none") return "No milestone";
+      if (key === "none") return t ? t("flow.noMilestone") : "No milestone";
       const milestone = milestones.find((item) => item.id === key);
-      return milestone ? milestoneLabel(milestone, milestones) : "Unknown";
+      return milestone
+        ? milestoneLabel(milestone, milestones)
+        : t
+          ? t("flow.unknown")
+          : "Unknown";
     }
     case "stage":
-      return columns.find((column) => column.id === key)?.title ?? "Stage";
+      return (
+        columns.find((column) => column.id === key)?.title ??
+        (t ? t("flow.stage") : "Stage")
+      );
   }
 }
 
@@ -174,6 +191,7 @@ export function flowLanes(
   columns: Column[],
   assignees: Assignee[],
   milestones: Milestone[],
+  t?: TFunction,
 ): FlowLane[] {
   if (cluster === "stage") {
     return [{ key: "all", label: "", fill: MUTED }];
@@ -190,7 +208,7 @@ export function flowLanes(
 
   return ordered.map((key) => ({
     key,
-    label: clusterLabel(key, cluster, columns, assignees, milestones),
+    label: clusterLabel(key, cluster, columns, assignees, milestones, t),
     fill: clusterFill(key, cluster, columns, 0),
   }));
 }
@@ -290,6 +308,7 @@ export function clusterInsight(
   cluster: FlowCluster,
   lanes: FlowLane[],
   nodes: FlowNode[],
+  t?: TFunction,
 ): string | null {
   if (cluster === "stage" || nodes.length === 0) return null;
   let top: FlowLane | null = null;
@@ -309,12 +328,18 @@ export function clusterInsight(
   if (share < 0.4) return null;
   const pct = Math.round(share * 100);
   if (cluster === "priority" && top.key === "high") {
-    return `High priority is ${pct}% of visible work.`;
+    return t
+      ? t("flow.insightHigh", { pct })
+      : `High priority is ${pct}% of visible work.`;
   }
   if (cluster === "assignee" || cluster === "milestone") {
-    return `${top.label} holds ${pct}% of visible work.`;
+    return t
+      ? t("flow.insightHolds", { label: top.label, pct })
+      : `${top.label} holds ${pct}% of visible work.`;
   }
-  return `${top.label} is ${pct}% of visible work.`;
+  return t
+    ? t("flow.insightIs", { label: top.label, pct })
+    : `${top.label} is ${pct}% of visible work.`;
 }
 
 function capitalize(value: string): string {

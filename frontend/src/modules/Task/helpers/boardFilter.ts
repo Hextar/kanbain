@@ -1,3 +1,4 @@
+import type { TFunction } from "@/i18n/translate";
 import type {
   Assignee,
   Milestone,
@@ -117,11 +118,24 @@ function isFilterOperator(value: string): value is FilterOperator {
   return OPERATOR_SET.has(value as FilterOperator);
 }
 
-export function fieldLabel(field: FilterField): string {
+export function fieldLabel(field: FilterField, t?: TFunction): string {
+  if (t) return t(`filter.${field}`);
   return FIELDS.find((item) => item.field === field)?.label ?? field;
 }
 
-export function operatorLabel(operator: FilterOperator): string {
+export function operatorLabel(operator: FilterOperator, t?: TFunction): string {
+  if (t) {
+    switch (operator) {
+      case "isNot":
+        return t("filter.isNot");
+      case "isEmpty":
+        return t("filter.isEmpty");
+      case "contains":
+        return t("filter.contains");
+      default:
+        return t("filter.is");
+    }
+  }
   switch (operator) {
     case "isNot":
       return "is not";
@@ -141,6 +155,7 @@ export function clauseKey(clause: FilterClause): string {
 function optionValues(
   field: FilterField,
   catalog: FilterCatalog,
+  t?: TFunction,
 ): { value: string; label: string }[] {
   switch (field) {
     case "assignee":
@@ -164,11 +179,17 @@ function optionValues(
         label: item.title,
       }));
     case "priority":
-      return PRIORITIES;
+      return PRIORITIES.map((item) => ({
+        value: item.value,
+        label: t ? t(`task.${item.value}`) : item.label,
+      }));
     case "estimate":
       return ESTIMATES;
     case "kind":
-      return KINDS;
+      return KINDS.map((item) => ({
+        value: item.value,
+        label: t ? t(`filter.${item.value}`) : item.label,
+      }));
     default:
       return [];
   }
@@ -178,8 +199,9 @@ export function displayValue(
   field: FilterField,
   value: string,
   catalog: FilterCatalog,
+  t?: TFunction,
 ): string {
-  const match = optionValues(field, catalog).find(
+  const match = optionValues(field, catalog, t).find(
     (item) => item.value === value,
   );
   return match?.label ?? value;
@@ -188,13 +210,15 @@ export function displayValue(
 export function clauseLabel(
   clause: FilterClause,
   catalog: FilterCatalog,
+  t?: TFunction,
 ): string {
-  const field = fieldLabel(clause.field);
-  const operator = operatorLabel(clause.operator);
+  const field = fieldLabel(clause.field, t);
+  const operator = operatorLabel(clause.operator, t);
   if (clause.operator === "isEmpty") return `${field} ${operator}`;
+  const or = t ? t("common.or") : "or";
   const values = clause.values
-    .map((value) => displayValue(clause.field, value, catalog))
-    .join(" or ");
+    .map((value) => displayValue(clause.field, value, catalog, t))
+    .join(` ${or} `);
   return `${field} ${operator} ${values}`;
 }
 
@@ -479,6 +503,7 @@ function valueSuggestions(
   operator: FilterOperator,
   catalog: FilterCatalog,
   active: FilterClause[],
+  t?: TFunction,
 ): RankedSuggestion[] {
   const ranked: RankedSuggestion[] = [];
   if (field === "title") {
@@ -493,7 +518,9 @@ function valueSuggestions(
       ranked,
       {
         id: suggestionId(clause),
-        label: `Title contains ${text}`,
+        label: t
+          ? t("filter.titleContains", { text })
+          : `Title contains ${text}`,
         clause,
       },
       90,
@@ -521,7 +548,9 @@ function valueSuggestions(
         ranked,
         {
           id: suggestionId(clause),
-          label: `${fieldLabel(field)} is empty`,
+          label: t
+            ? t("filter.fieldEmpty", { field: fieldLabel(field, t) })
+            : `${fieldLabel(field)} is empty`,
           clause,
         },
         typeof emptyScore === "number" ? Math.max(emptyScore, 40) : 40,
@@ -532,7 +561,7 @@ function valueSuggestions(
 
   const nextOperator =
     operator === "isEmpty" || operator === "contains" ? "is" : operator;
-  for (const option of optionValues(field, catalog)) {
+  for (const option of optionValues(field, catalog, t)) {
     const score = query ? scoreMatch(option.label, query) : 70;
     if (!score) continue;
     const clause: FilterClause = {
@@ -544,7 +573,7 @@ function valueSuggestions(
       ranked,
       {
         id: suggestionId(clause),
-        label: `${fieldLabel(field)} ${operatorLabel(nextOperator)} ${option.label}`,
+        label: `${fieldLabel(field, t)} ${operatorLabel(nextOperator, t)} ${option.label}`,
         detail: option.label,
         clause,
       },
@@ -560,6 +589,7 @@ export function suggestFilters(
   catalog: FilterCatalog,
   active: FilterClause[],
   drillField?: FilterField,
+  t?: TFunction,
 ): FilterSuggestion[] {
   const trimmed = query.trim();
   const ranked: RankedSuggestion[] = [];
@@ -567,7 +597,14 @@ export function suggestFilters(
   if (drillField) {
     const { operator, rest } = splitOperatorPrefix(trimmed);
     ranked.push(
-      ...valueSuggestions(drillField, rest, operator ?? "is", catalog, active),
+      ...valueSuggestions(
+        drillField,
+        rest,
+        operator ?? "is",
+        catalog,
+        active,
+        t,
+      ),
     );
     return ranked
       .toSorted((left, right) => right.score - left.score)
@@ -585,7 +622,9 @@ export function suggestFilters(
       ranked,
       {
         id: suggestionId(clause),
-        label: `${fieldLabel(empty.field)} is empty`,
+        label: t
+          ? t("filter.fieldEmpty", { field: fieldLabel(empty.field, t) })
+          : `${fieldLabel(empty.field)} is empty`,
         clause,
       },
       100,
@@ -606,8 +645,8 @@ export function suggestFilters(
         ranked,
         {
           id: suggestionId(drill, prefixed.field),
-          label: fieldLabel(prefixed.field),
-          detail: "Choose a value",
+          label: fieldLabel(prefixed.field, t),
+          detail: t ? t("filter.chooseValue") : "Choose a value",
           clause: drill,
           drillField: prefixed.field,
         },
@@ -622,6 +661,7 @@ export function suggestFilters(
         operator ?? (prefixed.field === "title" ? "contains" : "is"),
         catalog,
         active,
+        t,
       ),
     );
   }
@@ -642,8 +682,8 @@ export function suggestFilters(
           ranked,
           {
             id: suggestionId(drill, spec.field),
-            label: spec.label,
-            detail: "Choose a value",
+            label: fieldLabel(spec.field, t),
+            detail: t ? t("filter.chooseValue") : "Choose a value",
             clause: drill,
             drillField: spec.field,
           },
@@ -658,6 +698,7 @@ export function suggestFilters(
           operator ?? "is",
           catalog,
           active,
+          t,
         ).map((item) => ({
           ...item,
           score: Math.min(item.score, fieldScore || item.score),
@@ -674,7 +715,9 @@ export function suggestFilters(
         ranked,
         {
           id: suggestionId(clause),
-          label: `Title contains ${trimmed}`,
+          label: t
+            ? t("filter.titleContains", { text: trimmed })
+            : `Title contains ${trimmed}`,
           clause,
         },
         35,
@@ -692,9 +735,15 @@ export function suggestFilters(
         ranked,
         {
           id: suggestionId(drill, spec.field),
-          label: spec.label,
+          label: fieldLabel(spec.field, t),
           detail:
-            spec.field === "title" ? "Match card titles" : "Choose a value",
+            spec.field === "title"
+              ? t
+                ? t("filter.matchTitles")
+                : "Match card titles"
+              : t
+                ? t("filter.chooseValue")
+                : "Choose a value",
           clause: drill,
           drillField: spec.field,
         },

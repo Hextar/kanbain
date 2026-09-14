@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "@/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumn as createColumnApi,
@@ -22,6 +23,7 @@ function withRenumberedOrders(list: Column[]): Column[] {
 }
 
 export function useColumns(projectId: string, initialColumns?: Column[]) {
+  const t = useT();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: columnKeys.list(projectId),
@@ -86,7 +88,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
         setListData((current) =>
           current.filter((item) => item.id !== column.id),
         );
-        showToast("Couldn't create the column.");
+        showToast(t("column.toastCreate"));
       }
     });
   }
@@ -109,7 +111,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
             current.map((item) => (item.id === previous.id ? previous : item)),
           );
         }
-        showToast("Couldn't save the column.");
+        showToast(t("column.toastSave"));
       }
     });
   }
@@ -140,7 +142,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
         await updateColumnMutation(nextMoved);
       } catch {
         queryClient.setQueryData<Column[]>(listKey, previous);
-        showToast("Couldn't move the column.");
+        showToast(t("column.toastMove"));
       }
     });
   }
@@ -154,7 +156,7 @@ export function useColumns(projectId: string, initialColumns?: Column[]) {
         await deleteColumnMutation(id);
       } catch {
         queryClient.setQueryData<Column[]>(listKey, previous);
-        showToast("Couldn't delete the column.");
+        showToast(t("column.toastDelete"));
       }
     });
   }
