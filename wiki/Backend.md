@@ -219,7 +219,7 @@ Wipes all stored keys from Redis. Users must re-enter their key after this.
 | `DATABASE_URL` | — | ✅ | PostgreSQL connection string |
 | `REDIS_URL` | — | ✅ | Redis connection string |
 | `PLANNER` | `openai` | — | `openai` for real LLM; `stub` for deterministic mock |
-| `OPENAI_API_KEY` | — | — | Operator-level key (alternative to Settings UI) |
+| `OPENAI_API_KEY` | — | — | Operator-level key (alternative to the API key dialog) |
 | `OPENAI_MODEL` | `gpt-4o` | — | Generation model |
 | `OPENAI_ROUTING_MODEL` | `gpt-4o-mini` | — | Classify/critique model |
 | `PLANNER_DELAY_SECONDS` | `0` | — | Artificial delay for stub mode |

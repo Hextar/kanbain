@@ -39,7 +39,7 @@ cd frontend && npm install && npm run dev
 
 Open the URL Next prints (Flask is on port 3000). The frontend container is for Coolify; it is not published on `localhost:8080`.
 
-On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must open the activation link before they can sign in. Then go to **Settings** and enter your OpenAI API key. The key is encrypted and stored server-side.
+On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must open the activation link before they can sign in. Then open the account menu (avatar) → **API key** and enter your OpenAI API key. The key is encrypted and stored server-side. Theme and language live in that same menu.
 
 ---
 
@@ -53,7 +53,7 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 | `DATABASE_URL` | ✅ | — | PostgreSQL URL, e.g. `postgresql://user:pass@database:5432/kanbain` |
 | `REDIS_URL` | ✅ | — | Redis URL, e.g. `redis://redis:6379/0` |
 | `PLANNER` | — | `openai` | Set to `stub` to disable real LLM calls |
-| `OPENAI_API_KEY` | — | — | Operator-level key; alternative to per-user key via Settings UI |
+| `OPENAI_API_KEY` | — | — | Operator-level key; alternative to per-user key via the API key dialog |
 | `OPENAI_MODEL` | — | `gpt-4o` | Generation model |
 | `OPENAI_ROUTING_MODEL` | — | `gpt-4o-mini` | Classification/critique model |
 | `PLANNER_DELAY_SECONDS` | — | `0` | Artificial delay for stub mode (useful for testing progress UI) |
@@ -73,7 +73,7 @@ On first open, create an account at `/signup` (or sign in with Google). Email/pa
 | `SMTP_PASSWORD` | — | — | SMTP password |
 | `RESEND_API_KEY` | — | — | Required when `MAIL_PROVIDER=resend` |
 
-On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must activate from the emailed link (`console` provider prints it in the backend log). Existing boards from before auth were backfilled into a `Migrated` org that no login can see — wipe the Postgres volume if you do not need them. Then go to **Settings** and enter your OpenAI API key.
+On first open, create an account at `/signup` (or sign in with Google). Email/password accounts must activate from the emailed link (`console` provider prints it in the backend log). Existing boards from before auth were backfilled into a `Migrated` org that no login can see — wipe the Postgres volume if you do not need them. Then open the account menu (avatar) → **API key** and enter your OpenAI API key.
 
 ### Frontend (`frontend/.env.local`)
 

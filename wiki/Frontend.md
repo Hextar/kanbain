@@ -11,6 +11,7 @@ The frontend is a **Next.js 16** application using the App Router, React 19, and
 | Framework | Next.js 16 (App Router) | All pages under `app/` use `force-dynamic` |
 | UI library | React 19.2 | With React Compiler (`babel-plugin-react-compiler`) for auto-memoization |
 | Styling | Tailwind CSS v4 | `tailwind-merge` for conditional class composition |
+| Client prefs | Redux Toolkit | `src/store` (`configureStore` + `prefs` slice); persisted to `localStorage` + cookie |
 | Server state | `@tanstack/react-query` v5 | 30s stale time; query cache is the single source of truth for remote data |
 | Icons | `lucide-react` | Tree-shaken via `optimizePackageImports` in Next.js config |
 | Force graph | D3 (`d3-force`, `d3-selection`, `d3-transition`, `d3-ease`) | Used for the Flow (dependency graph) view |
@@ -26,7 +27,7 @@ The frontend is a **Next.js 16** application using the App Router, React 19, and
 ```
 frontend/src/
 ├── app/                        # Next.js App Router
-│   ├── layout.tsx              # Root layout (QueryClient, toasts)
+│   ├── layout.tsx              # Root layout (Redux prefs, boot script)
 │   ├── (auth)/login|signup|forgot-password|reset-password|activate
 │   ├── (app)/                  # Authenticated shell
 │   │   ├── page.tsx            # Project list
@@ -42,6 +43,7 @@ frontend/src/
 │   ├── Task/                   # Kanban board, task dialogs, flow view
 │   └── Settings/               # OpenAI API key management
 │
+├── store/                      # Redux Toolkit (`makeStore`, `prefs` slice)
 ├── libraries/                  # Shared client infrastructure (`@libraries/…`)
 │   ├── dnd/                    # Custom HTML5 drag-and-drop
 │   ├── realtime/               # WebSocket + TanStack Query cache patches
@@ -122,25 +124,31 @@ The workspace shows one of two states depending on `project.planStatus`:
 
 ### `modules/Settings/`
 
-Settings dialog where users enter their OpenAI API key. The key is sent to Flask which encrypts and stores it — it is never returned to the browser after saving.
+Settings dialog is **API key** (OpenAI). Theme and language are switched from the account menu (and language also from the auth-screen footer). The key is sent to Flask which encrypts and stores it — it is never returned to the browser after saving.
 
 ### `modules/About/`
 
-About dialog (developer bio, short privacy note, GitHub + LinkedIn). Opened from the account menu, or from About / Privacy in the auth-screen footer. Copy lives in `site.ts`.
+About dialog (developer bio, short privacy note, GitHub + LinkedIn). Opened from the account menu, or from About / Privacy in the auth-screen footer. Static chrome copy is translated via `src/i18n/`; developer name and profile URLs stay in `site.ts`.
 
 ---
 
 ## State Management
 
-KanbAIn uses **no global state library** (no Redux, no Zustand). State is split into three tiers:
+State is split into four tiers. Redux holds **client prefs only** (theme and locale). Server data stays in TanStack Query; board view/filter stays in the URL.
 
-### 1. Server State — TanStack Query
+### 1. Client prefs — Redux Toolkit
+
+`src/store` is the Redux Toolkit store (`configureStore` via `makeStore`) provided from the root layout. The `prefs` slice stores `{ theme, locale, density }`. The account menu writes `theme` (`dark` | `light` | `system`) and `locale` (`en` | `it` | `fr` | `es` | `de`). `src/i18n/` holds message catalogs; `useT()` reads locale from Redux and interpolates `{name}` tokens. Locale also sets `<html lang>`. User-generated content (project names, task titles, planner output) and Flask error messages stay untranslated. Typed board-filter queries stay English. A blocking `/prefs-boot.js` script applies `data-theme` on `<html>` before paint so the stored theme does not flash. Prefs persist to `localStorage` key `prefs:v1` and cookie `kanbain_prefs`.
+
+Do not put projects, tasks, or session data in Redux.
+
+### 2. Server State — TanStack Query
 
 All remote data (projects, columns, tasks, milestones, members, settings) lives in the TanStack Query cache. Components subscribe to specific query keys and re-render only when their data changes.
 
 Realtime WebSocket events patch the cache directly via `queryClient.setQueryData()` or `queryClient.invalidateQueries()` — see [Realtime Updates](Frontend-Realtime).
 
-### 2. URL State — Search Params
+### 3. URL State — Search Params
 
 The board persists navigable state in the URL so deep links and browser back/forward work correctly:
 
@@ -151,7 +159,7 @@ The board persists navigable state in the URL so deep links and browser back/for
 | `?filter=` | serialized filter clauses | Active filter configuration |
 | `?cluster=` | node ID | Focused node in flow view |
 
-### 3. Local UI State — `useState`
+### 4. Local UI State — `useState`
 
 Transient UI state (draft column titles, tooltip visibility, dialog open/close) uses plain React state scoped to the component that needs it.
 
