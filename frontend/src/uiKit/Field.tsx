@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 export const FIELD_LABEL_CLASS =
-  "text-[11px] font-medium tracking-wide text-zinc-500";
+  "text-[11px] font-medium tracking-wide text-subtle";
 
 export type FieldLabelProps = ComponentProps<"label"> & {
   as?: "label" | "span";
@@ -25,7 +25,11 @@ export function FieldLabel({
       </label>
     );
   }
-  return <span className={classNames}>{children}</span>;
+  return (
+    <span {...props} className={classNames}>
+      {children}
+    </span>
+  );
 }
 
 export type FieldProps = {

@@ -8,7 +8,7 @@ export default function Skeleton({ className, ...props }: SkeletonProps) {
     <div
       aria-hidden
       className={twMerge(
-        "rounded-md bg-white/8 motion-safe:animate-pulse",
+        "rounded-md bg-fg/8 motion-safe:animate-pulse",
         className,
       )}
       {...props}

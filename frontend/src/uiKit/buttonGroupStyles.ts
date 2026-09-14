@@ -4,8 +4,8 @@ export type ButtonGroupSize = "xs" | "sm";
 export type ButtonGroupItemTone = "muted" | "primary";
 
 export const BUTTON_GROUP_SHELL: Record<ButtonGroupSize, string> = {
-  xs: "flex h-7 items-center rounded-md bg-[#181b24] p-0.5 ring-1 ring-white/8",
-  sm: "flex h-8 min-w-0 items-center rounded-md bg-[#12141c] p-0.5 ring-1 ring-white/8",
+  xs: "flex h-7 items-center rounded-md bg-surface p-0.5 ring-1 ring-fg/8",
+  sm: "flex h-8 min-w-0 items-center rounded-md bg-canvas p-0.5 ring-1 ring-fg/8",
 };
 
 const ITEM_BASE: Record<ButtonGroupSize, string> = {
@@ -14,7 +14,7 @@ const ITEM_BASE: Record<ButtonGroupSize, string> = {
 };
 
 const SELECTED_TONE: Record<ButtonGroupItemTone, string> = {
-  muted: "bg-zinc-700/90 text-white",
+  muted: "bg-fg/15 text-fg",
   primary:
     "bg-gradient-to-br from-violet-400 to-purple-600 text-white shadow-[inset_0_1px_0_0_rgb(255_255_255/0.22)]",
 };
@@ -39,7 +39,7 @@ export function buttonGroupItemClassName({
     grow && "flex-1",
     selected
       ? (selectedClassName ?? SELECTED_TONE[tone])
-      : "text-zinc-500 hover:text-zinc-300",
+      : "text-subtle hover:text-muted",
     className,
   );
 }

@@ -2,8 +2,8 @@ import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 
 const SIZE_CLASS = {
-  sm: "rounded-lg border border-white/8 bg-[#14161e] p-3 shadow-sm shadow-black/25",
-  md: "rounded-xl border border-white/6 bg-[#181b24] p-5",
+  sm: "rounded-lg border border-fg/8 bg-surface-2 p-3 shadow-sm shadow-black/25",
+  md: "rounded-xl border border-fg/6 bg-surface p-5",
 } as const;
 
 export type CardSize = keyof typeof SIZE_CLASS;

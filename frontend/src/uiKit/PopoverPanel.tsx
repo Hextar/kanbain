@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 import LightOrb from "./LightOrb";
 
 const PANEL_CLASS =
-  "glass-overlay light-edge light-edge-card isolate absolute top-full z-50 mt-1.5 overflow-hidden rounded-xl border border-white/10 shadow-xl shadow-black/50";
+  "glass-overlay light-edge light-edge-card isolate absolute top-full z-50 mt-1.5 overflow-hidden rounded-xl border border-fg/10 shadow-xl shadow-black/50";
 
 export type PopoverProps = {
   open: boolean;

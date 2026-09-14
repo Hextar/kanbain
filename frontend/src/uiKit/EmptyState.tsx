@@ -9,15 +9,15 @@ const SIZE_CLASS = {
 } as const;
 
 const TITLE_CLASS = {
-  page: "text-2xl font-semibold text-white",
-  panel: "text-lg font-semibold text-pretty text-white",
-  compact: "text-2xl font-bold text-white",
+  page: "text-2xl font-semibold text-fg",
+  panel: "text-lg font-semibold text-pretty text-fg",
+  compact: "text-2xl font-bold text-fg",
 } as const;
 
 const ICON_WELL_CLASS = {
-  page: "relative flex size-16 items-center justify-center rounded-2xl border border-white/8 bg-[#181b24] text-purple-300",
+  page: "relative flex size-16 items-center justify-center rounded-2xl border border-fg/8 bg-surface text-purple-300",
   panel:
-    "flex size-12 items-center justify-center rounded-2xl border border-white/8 bg-[#181b24] text-purple-300",
+    "flex size-12 items-center justify-center rounded-2xl border border-fg/8 bg-surface text-purple-300",
 } as const;
 
 export type EmptyStateSize = keyof typeof SIZE_CLASS;
@@ -83,8 +83,8 @@ export default function EmptyState({
           <div
             className={
               size === "compact"
-                ? "text-zinc-400"
-                : "text-sm leading-6 text-zinc-400"
+                ? "text-muted"
+                : "text-sm leading-6 text-muted"
             }
           >
             {body}
