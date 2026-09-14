@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useT } from "@/i18n";
 import IconButton from "./IconButton";
 
 export type ChipProps = {
@@ -15,9 +16,12 @@ export type ChipProps = {
 export default function Chip({
   children,
   onRemove,
-  removeLabel = "Remove",
+  removeLabel,
   className,
 }: ChipProps) {
+  const t = useT();
+  const resolvedRemoveLabel = removeLabel ?? t("common.remove");
+
   return (
     <span
       className={twMerge(
@@ -28,7 +32,7 @@ export default function Chip({
       <span className="flex min-w-0 items-center gap-1">{children}</span>
       {onRemove ? (
         <IconButton
-          aria-label={removeLabel}
+          aria-label={resolvedRemoveLabel}
           className="size-5 text-zinc-400"
           size="xs"
           type="button"

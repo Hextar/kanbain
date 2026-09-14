@@ -17,6 +17,7 @@ import {
 import { createPortal } from "react-dom";
 import { Check, ChevronRight } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useT } from "@/i18n";
 
 const GUTTER = 8;
 const SUBMENU_GAP = 4;
@@ -174,10 +175,12 @@ export default function ContextMenu({
   children,
   items,
   disabled = false,
-  label = "Actions",
+  label,
   anchor = null,
   onClose,
 }: ContextMenuProps) {
+  const t = useT();
+  const resolvedLabel = label ?? t("common.actions");
   const menuId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -476,7 +479,7 @@ export default function ContextMenu({
             <>
               <div
                 ref={panelRef}
-                aria-label={label}
+                aria-label={resolvedLabel}
                 className={twMerge(PANEL_CLASS, !coords && "opacity-0")}
                 data-light-edge=""
                 role="menu"

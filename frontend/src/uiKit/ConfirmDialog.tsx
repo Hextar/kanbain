@@ -2,6 +2,7 @@
 
 import { useId, type FormEvent, type ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
+import { useT } from "@/i18n";
 import Button from "./Button";
 import Dialog, { DIALOG_ACCENTS } from "./Dialog";
 
@@ -21,15 +22,18 @@ export default function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "danger",
   onConfirm,
   onCancel,
   className,
 }: ConfirmDialogProps) {
+  const t = useT();
   const descriptionId = useId();
   const formId = useId();
+  const resolvedConfirm = confirmLabel ?? t("common.confirm");
+  const resolvedCancel = cancelLabel ?? t("common.cancel");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +47,7 @@ export default function ConfirmDialog({
       }
       className={twMerge("max-w-sm", className)}
       descriptionId={description ? descriptionId : undefined}
-      eyebrow={variant === "danger" ? "Warning" : "Confirm"}
+      eyebrow={variant === "danger" ? t("common.warning") : t("common.confirm")}
       footer={
         <div className="flex flex-row items-center justify-end gap-2">
           <Button
@@ -53,7 +57,7 @@ export default function ConfirmDialog({
             variant="secondary"
             onClick={onCancel}
           >
-            {cancelLabel}
+            {resolvedCancel}
           </Button>
           <Button
             autoFocus
@@ -62,7 +66,7 @@ export default function ConfirmDialog({
             type="submit"
             variant={variant}
           >
-            {confirmLabel}
+            {resolvedConfirm}
           </Button>
         </div>
       }

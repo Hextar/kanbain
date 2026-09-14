@@ -9,6 +9,7 @@ import {
 } from "react";
 import { X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useT } from "@/i18n";
 import IconButton from "./IconButton";
 import LightOrb from "./LightOrb";
 
@@ -49,6 +50,7 @@ export default function Dialog({
   accent = DIALOG_ACCENTS.primary,
   titleTranslate,
 }: DialogProps) {
+  const t = useT();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -150,13 +152,13 @@ export default function Dialog({
       <div
         ref={headerRef}
         className={twMerge(
-          "relative flex shrink-0 justify-between gap-3 border-b border-white/6 px-4 py-2.5",
+          "relative flex shrink-0 justify-between gap-3 border-b border-fg/6 px-4 py-2.5",
           eyebrow ? "items-start" : "items-center",
         )}
       >
         <div className="min-w-0 flex-1">
           {eyebrow ? (
-            <p className="text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+            <p className="text-[11px] font-medium tracking-[0.14em] text-subtle uppercase">
               {eyebrow}
             </p>
           ) : null}
@@ -171,7 +173,7 @@ export default function Dialog({
               id={titleId}
               translate={titleTranslate}
               className={twMerge(
-                "min-w-0 truncate font-semibold text-pretty text-white",
+                "min-w-0 truncate font-semibold text-pretty text-fg",
                 subtitle ? "flex-1" : null,
                 eyebrow ? "text-sm tracking-wide" : "text-base",
                 titleTranslate === "no" ? "tabular-nums" : null,
@@ -187,7 +189,7 @@ export default function Dialog({
           </div>
         </div>
         <IconButton
-          aria-label="Close"
+          aria-label={t("common.close")}
           className="shrink-0"
           kind="ghost"
           size="xs"
@@ -204,7 +206,7 @@ export default function Dialog({
       {footer ? (
         <div
           ref={footerRef}
-          className="app-dialog-footer relative shrink-0 border-t border-white/6 px-4 py-2.5"
+          className="app-dialog-footer relative shrink-0 border-t border-fg/6 px-4 py-2.5"
         >
           {footer}
         </div>
@@ -221,9 +223,9 @@ export function DialogPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-xl border border-white/8 bg-[#14161e]/55 p-3 backdrop-blur-sm">
+    <section className="min-w-0 rounded-xl border border-fg/8 bg-surface-2/55 p-3 backdrop-blur-sm">
       {title ? (
-        <h3 className="mb-2.5 text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+        <h3 className="mb-2.5 text-[11px] font-medium tracking-[0.14em] text-subtle uppercase">
           {title}
         </h3>
       ) : null}
