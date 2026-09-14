@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import Dialog, { DialogPanel } from "@uiKit/Dialog";
+import { useT } from "@/i18n";
 import ProfileLinks from "./ProfileLinks";
 import { DEVELOPER } from "./site";
 
@@ -11,6 +12,7 @@ type AboutDialogProps = {
 };
 
 export default function AboutDialog({ open, onClose }: AboutDialogProps) {
+  const t = useT();
   const descriptionId = useId();
 
   return (
@@ -22,15 +24,14 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
         <ProfileLinks className="text-sm text-purple-300 hover:text-purple-200" />
       }
       open={open}
-      title="About"
+      title={t("about.title")}
       onClose={onClose}
     >
       <div className="flex flex-col gap-3">
         <p className="text-sm leading-relaxed text-zinc-400" id={descriptionId}>
-          An AI-first Kanban board. You describe a project; the planner puts the
-          work on the board.
+          {t("about.tagline")}
         </p>
-        <DialogPanel title="Developer">
+        <DialogPanel title={t("about.developer")}>
           <div className="flex gap-3">
             <img
               alt={DEVELOPER.name}
@@ -41,35 +42,20 @@ export default function AboutDialog({ open, onClose }: AboutDialogProps) {
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-white">{DEVELOPER.name}</p>
-              <p className="text-sm text-zinc-400">{DEVELOPER.role}</p>
+              <p className="text-sm text-zinc-400">{t("about.role")}</p>
               <p className="text-xs text-zinc-500">{DEVELOPER.location}</p>
             </div>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-            {DEVELOPER.bio}
+            {t("about.bio")}
           </p>
         </DialogPanel>
-        <DialogPanel title="Privacy">
+        <DialogPanel title={t("about.privacy")}>
           <div className="flex flex-col gap-2.5 text-sm leading-relaxed text-zinc-400">
-            <p>
-              A personal project run by {DEVELOPER.name}. No ads, and no selling
-              of your data.
-            </p>
-            <p>
-              An account stores your name, email, and either a password hash or
-              a Google account id. Boards and the brief you type stay in your
-              workspace. Sign-in uses an httpOnly session cookie.
-            </p>
-            <p>
-              An OpenAI key saved in Settings is encrypted on the server and
-              never returned to the browser. The planner sends your brief to
-              OpenAI with that key. Google sign-in shares your Google email and
-              name with this app.
-            </p>
-            <p>
-              No analytics suite. Ask about your data or request deletion via
-              GitHub or LinkedIn.
-            </p>
+            <p>{t("about.privacy1", { name: DEVELOPER.name })}</p>
+            <p>{t("about.privacy2")}</p>
+            <p>{t("about.privacy3")}</p>
+            <p>{t("about.privacy4")}</p>
           </div>
         </DialogPanel>
       </div>
